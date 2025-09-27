@@ -1,4 +1,4 @@
-import { ConvexReactClient } from "convex/react";
+import { ConvexReactClient, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { Stack } from "expo-router";
 import {
@@ -13,9 +13,10 @@ import "../global.css";
 import { NAV_THEME } from "@/lib/constants";
 import React, { useRef } from "react";
 import { useColorScheme } from "@/lib/use-color-scheme";
-import { Platform } from "react-native";
+import { Platform, View, Text, StyleSheet } from "react-native";
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar";
 import { authClient } from "@/lib/auth-client";
+import AuthScreen from "@/components/auth-screen";
 
 const LIGHT_THEME: Theme = {
 	...DefaultTheme,
@@ -60,13 +61,23 @@ export default function RootLayout() {
 			<ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
 				<StatusBar style={isDarkColorScheme ? "light" : "dark"} />
 				<GestureHandlerRootView style={{ flex: 1 }}>
-					<Stack>
-						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-						<Stack.Screen
-							name="modal"
-							options={{ title: "Modal", presentation: "modal" }}
-						/>
-					</Stack>
+					<Authenticated>
+						<Stack>
+							<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+							<Stack.Screen
+								name="modal"
+								options={{ title: "Modal", presentation: "modal" }}
+							/>
+						</Stack>
+					</Authenticated>
+					<Unauthenticated>
+						<AuthScreen />
+					</Unauthenticated>
+					<AuthLoading>
+						<View style={styles.loadingContainer}>
+							<Text style={styles.loadingText}>Loading...</Text>
+						</View>
+					</AuthLoading>
 				</GestureHandlerRootView>
 			</ThemeProvider>
 		</ConvexBetterAuthProvider>
@@ -77,3 +88,16 @@ const useIsomorphicLayoutEffect =
 	Platform.OS === "web" && typeof window === "undefined"
 		? React.useEffect
 		: React.useLayoutEffect;
+
+const styles = StyleSheet.create({
+	loadingContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#ffffff",
+	},
+	loadingText: {
+		fontSize: 18,
+		color: "#000000",
+	},
+});
