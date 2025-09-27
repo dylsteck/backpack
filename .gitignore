@@ -1,0 +1,8 @@
+node_modules
+.turbo
+.alchemy
+.env
+bun.lock
+bun.lockb
+.DS_Store
+.vercel
