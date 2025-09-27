@@ -4,14 +4,15 @@ import { authComponent } from "./auth";
 
 export const getAll = query({
 	handler: async (ctx) => {
-		const user = await authComponent.getAuthUser(ctx);
-		if (!user) {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) {
 			throw new Error("You must be logged in to view todos");
 		}
 		
 		// Return todos for this specific user using the index
+		// Use identity.subject as the user ID
 		return await ctx.db.query("todos")
-			.withIndex("by_user", (q) => q.eq("userId", user.id))
+			.withIndex("by_user", (q) => q.eq("userId", identity.subject))
 			.collect();
 	},
 });
@@ -21,15 +22,15 @@ export const create = mutation({
 		text: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const user = await authComponent.getAuthUser(ctx);
-		if (!user) {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) {
 			throw new Error("You must be logged in to create todos");
 		}
 		
 		const newTodoId = await ctx.db.insert("todos", {
 			text: args.text,
 			completed: false,
-			userId: user.id,
+			userId: identity.subject,
 		});
 		return await ctx.db.get(newTodoId);
 	},
@@ -41,14 +42,14 @@ export const toggle = mutation({
 		completed: v.boolean(),
 	},
 	handler: async (ctx, args) => {
-		const user = await authComponent.getAuthUser(ctx);
-		if (!user) {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) {
 			throw new Error("You must be logged in to update todos");
 		}
 		
 		// Check if the todo belongs to the current user
 		const todo = await ctx.db.get(args.id);
-		if (!todo || todo.userId !== user.id) {
+		if (!todo || todo.userId !== identity.subject) {
 			throw new Error("Todo not found or you don't have permission to update it");
 		}
 		
@@ -62,14 +63,14 @@ export const deleteTodo = mutation({
 		id: v.id("todos"),
 	},
 	handler: async (ctx, args) => {
-		const user = await authComponent.getAuthUser(ctx);
-		if (!user) {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) {
 			throw new Error("You must be logged in to delete todos");
 		}
 		
 		// Check if the todo belongs to the current user
 		const todo = await ctx.db.get(args.id);
-		if (!todo || todo.userId !== user.id) {
+		if (!todo || todo.userId !== identity.subject) {
 			throw new Error("Todo not found or you don't have permission to delete it");
 		}
 		

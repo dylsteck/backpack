@@ -1,7 +1,7 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { components } from "./_generated/api";
-import { DataModel } from "./_generated/dataModel";
+import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { betterAuth } from "better-auth";
 
@@ -31,12 +31,12 @@ export const createAuth = (
 export const getCurrentUser = query({
 	args: {},
 	handler: async (ctx) => {
-		try {
-			const user = await authComponent.getAuthUser(ctx);
-			return user;
-		} catch (error) {
-			console.error("Error getting auth user:", error);
+		const identity = await ctx.auth.getUserIdentity();
+		if (identity === null) {
 			return null;
 		}
+		// You can extend this to fetch additional user data from your database
+		// For example: const user = await ctx.db.get(identity.subject as Id<"users">);
+		return identity;
 	},
 });
