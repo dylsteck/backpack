@@ -9,13 +9,17 @@ import {
 	StyleSheet,
 	Alert,
 } from "react-native";
+import { useOnboarding } from "@/app/_layout";
 import z from "zod";
 
 export default function SignUpForm({
 	onSwitchToSignIn,
+	onSignUpSuccess,
 }: {
 	onSwitchToSignIn: () => void;
+	onSignUpSuccess?: () => void;
 }) {
+	const { setShowOnboarding } = useOnboarding();
 	const form = useForm({
 		defaultValues: {
 			email: "",
@@ -32,6 +36,8 @@ export default function SignUpForm({
 				{
 					onSuccess: () => {
 						Alert.alert("Success", "Sign up successful");
+						setShowOnboarding(true);
+						onSignUpSuccess?.();
 					},
 					onError: (error) => {
 						Alert.alert("Error", error.error.message || error.error.statusText);
@@ -50,7 +56,9 @@ export default function SignUpForm({
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>Create Account</Text>
+			<View style={styles.header}>
+				<Text style={styles.title}>Cortex</Text>
+			</View>
 
 			<View style={styles.form}>
 				<form.Field name="name">
@@ -149,12 +157,19 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		paddingHorizontal: 24,
 		backgroundColor: "#ffffff",
+		paddingTop: 60,
+	},
+	header: {
+		position: "absolute",
+		top: 120,
+		left: 24,
+		flexDirection: "column",
+		alignItems: "flex-start",
+		marginBottom: 80,
 	},
 	title: {
 		fontSize: 32,
 		fontWeight: "bold",
-		textAlign: "center",
-		marginBottom: 32,
 		color: "#000000",
 	},
 	form: {
@@ -184,7 +199,7 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	submitButton: {
-		backgroundColor: "#007AFF",
+		backgroundColor: "#000000",
 		borderRadius: 8,
 		padding: 16,
 		alignItems: "center",

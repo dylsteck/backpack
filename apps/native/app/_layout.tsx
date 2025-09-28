@@ -11,12 +11,13 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 import { NAV_THEME } from "@/lib/constants";
-import React, { useRef } from "react";
+import React, { useRef, useState, createContext, useContext } from "react";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { Platform, View, Text, StyleSheet } from "react-native";
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar";
 import { authClient } from "@/lib/auth-client";
 import AuthScreen from "@/components/auth-screen";
+import OnboardingScreen from "@/components/onboarding-screen";
 
 const LIGHT_THEME: Theme = {
 	...DefaultTheme,
@@ -35,10 +36,43 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
 	unsavedChangesWarning: false,
 });
 
+const OnboardingContext = createContext<{
+	showOnboarding: boolean;
+	setShowOnboarding: (show: boolean) => void;
+}>({
+	showOnboarding: false,
+	setShowOnboarding: () => {},
+});
+
+export const useOnboarding = () => useContext(OnboardingContext);
+
+function AuthenticatedApp() {
+	const { showOnboarding, setShowOnboarding } = useOnboarding();
+
+	const handleOnboardingComplete = () => {
+		setShowOnboarding(false);
+	};
+
+	if (showOnboarding) {
+		return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+	}
+
+	return (
+		<Stack>
+			<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+			<Stack.Screen
+				name="modal"
+				options={{ title: "Modal", presentation: "modal" }}
+			/>
+		</Stack>
+	);
+}
+
 export default function RootLayout() {
 	const hasMounted = useRef(false);
 	const { colorScheme, isDarkColorScheme } = useColorScheme();
 	const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
+	const [showOnboarding, setShowOnboarding] = useState(false);
 
 	useIsomorphicLayoutEffect(() => {
 		if (hasMounted.current) {
@@ -57,30 +91,26 @@ export default function RootLayout() {
 		return null;
 	}
 	return (
-		<ConvexBetterAuthProvider client={convex} authClient={authClient}>
-			<ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-				<StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-				<GestureHandlerRootView style={{ flex: 1 }}>
-					<Authenticated>
-						<Stack>
-							<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-							<Stack.Screen
-								name="modal"
-								options={{ title: "Modal", presentation: "modal" }}
-							/>
-						</Stack>
-					</Authenticated>
-					<Unauthenticated>
-						<AuthScreen />
-					</Unauthenticated>
-					<AuthLoading>
-						<View style={styles.loadingContainer}>
-							<Text style={styles.loadingText}>Loading...</Text>
-						</View>
-					</AuthLoading>
-				</GestureHandlerRootView>
-			</ThemeProvider>
-		</ConvexBetterAuthProvider>
+		<OnboardingContext.Provider value={{ showOnboarding, setShowOnboarding }}>
+			<ConvexBetterAuthProvider client={convex} authClient={authClient}>
+				<ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+					<StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+					<GestureHandlerRootView style={{ flex: 1 }}>
+						<Authenticated>
+							<AuthenticatedApp />
+						</Authenticated>
+						<Unauthenticated>
+							<AuthScreen />
+						</Unauthenticated>
+						<AuthLoading>
+							<View style={styles.loadingContainer}>
+								<Text style={styles.loadingText}>Loading...</Text>
+							</View>
+						</AuthLoading>
+					</GestureHandlerRootView>
+				</ThemeProvider>
+			</ConvexBetterAuthProvider>
+		</OnboardingContext.Provider>
 	);
 }
 

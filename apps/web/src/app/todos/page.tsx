@@ -14,8 +14,8 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { useMutation, useQuery } from "convex/react";
-import { api } from "@command/backend/convex/_generated/api";
-import type { Id } from "@command/backend/convex/_generated/dataModel";
+import { api } from "@cortex/backend/convex/_generated/api";
+import type { Id } from "@cortex/backend/convex/_generated/dataModel";
 import {
 	Authenticated,
 	AuthLoading,

@@ -47,7 +47,9 @@ export default function SignInForm({
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>Welcome Back</Text>
+			<View style={styles.header}>
+				<Text style={styles.title}>Cortex</Text>
+			</View>
 
 			<View style={styles.form}>
 				<form.Field name="email">
@@ -124,12 +126,19 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		paddingHorizontal: 24,
 		backgroundColor: "#ffffff",
+		paddingTop: 60,
+	},
+	header: {
+		position: "absolute",
+		top: 120,
+		left: 24,
+		flexDirection: "column",
+		alignItems: "flex-start",
+		marginBottom: 80,
 	},
 	title: {
 		fontSize: 32,
 		fontWeight: "bold",
-		textAlign: "center",
-		marginBottom: 32,
 		color: "#000000",
 	},
 	form: {
@@ -159,7 +168,7 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	submitButton: {
-		backgroundColor: "#007AFF",
+		backgroundColor: "#000000",
 		borderRadius: 8,
 		padding: 16,
 		alignItems: "center",

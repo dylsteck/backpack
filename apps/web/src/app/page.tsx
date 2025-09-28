@@ -1,7 +1,7 @@
 "use client";
 
 import UserMenu from "@/components/user-menu";
-import { api } from "@command/backend/convex/_generated/api";
+import { api } from "@cortex/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 
 export default function Home() {

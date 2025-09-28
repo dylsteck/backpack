@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "command",
-	description: "command",
+	title: "cortex",
+	description: "cortex",
 };
 
 export default function RootLayout({

@@ -2,8 +2,8 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Activity
 import { Container } from "@/components/container";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "@command/backend/convex/_generated/api";
-import type { Id } from "@command/backend/convex/_generated/dataModel";
+import { api } from "@cortex/backend/convex/_generated/api";
+import type { Id } from "@cortex/backend/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import {
 	Authenticated,

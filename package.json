@@ -1,5 +1,5 @@
 {
-  "name": "command",
+  "name": "cortex",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -12,8 +12,8 @@
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F @command/backend dev",
-    "dev:setup": "turbo -F @command/backend dev:setup"
+    "dev:server": "turbo -F @cortex/backend dev",
+    "dev:setup": "turbo -F @cortex/backend dev:setup"
   },
   "dependencies": {
     "react-compiler-runtime": "19.0.0-beta-df7b47d-20241124"

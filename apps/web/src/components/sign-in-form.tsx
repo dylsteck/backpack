@@ -45,8 +45,8 @@ export default function SignInForm({
 	});
 
 	return (
-		<div className="mx-auto w-full mt-10 max-w-md p-6">
-			<h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
+		<div className="mx-auto w-full mt-10 max-w-md p-6 relative">
+			<h1 className="absolute top-0 left-0 text-3xl font-bold">cortex</h1>
 
 			<form
 				onSubmit={(e) => {
@@ -54,7 +54,7 @@ export default function SignInForm({
 					e.stopPropagation();
 					form.handleSubmit();
 				}}
-				className="space-y-4"
+				className="space-y-4 mt-16"
 			>
 				<div>
 					<form.Field name="email">
