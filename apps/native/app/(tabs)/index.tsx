@@ -126,7 +126,6 @@ function SignInForm() {
 
 function AuthenticatedDashboard() {
 	const currentUser = useQuery(api.auth.getCurrentUser);
-	const deleteUser = useMutation(api.auth.deleteCurrentUser);
 
 	const handleLogout = () => {
 		Alert.alert(
@@ -143,32 +142,6 @@ function AuthenticatedDashboard() {
 						} catch (error) {
 							console.error("Logout error:", error);
 							Alert.alert("Error", "Failed to log out");
-						}
-					}
-				}
-			]
-		);
-	};
-
-	const handleDeleteAccount = () => {
-		Alert.alert(
-			"Delete Account",
-			"Are you sure you want to permanently delete your account? This action cannot be undone.",
-			[
-				{ text: "Cancel", style: "cancel" },
-				{ 
-					text: "Delete Account", 
-					style: "destructive",
-					onPress: async () => {
-						try {
-							// Delete the user from Convex
-							await deleteUser();
-							// Sign out the user after successful deletion
-							await authClient.signOut();
-							Alert.alert("Account Deleted", "Your account has been permanently deleted.");
-						} catch (error) {
-							console.error("Delete account error:", error);
-							Alert.alert("Error", "Failed to delete account. Please try again.");
 						}
 					}
 				}
@@ -194,13 +167,6 @@ function AuthenticatedDashboard() {
 				<Text className="text-lg font-medium text-black dark:text-white mb-2">Appearance</Text>
 				<ThemeToggle />
 			</View>
-
-			<TouchableOpacity 
-				className="bg-gray-800 py-3 rounded-lg items-center mt-4"
-				onPress={handleDeleteAccount}
-			>
-				<Text className="text-white text-lg font-semibold">Delete Account</Text>
-			</TouchableOpacity>
 
 			<TouchableOpacity 
 				className="bg-red-500 py-3 rounded-lg items-center mt-4"

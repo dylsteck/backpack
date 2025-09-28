@@ -41,35 +41,3 @@ export const getCurrentUser = query({
 	},
 });
 
-export const deleteCurrentUser = mutation({
-	args: {},
-	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (identity === null) {
-			throw new Error("User not authenticated");
-		}
-
-		try {
-			// For now, we'll mark the user as deleted by removing their session
-			// In a production app, you might want to:
-			// 1. Delete user data from your tables
-			// 2. Use Better Auth's admin API to delete the user
-			// 3. Handle cascading deletions
-			
-			// Delete any user-specific data (like todos)
-			const userTodos = await ctx.db
-				.query("todos")
-				.filter(q => q.eq(q.field("userId"), identity.subject))
-				.collect();
-			
-			for (const todo of userTodos) {
-				await ctx.db.delete(todo._id);
-			}
-
-			return { success: true };
-		} catch (error) {
-			console.error("Error deleting user data:", error);
-			throw new Error("Failed to delete user account");
-		}
-	},
-});

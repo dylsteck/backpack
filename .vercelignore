@@ -1,0 +1,12 @@
+apps/native/
+ios/
+android/
+*.xcodeproj/
+*.xcworkspace/
+Pods/
+build/
+.expo/
+.git/
+node_modules/
+bun.lock
+*.log
