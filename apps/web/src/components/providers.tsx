@@ -1,12 +1,10 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import { authClient } from "@/lib/auth-client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "@/utils/trpc";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
-
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	return (
@@ -16,9 +14,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 			enableSystem
 			disableTransitionOnChange
 		>
-			<ConvexBetterAuthProvider client={convex} authClient={authClient}>
+			<QueryClientProvider client={queryClient}>
 				{children}
-			</ConvexBetterAuthProvider>
+				<ReactQueryDevtools />
+			</QueryClientProvider>
 			<Toaster richColors />
 		</ThemeProvider>
 	);

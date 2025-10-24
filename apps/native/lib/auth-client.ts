@@ -1,7 +1,14 @@
+import { expoClient } from "@better-auth/expo/client";
 import { createAuthClient } from "better-auth/react";
-import { convexClient } from "@convex-dev/better-auth/client/plugins";
+import * as SecureStore from "expo-secure-store";
 
 export const authClient = createAuthClient({
-	baseURL: "http://192.168.7.112:3001", // Connect to the web server for auth (use your local IP)
-	plugins: [convexClient()],
+	baseURL: process.env.EXPO_PUBLIC_SERVER_URL,
+	plugins: [
+		expoClient({
+			scheme: "mybettertapp",
+			storagePrefix: "cortex",
+			storage: SecureStore,
+		}),
+	],
 });

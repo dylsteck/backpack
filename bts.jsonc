@@ -3,12 +3,12 @@
 
 {
   "$schema": "https://r2.better-t-stack.dev/schema.json",
-  "version": "2.49.0",
-  "createdAt": "2025-09-27T20:18:48.796Z",
-  "database": "none",
-  "orm": "none",
-  "backend": "convex",
-  "runtime": "none",
+  "version": "3.1.5",
+  "createdAt": "2025-10-12T20:22:13.426Z",
+  "database": "postgres",
+  "orm": "drizzle",
+  "backend": "elysia",
+  "runtime": "bun",
   "frontend": [
     "next",
     "native-nativewind"
@@ -16,13 +16,11 @@
   "addons": [
     "turborepo"
   ],
-  "examples": [
-    "todo"
-  ],
+  "examples": [],
   "auth": "better-auth",
-  "packageManager": "bun",
+  "packageManager": "pnpm",
   "dbSetup": "none",
-  "api": "none",
+  "api": "trpc",
   "webDeploy": "none",
   "serverDeploy": "none"
 }

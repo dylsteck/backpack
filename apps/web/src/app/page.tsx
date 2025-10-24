@@ -1,33 +1,45 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
 
-import UserMenu from "@/components/user-menu";
-import { api } from "@cortex/backend/convex/_generated/api";
-import { useQuery } from "convex/react";
+const TITLE_TEXT = `
+ ██████╗ ███████╗████████╗████████╗███████╗██████╗
+ ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
+ ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
+ ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
+ ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
+ ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
+
+ ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
+ ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
+    ██║       ███████╗   ██║   ███████║██║     █████╔╝
+    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
+    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
+    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+ `;
 
 export default function Home() {
-	const currentUser = useQuery(api.auth.getCurrentUser);
+	const healthCheck = useQuery(trpc.healthCheck.queryOptions());
 
 	return (
-		<div className="container mx-auto max-w-3xl px-4 py-8">
-			<div className="space-y-6">
-				<div className="flex items-center justify-between">
-					<h1 className="text-3xl font-bold">Welcome!</h1>
-					<UserMenu />
-				</div>
-				
-				<div className="grid gap-6">
-					<section className="rounded-lg border p-6">
-						<h2 className="mb-4 text-xl font-semibold">Account Info</h2>
-						<div className="space-y-2">
-							<p className="text-sm text-muted-foreground">
-								<span className="font-medium">Name:</span> {currentUser?.name || "Loading..."}
-							</p>
-							<p className="text-sm text-muted-foreground">
-								<span className="font-medium">Email:</span> {currentUser?.email || "Loading..."}
-							</p>
-						</div>
-					</section>
-				</div>
+		<div className="container mx-auto max-w-3xl px-4 py-2">
+			<pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
+			<div className="grid gap-6">
+				<section className="rounded-lg border p-4">
+					<h2 className="mb-2 font-medium">API Status</h2>
+					<div className="flex items-center gap-2">
+						<div
+							className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
+						/>
+						<span className="text-sm text-muted-foreground">
+							{healthCheck.isLoading
+								? "Checking..."
+								: healthCheck.data
+									? "Connected"
+									: "Disconnected"}
+						</span>
+					</div>
+				</section>
 			</div>
 		</div>
 	);

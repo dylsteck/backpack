@@ -2,6 +2,7 @@ import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import z from "zod";
+import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -13,6 +14,7 @@ export default function SignInForm({
 	onSwitchToSignUp: () => void;
 }) {
 	const router = useRouter();
+	const { isPending } = authClient.useSession();
 
 	const form = useForm({
 		defaultValues: {
@@ -27,7 +29,7 @@ export default function SignInForm({
 				},
 				{
 					onSuccess: () => {
-						router.push("/");
+						router.push("/dashboard");
 						toast.success("Sign in successful");
 					},
 					onError: (error) => {
@@ -44,9 +46,13 @@ export default function SignInForm({
 		},
 	});
 
+	if (isPending) {
+		return <Loader />;
+	}
+
 	return (
-		<div className="mx-auto w-full mt-10 max-w-md p-6 relative">
-			<h1 className="absolute top-0 left-0 text-3xl font-bold">cortex</h1>
+		<div className="mx-auto w-full mt-10 max-w-md p-6">
+			<h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
 
 			<form
 				onSubmit={(e) => {
@@ -54,7 +60,7 @@ export default function SignInForm({
 					e.stopPropagation();
 					form.handleSubmit();
 				}}
-				className="space-y-4 mt-16"
+				className="space-y-4"
 			>
 				<div>
 					<form.Field name="email">

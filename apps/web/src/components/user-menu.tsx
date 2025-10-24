@@ -8,23 +8,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@cortex/backend/convex/_generated/api";
+import Link from "next/link";
 
 export default function UserMenu() {
 	const router = useRouter();
-	const user = useQuery(api.auth.getCurrentUser);
+	const { data: session, isPending } = authClient.useSession();
+
+	if (isPending) {
+		return <Skeleton className="h-9 w-24" />;
+	}
+
+	if (!session) {
+		return (
+			<Button variant="outline" asChild>
+				<Link href="/login">Sign In</Link>
+			</Button>
+		);
+	}
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="outline">{user?.name}</Button>
+				<Button variant="outline">{session.user.name}</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="bg-card">
 				<DropdownMenuLabel>My Account</DropdownMenuLabel>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem>{user?.email}</DropdownMenuItem>
+				<DropdownMenuItem>{session.user.email}</DropdownMenuItem>
 				<DropdownMenuItem asChild>
 					<Button
 						variant="destructive"
