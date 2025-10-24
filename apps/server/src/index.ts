@@ -6,6 +6,8 @@ import { appRouter } from "@cortex/api/routers/index";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { auth } from "@cortex/auth";
 
+const port = process.env.PORT ?? 3000;
+
 const app = new Elysia()
 	.use(
 		cors({
@@ -32,6 +34,6 @@ const app = new Elysia()
 		return res;
 	})
 	.get("/", () => "OK")
-	.listen(3000, () => {
-		console.log("Server is running on http://localhost:3000");
+	.listen(port, () => {
+		console.log(`Server is running on http://localhost:${port}`);
 	});

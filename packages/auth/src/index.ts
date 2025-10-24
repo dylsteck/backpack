@@ -22,4 +22,6 @@ export const auth = betterAuth({
 		},
 	},
   plugins: [expo()]
-});
+}) as any;
+
+export type Auth = typeof auth;
