@@ -29,7 +29,7 @@ export default function SignInForm({
 				},
 				{
 					onSuccess: () => {
-						router.push("/dashboard");
+						router.push("/apps");
 						toast.success("Sign in successful");
 					},
 					onError: (error) => {
