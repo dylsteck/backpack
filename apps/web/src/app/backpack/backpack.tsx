@@ -3,14 +3,14 @@ import AppCard from "@/components/app-card";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-const mockBackpackData = [
-	{ name: "ChatGPT", amount: "$3,200.75", iconColor: "#10a37f", iconText: "G" },
-	{ name: "Claude", amount: "$2,890.40", iconColor: "#d97757", iconText: "C" },
-	{ name: "Midjourney", amount: "$1,567.20", iconColor: "#000000", iconText: "M" },
-	{ name: "Cursor", amount: "$1,234.90", iconColor: "#0066ff", iconText: "C" },
-	{ name: "Raycast", amount: "$987.50", iconColor: "#ff6363", iconText: "R" },
-	{ name: "Arc Browser", amount: "$845.30", iconColor: "#fcbfbd", iconText: "A" },
-	{ name: "Loom", amount: "$756.80", iconColor: "#625df5", iconText: "L" },
+const mockAppsData = [
+	{ name: "Notion", amount: "$2,450.50", iconColor: "#000000", iconText: "N" },
+	{ name: "Figma", amount: "$1,890.25", iconColor: "#f24e1e", iconText: "F" },
+	{ name: "Slack", amount: "$1,234.00", iconColor: "#4a154b", iconText: "S" },
+	{ name: "Linear", amount: "$987.60", iconColor: "#5e6ad2", iconText: "L" },
+	{ name: "GitHub", amount: "$856.40", iconColor: "#24292e", iconText: "G" },
+	{ name: "Vercel", amount: "$745.30", iconColor: "#000000", iconText: "▲" },
+	{ name: "Discord", amount: "$623.15", iconColor: "#5865f2", iconText: "D" },
 ];
 
 export default function Backpack({
@@ -19,7 +19,7 @@ export default function Backpack({
 	session: typeof authClient.$Infer.Session;
 }) {
 	return (
-		<div className="container mx-auto px-8 py-8">
+		<div>
 			<div className="flex items-center justify-between mb-6">
 				<h1 className="text-4xl font-bold">Your backpack (101)</h1>
 				<Button variant="outline" className="rounded-full px-6">
@@ -27,7 +27,7 @@ export default function Backpack({
 				</Button>
 			</div>
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				{mockBackpackData.map((item) => (
+				{mockAppsData.map((item) => (
 					<AppCard
 						key={item.name}
 						name={item.name}
