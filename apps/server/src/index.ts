@@ -5,6 +5,8 @@ import { createContext } from "@cortex/api/context";
 import { appRouter } from "@cortex/api/routers/index";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { auth } from "@cortex/auth";
+import { mcpRoutes } from "./routes/mcp";
+import { chatRoutes } from "./routes/chat";
 
 const port = process.env.PORT ?? 3000;
 
@@ -17,6 +19,8 @@ const app = new Elysia()
 			credentials: true,
 		}),
 	)
+	.use(mcpRoutes)
+	.use(chatRoutes)
 	.all("/api/auth/*", async (context) => {
 		const { request, status } = context;
 		if (["POST", "GET"].includes(request.method)) {

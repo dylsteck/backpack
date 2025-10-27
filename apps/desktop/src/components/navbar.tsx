@@ -10,6 +10,7 @@ export default function Navbar() {
 		{ to: "/", label: "Home" },
 		{ to: "/items", label: "Items" },
 		{ to: "/connections", label: "Connections" },
+		{ to: "/chat", label: "Chat" },
 	] as const;
 
 	return (

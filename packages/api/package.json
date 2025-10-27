@@ -21,12 +21,13 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@trpc/server": "catalog:",
-    "@trpc/client": "catalog:",
-    "elysia": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:",
     "@cortex/auth": "workspace:*",
-    "@cortex/db": "workspace:*"
+    "@cortex/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "^0.44.7",
+    "elysia": "catalog:",
+    "zod": "catalog:"
   }
 }

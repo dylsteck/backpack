@@ -1,33 +1,100 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
-import AppCard from "@/components/app-card";
-import { Button } from "@cortex/shared/components";
-
-const mockAppsData = [
-	{ name: "Notion", amount: "$2,450.50", iconColor: "#000000", iconText: "N" },
-	{ name: "Figma", amount: "$1,890.25", iconColor: "#f24e1e", iconText: "F" },
-	{ name: "Slack", amount: "$1,234.00", iconColor: "#4a154b", iconText: "S" },
-	{ name: "Linear", amount: "$987.60", iconColor: "#5e6ad2", iconText: "L" },
-	{ name: "GitHub", amount: "$856.40", iconColor: "#24292e", iconText: "G" },
-	{ name: "Vercel", amount: "$745.30", iconColor: "#000000", iconText: "▲" },
-	{ name: "Discord", amount: "$623.15", iconColor: "#5865f2", iconText: "D" },
-];
+import { useState, useMemo } from "react";
+import MCPServerCard from "@/components/mcp-server-card";
+import MCPFilters from "@/components/mcp-filters";
+import MCPSetupSheet from "@/components/mcp-setup-sheet";
+import { trpc } from "@/utils/trpc";
+import Loader from "@/components/loader";
+import { Badge } from "@cortex/shared/components";
 
 export const Route = createFileRoute("/connections")({
 	component: ConnectionsPage,
 });
 
-function ConnectionsPage() {
-	const { data: session, isPending } = authClient.useSession();
+interface MCPServer {
+	id: string;
+	name: string;
+	description?: string;
+	vendor?: string;
+	categories?: string[];
+}
 
-	if (isPending) {
-		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
-				<div className="text-center">
-					<p className="text-2xl text-slate-400 dark:text-slate-500">Loading...</p>
-				</div>
-			</div>
-		)
+function ConnectionsPage() {
+	const { data: session, isPending: sessionPending } = authClient.useSession();
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
+	const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+	const [selectedServer, setSelectedServer] = useState<MCPServer | null>(null);
+	const [isSetupSheetOpen, setIsSetupSheetOpen] = useState(false);
+
+	const { data: serversData, isLoading: serversLoading, error } = trpc.mcp.getAvailableServers.useQuery();
+	const { data: userConnections } = trpc.mcp.getUserConnections.useQuery(undefined, {
+		enabled: !!session?.user,
+	});
+
+	// Debug: log the data
+	console.log("Servers data:", serversData);
+	console.log("Error:", error);
+
+	// Extract server data from the nested structure
+	const servers: MCPServer[] = (serversData?.servers || []).map((item: any) => ({
+		id: item.server?.name || "",
+		name: item.server?.name || "",
+		description: item.server?.description || "",
+		vendor: item.server?.name?.split("/")[0] || "",
+		categories: item.server?.categories || [],
+	}));
+
+	// Extract unique vendors and categories
+	const { availableVendors, availableCategories } = useMemo(() => {
+		const vendors = new Set<string>();
+		const categories = new Set<string>();
+
+		servers.forEach((server) => {
+			if (server.vendor) vendors.add(server.vendor);
+			if (server.categories) {
+				server.categories.forEach((cat: string) => categories.add(cat));
+			}
+		});
+
+		return {
+			availableVendors: Array.from(vendors).sort(),
+			availableCategories: Array.from(categories).sort(),
+		};
+	}, [servers]);
+
+	// Filter servers based on search and filters
+	const filteredServers = useMemo(() => {
+		return servers.filter((server) => {
+			// Search filter
+			const matchesSearch =
+				searchQuery === "" ||
+				server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				server.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+			// Vendor filter
+			const matchesVendor =
+				selectedVendors.length === 0 ||
+				(server.vendor && selectedVendors.includes(server.vendor));
+
+			// Category filter
+			const matchesCategory =
+				selectedCategories.length === 0 ||
+				(server.categories &&
+					server.categories.some((cat: string) => selectedCategories.includes(cat)));
+
+			return matchesSearch && matchesVendor && matchesCategory;
+		});
+	}, [servers, searchQuery, selectedVendors, selectedCategories]);
+
+	const handleServerClick = (server: MCPServer) => {
+		setSelectedServer(server);
+		setIsSetupSheetOpen(true);
+	};
+
+	if (sessionPending || serversLoading) {
+		return <Loader />;
 	}
 
 	if (!session?.user) {
@@ -37,30 +104,61 @@ function ConnectionsPage() {
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-4xl font-bold">Your connections (101)</h1>
-				<Button variant="outline" className="rounded-full px-6">
-					View more →
-				</Button>
+				<div>
+					<h1 className="text-4xl font-bold mb-2">MCP Connections</h1>
+					<p className="text-slate-600 dark:text-slate-400">
+						Browse and connect to Model Context Protocol servers
+					</p>
+				</div>
+				{userConnections && userConnections.length > 0 && (
+					<Badge variant="secondary" className="text-sm px-4 py-2">
+						{userConnections.length} connected
+					</Badge>
+				)}
 			</div>
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				{mockAppsData.map((item) => (
-					<AppCard
-						key={item.name}
-						name={item.name}
-						amount={item.amount}
-						iconColor={item.iconColor}
-						iconText={item.iconText}
-					/>
-				))}
-				<AppCard
-					name="View all"
-					iconColor="#ffffff"
-					iconText="→"
-					isViewAll
-					totalCount={101}
+
+			<div className="mb-6">
+				<MCPFilters
+					searchQuery={searchQuery}
+					onSearchChange={setSearchQuery}
+					selectedVendors={selectedVendors}
+					onVendorsChange={setSelectedVendors}
+					selectedCategories={selectedCategories}
+					onCategoriesChange={setSelectedCategories}
+					availableVendors={availableVendors}
+					availableCategories={availableCategories}
 				/>
 			</div>
+
+			{filteredServers.length === 0 ? (
+				<div className="flex items-center justify-center min-h-[40vh]">
+					<div className="text-center">
+						<p className="text-xl text-slate-400 dark:text-slate-500">
+							No MCP servers found
+						</p>
+						<p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+							Try adjusting your search or filters
+						</p>
+					</div>
+				</div>
+			) : (
+				<div className="flex flex-col gap-3">
+					{filteredServers.map((server) => (
+						<MCPServerCard
+							key={server.id}
+							server={server}
+							onClick={() => handleServerClick(server)}
+						/>
+					))}
+				</div>
+			)}
+
+			<MCPSetupSheet
+				isOpen={isSetupSheetOpen}
+				onClose={() => setIsSetupSheetOpen(false)}
+				server={selectedServer}
+			/>
 		</div>
-	)
+	);
 }
 
