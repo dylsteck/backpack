@@ -18,10 +18,10 @@ export default function AppCard({
 	totalCount,
 }: AppCardProps) {
 	return (
-		<Card className="bg-slate-100 dark:bg-slate-800 border-0 p-6 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+		<Card className="bg-slate-100 dark:bg-slate-800 border-0 p-6 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer rounded-xl">
 			<div className="flex flex-col gap-4">
 				<div
-					className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-semibold text-white"
+					className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-semibold text-white"
 					style={{ backgroundColor: iconColor }}
 				>
 					{iconText}

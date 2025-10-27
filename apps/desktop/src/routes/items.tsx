@@ -13,11 +13,11 @@ const mockAppsData = [
 	{ name: "Discord", amount: "$623.15", iconColor: "#5865f2", iconText: "D" },
 ];
 
-export const Route = createFileRoute("/backpack")({
-	component: BackpackPage,
+export const Route = createFileRoute("/items")({
+	component: ItemsPage,
 });
 
-function BackpackPage() {
+function ItemsPage() {
 	const { data: session, isPending } = authClient.useSession();
 
 	if (isPending) {
@@ -27,7 +27,7 @@ function BackpackPage() {
 					<p className="text-2xl text-slate-400 dark:text-slate-500">Loading...</p>
 				</div>
 			</div>
-		);
+		)
 	}
 
 	if (!session?.user) {
@@ -37,7 +37,7 @@ function BackpackPage() {
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-4xl font-bold">Your backpack (101)</h1>
+				<h1 className="text-4xl font-bold">Your items (101)</h1>
 				<Button variant="outline" className="rounded-full px-6">
 					View more →
 				</Button>
@@ -61,6 +61,6 @@ function BackpackPage() {
 				/>
 			</div>
 		</div>
-	);
+	)
 }
 

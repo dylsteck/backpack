@@ -29,7 +29,7 @@ export default function SignUpForm({
 				},
 				{
 					onSuccess: () => {
-						router.navigate({ to: "/apps" });
+						router.navigate({ to: "/items" });
 						toast.success("Sign up successful");
 					},
 					onError: (error) => {

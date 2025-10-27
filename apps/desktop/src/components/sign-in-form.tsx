@@ -27,7 +27,7 @@ export default function SignInForm({
 				},
 				{
 					onSuccess: () => {
-						router.navigate({ to: "/apps" });
+						router.navigate({ to: "/items" });
 						toast.success("Sign in successful");
 					},
 					onError: (error) => {
