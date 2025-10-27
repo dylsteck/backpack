@@ -1,7 +1,7 @@
-"use client";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { authClient } from "@/lib/auth-client";
 import AppCard from "@/components/app-card";
 import { Button } from "@cortex/shared/components";
-import { authClient } from "@/lib/auth-client";
 
 const mockAppsData = [
 	{ name: "Notion", amount: "$2,450.50", iconColor: "#000000", iconText: "N" },
@@ -13,11 +13,27 @@ const mockAppsData = [
 	{ name: "Discord", amount: "$623.15", iconColor: "#5865f2", iconText: "D" },
 ];
 
-export default function Backpack({
-	session,
-}: {
-	session: typeof authClient.$Infer.Session;
-}) {
+export const Route = createFileRoute("/backpack")({
+	component: BackpackPage,
+});
+
+function BackpackPage() {
+	const { data: session, isPending } = authClient.useSession();
+
+	if (isPending) {
+		return (
+			<div className="flex items-center justify-center min-h-[60vh]">
+				<div className="text-center">
+					<p className="text-2xl text-slate-400 dark:text-slate-500">Loading...</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (!session?.user) {
+		return <Navigate to="/login" />;
+	}
+
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-6">

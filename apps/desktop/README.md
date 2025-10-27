@@ -1,6 +1,6 @@
 # Cortex Desktop
 
-Electron + Next.js desktop application for Cortex.
+Electron + Vite + TanStack Router desktop application for Cortex.
 
 ## Development
 
@@ -8,37 +8,37 @@ Electron + Next.js desktop application for Cortex.
 # Install dependencies
 bun install
 
-# Run in development mode (starts both Next.js and Electron)
-npm run dev
+# Run in development mode (starts both Vite and Electron)
+bun run dev
 
 # Build for production
-npm run build
+bun run build
 ```
 
 ## Architecture
 
 - **Electron**: Main process manages the application window and lifecycle
-- **Next.js**: Runs internally on port 3002, providing the UI and API routes
-- **API Proxy**: Next.js API routes can proxy requests to the main server
+- **Vite**: Fast dev server on port 3002, builds the UI
+- **TanStack Router**: Client-side routing
+- **Direct API Calls**: tRPC calls to Elysia server at localhost:3000
 
 ## Environment Variables
 
-Create a `.env.local` file in the `nextjs/` directory:
+Create a `.env.local` file in the desktop root:
 
-**`nextjs/.env.local`**:
+**`.env.local`**:
 ```
-NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+VITE_SERVER_URL=http://localhost:3000
 ```
-
-> Note: The file needs to be in `nextjs/.env.local` (not the root desktop folder) because Next.js runs from the `nextjs` subdirectory.
 
 ## Tech Stack
 
 - Electron Forge with Webpack
-- Next.js 15
+- Vite 6
+- TanStack Router
 - React 19
 - TypeScript
-- TailwindCSS
+- TailwindCSS v4
 - tRPC
 - better-auth
 

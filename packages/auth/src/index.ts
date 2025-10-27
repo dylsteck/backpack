@@ -10,7 +10,11 @@ export const auth = betterAuth({
 
 		schema: schema,
 	}),
-	trustedOrigins: [process.env.CORS_ORIGIN || "", "mybettertapp://", "exp://"],
+	trustedOrigins: [
+		...(process.env.CORS_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean),
+		"mybettertapp://",
+		"exp://",
+	],
 	emailAndPassword: {
 		enabled: true,
 	},

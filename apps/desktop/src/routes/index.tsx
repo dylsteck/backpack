@@ -1,4 +1,4 @@
-"use client";
+import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@cortex/shared/components";
 
 const mockProjects = [
@@ -12,7 +12,11 @@ const mockProjects = [
 	{ id: 8, name: "#posters", tag: "posters", image: "", period: "apr" },
 ];
 
-export default function Home() {
+export const Route = createFileRoute("/")({
+	component: Home,
+});
+
+function Home() {
 	const nowProjects = mockProjects.filter((p) => p.period === "now");
 	const aprProjects = mockProjects.filter((p) => p.period === "apr");
 

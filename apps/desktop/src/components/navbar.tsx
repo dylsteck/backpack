@@ -1,11 +1,10 @@
-"use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useRouterState } from "@tanstack/react-router";
 import UserMenu from "./user-menu";
 import CortexIcon from "./cortex-icon";
 
 export default function Navbar() {
-	const pathname = usePathname();
+	const router = useRouterState();
+	const pathname = router.location.pathname;
 
 	const links = [
 		{ to: "/", label: "Home" },
@@ -16,7 +15,7 @@ export default function Navbar() {
 	return (
 		<div className="border-b">
 			<div className="flex h-16 items-center px-6">
-				<Link href="/" className="mr-8">
+				<Link to="/" className="mr-8">
 					<CortexIcon size={28} />
 				</Link>
 				<nav className="flex gap-6 text-sm">
@@ -25,7 +24,7 @@ export default function Navbar() {
 						return (
 							<Link
 								key={to}
-								href={to}
+								to={to}
 								className={`transition-colors hover:text-foreground/80 ${
 									isActive ? "text-foreground font-medium" : "text-foreground/60"
 								}`}

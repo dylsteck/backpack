@@ -6,17 +6,14 @@ node_modules/
 # Testing
 /coverage
 
-# Next.js
-/.next/
-/nextjs/.next/
-/out/
-next-env.d.ts
-nextjs/next-env.d.ts
+# Vite
+/dist/
+/.vite/
 
 # Production
 /build
-/dist
 .webpack/
+/out
 
 # Misc
 .DS_Store
@@ -32,10 +29,6 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-nextjs/.env.local
-nextjs/.env.development.local
-nextjs/.env.test.local
-nextjs/.env.production.local
 
 # Vercel
 .vercel
@@ -43,5 +36,5 @@ nextjs/.env.production.local
 # TypeScript
 *.tsbuildinfo
 
-# Electron
-/out
+# TanStack Router
+/src/routeTree.gen.ts

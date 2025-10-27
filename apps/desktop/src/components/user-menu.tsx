@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -15,9 +13,8 @@ import {
 	Skeleton,
 } from "@cortex/shared/components";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, Link } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
-import Link from "next/link";
 import { Moon, Sun, Monitor } from "lucide-react";
 
 export default function UserMenu() {
@@ -38,7 +35,7 @@ export default function UserMenu() {
 	if (!session) {
 		return (
 			<Button variant="outline" asChild>
-				<Link href="/login">Sign In</Link>
+				<Link to="/login">Sign In</Link>
 			</Button>
 		);
 	}
@@ -79,7 +76,7 @@ export default function UserMenu() {
 									authClient.signOut({
 										fetchOptions: {
 											onSuccess: () => {
-												router.push("/");
+												router.navigate({ to: "/" });
 											},
 										},
 									});

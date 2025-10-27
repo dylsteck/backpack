@@ -13,10 +13,10 @@ try {
 }
 
 let mainWindow: BrowserWindow | null = null;
-let nextProcess: ChildProcess | null = null;
+let viteProcess: ChildProcess | null = null;
 let tray: Tray | null = null;
 const isDev = process.env.NODE_ENV !== 'production';
-const nextPort = 3002;
+const vitePort = 3002;
 const windowStateManager = new WindowStateManager('main');
 
 const createWindow = (): void => {
@@ -39,17 +39,18 @@ const createWindow = (): void => {
   // Manage window state (this will restore saved position/size)
   windowStateManager.manage(mainWindow);
 
-  // Load the Next.js app (not the webpack renderer)
-  const nextURL = `http://localhost:${nextPort}`;
+  // Load the Vite app
+  const viteURL = `http://localhost:${vitePort}`;
   
-  // Wait a bit for Next.js to be ready before loading
+  // In dev mode, Vite is already running via concurrently
+  // In prod mode, we wait for preview server
   setTimeout(() => {
     if (mainWindow) {
-      mainWindow.loadURL(nextURL).catch((err) => {
-        console.error('Failed to load Next.js app:', err);
+      mainWindow.loadURL(viteURL).catch((err) => {
+        console.error('Failed to load Vite app:', err);
       });
     }
-  }, isDev ? 3000 : 1000);
+  }, isDev ? 500 : 1000);
 
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
@@ -173,48 +174,47 @@ const createMenu = () => {
   Menu.setApplicationMenu(menu);
 };
 
-const startNextServer = (): Promise<void> => {
+const startViteServer = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const command = isDev ? 'npm' : 'npm';
-    const args = isDev ? ['run', 'dev:next'] : ['run', 'start:next'];
+    const command = isDev ? 'bun' : 'bun';
+    const args = isDev ? ['run', 'dev:vite'] : ['run', 'preview'];
     
-    nextProcess = spawn(command, args, {
+    viteProcess = spawn(command, args, {
       cwd: app.getAppPath(),
       env: { 
-        ...process.env, 
-        PORT: nextPort.toString(),
-        NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+        ...process.env,
+        VITE_SERVER_URL: process.env.VITE_SERVER_URL || 'http://localhost:3000',
       },
       shell: true,
     });
 
-    nextProcess.stdout?.on('data', (data) => {
-      console.log(`Next.js: ${data}`);
-      if (data.toString().includes('Ready') || data.toString().includes('started server')) {
+    viteProcess.stdout?.on('data', (data) => {
+      console.log(`Vite: ${data}`);
+      if (data.toString().includes('ready') || data.toString().includes('Local:') || data.toString().includes('3002')) {
         resolve();
       }
     });
 
-    nextProcess.stderr?.on('data', (data) => {
-      console.error(`Next.js Error: ${data}`);
+    viteProcess.stderr?.on('data', (data) => {
+      console.error(`Vite Error: ${data}`);
     });
 
-    nextProcess.on('error', (error) => {
-      console.error('Failed to start Next.js:', error);
+    viteProcess.on('error', (error) => {
+      console.error('Failed to start Vite:', error);
       reject(error);
     });
 
-    // Timeout after 30 seconds
+    // Timeout after 15 seconds
     setTimeout(() => {
       resolve(); // Resolve anyway to allow window creation
-    }, 30000);
+    }, 15000);
   });
 };
 
-const stopNextServer = () => {
-  if (nextProcess) {
-    nextProcess.kill();
-    nextProcess = null;
+const stopViteServer = () => {
+  if (viteProcess) {
+    viteProcess.kill();
+    viteProcess = null;
   }
 };
 
@@ -222,12 +222,20 @@ const stopNextServer = () => {
 // initialization and is ready to create browser windows.
 app.on('ready', async () => {
   try {
-    console.log('Starting Next.js server...');
-    await startNextServer();
-    console.log('Next.js server started');
+    // In development, Vite is started by concurrently, so just connect to it
+    // In production, we need to start the preview server
+    if (!isDev) {
+      console.log('Starting Vite server...');
+      await startViteServer();
+      console.log('Vite server started');
+    } else {
+      console.log('Connecting to Vite dev server...');
+      // Wait a moment for Vite to be ready (started by concurrently)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
     createWindow();
   } catch (error) {
-    console.error('Error starting Next.js:', error);
+    console.error('Error:', error);
     // Create window anyway if in development
     if (isDev) {
       createWindow();
@@ -239,7 +247,7 @@ app.on('ready', async () => {
 
 // Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
-  stopNextServer();
+  stopViteServer();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -254,9 +262,9 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-  stopNextServer();
+  stopViteServer();
 });
 
 app.on('will-quit', () => {
-  stopNextServer();
+  stopViteServer();
 });
