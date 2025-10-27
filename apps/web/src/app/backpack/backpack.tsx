@@ -1,6 +1,6 @@
 "use client";
 import AppCard from "@/components/app-card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@cortex/shared/components";
 import { authClient } from "@/lib/auth-client";
 
 const mockAppsData = [

@@ -1,5 +1,5 @@
 "use client";
-import { Card } from "@/components/ui/card";
+import { Card } from "@cortex/shared/components";
 
 const mockProjects = [
 	{ id: 1, name: "#emerald", tag: "emerald", image: "", period: "now" },

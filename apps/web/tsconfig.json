@@ -26,6 +26,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@cortex/shared": [
+        "../../packages/shared/src"
+      ],
+      "@cortex/shared/*": [
+        "../../packages/shared/src/*"
       ]
     }
   },
