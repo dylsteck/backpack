@@ -1,5 +1,5 @@
 import { Card, Badge } from "@cortex/ui/components";
-import type { CursorServer } from "@cortex/shared/types/mcp";
+import type { CursorServer } from "@/types/mcp";
 import { useState } from "react";
 
 interface MCPServerCardProps {

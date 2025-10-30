@@ -22,8 +22,6 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
-    "dev:web": "turbo -F web dev",
     "dev:desktop": "turbo -F desktop dev",
     "dev:server": "turbo -F server dev",
     "db:push": "turbo -F @cortex/db db:push",

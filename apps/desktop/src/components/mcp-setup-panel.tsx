@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import { authClient } from "@/lib/auth-client";
-import type { CursorServer, TransportType } from "@cortex/shared/types/mcp";
+import type { CursorServer, TransportType } from "@/types/mcp";
 
 interface MCPSetupPanelProps {
 	server: CursorServer;

@@ -7,7 +7,7 @@ import { trpc } from "@/utils/trpc";
 import { Badge, Button } from "@cortex/ui/components";
 import { Skeleton } from "@cortex/ui/components";
 import { ArrowLeft } from "lucide-react";
-import type { CursorServer } from "@cortex/shared/types/mcp";
+import type { CursorServer } from "@/types/mcp";
 
 export const Route = createFileRoute("/connections")({
 	component: ConnectionsPage,
