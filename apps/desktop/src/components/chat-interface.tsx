@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ScrollArea } from "@cortex/shared/components";
+import { ScrollArea } from "@cortex/ui/components";
 import ChatMessage from "./chat-message";
 import ChatInput from "./chat-input";
 import type { UIMessage } from "@ai-sdk/react";

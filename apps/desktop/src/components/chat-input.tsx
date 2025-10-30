@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input } from "@cortex/shared/components";
+import { Button, Input } from "@cortex/ui/components";
 import { Send } from "lucide-react";
 
 interface ChatInputProps {

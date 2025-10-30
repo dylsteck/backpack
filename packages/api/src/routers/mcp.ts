@@ -1,6 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, mcpConnection } from "@cortex/db";
+import { db, mcpConnection, mcpServerRegistry } from "@cortex/db";
 import { eq, and } from "drizzle-orm";
 
 const transportConfigSchema = z.object({
@@ -8,31 +8,27 @@ const transportConfigSchema = z.object({
 	args: z.array(z.string()).optional(),
 	url: z.string().optional(),
 	headers: z.record(z.string()).optional(),
+	env: z.record(z.string()).optional(),
 });
 
 export const mcpRouter = router({
-	// Get all available servers from the MCP registry via server route
+	// Get all available servers from database
 	getAvailableServers: publicProcedure.query(async () => {
 		try {
-			// Fetch from our server's MCP route which has caching
-			const serverUrl = process.env.SERVER_URL || "http://localhost:3000";
-			const response = await fetch(`${serverUrl}/api/mcp/servers`);
+			const servers = await db.select().from(mcpServerRegistry);
 			
-			if (!response.ok) {
-				console.error("Server MCP route failed:", response.status, response.statusText);
-				throw new Error("Failed to fetch MCP servers from server");
-			}
-			
-			const data = await response.json();
-			console.log("MCP servers fetched:", data);
-			
-			// Ensure we return the expected structure
-			if (!data || !data.servers) {
-				console.warn("Invalid data structure from server:", data);
-				return { servers: [] };
-			}
-			
-			return data;
+			return {
+				servers: servers.map((server) => ({
+					id: server.id,
+					name: server.name,
+					description: server.description,
+					transport: server.transport,
+					oauth: server.oauth,
+					iconUrl: server.iconUrl,
+					config: server.config,
+					domains: server.domains,
+				})),
+			};
 		} catch (error) {
 			console.error("Error in getAvailableServers:", error);
 			return { servers: [] };
@@ -56,7 +52,7 @@ export const mcpRouter = router({
 				serverId: z.string(),
 				serverName: z.string(),
 				vendor: z.string().optional(),
-				transportType: z.enum(["stdio", "http", "sse"]),
+				transportType: z.enum(["stdio", "http", "https", "sse", "streamable-http"]),
 				transportConfig: transportConfigSchema,
 			})
 		)

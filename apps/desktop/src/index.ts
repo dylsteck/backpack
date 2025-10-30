@@ -32,7 +32,12 @@ const createWindow = (): void => {
       contextIsolation: true,
       sandbox: true,
     },
-    titleBarStyle: 'default',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarOverlay: process.platform === 'darwin' ? {
+      color: '#000000',
+      symbolColor: '#ffffff',
+      height: 48,
+    } : undefined,
     show: false,
   });
 
@@ -70,7 +75,7 @@ const createWindow = (): void => {
     mainWindow = null;
   });
 
-  // Create application menu
+  // Remove native menu bar on macOS - custom topbar in sidebar header replaces it
   createMenu();
 
   // Create tray icon
@@ -124,6 +129,13 @@ const createTray = () => {
 };
 
 const createMenu = () => {
+  // Remove the menu bar completely on macOS
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(null);
+    return;
+  }
+
+  // On other platforms, keep the menu
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',

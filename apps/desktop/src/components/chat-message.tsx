@@ -1,4 +1,4 @@
-import { Avatar } from "@cortex/shared/components";
+import { Avatar } from "@cortex/ui/components";
 import { Bot, User } from "lucide-react";
 
 interface ChatMessageProps {

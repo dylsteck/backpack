@@ -1,4 +1,4 @@
-import { Card } from "@cortex/shared/components";
+import { Card } from "@cortex/ui/components";
 
 interface AppCardProps {
 	name: string;

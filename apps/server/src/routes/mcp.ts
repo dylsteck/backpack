@@ -1,108 +1,250 @@
 import { Elysia } from "elysia";
+import { db, mcpServerRegistry } from "@cortex/db";
+import { eq } from "drizzle-orm";
 
-// Simple in-memory cache
-interface CacheEntry {
-	data: any;
-	timestamp: number;
+// OAuth session store (in-memory, for production use Redis or database)
+interface OAuthSession {
+	sessionId: string;
+	serverUrl: string;
+	userId: string;
+	state: string;
+	createdAt: number;
 }
 
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const oauthSessions = new Map<string, OAuthSession>();
+const OAUTH_SESSION_TTL = 10 * 60 * 1000; // 10 minutes
 
-function getCached(key: string): any | null {
-	const entry = cache.get(key);
-	if (!entry) return null;
-	
-	if (Date.now() - entry.timestamp > CACHE_TTL) {
-		cache.delete(key);
-		return null;
-	}
-	
-	return entry.data;
+function generateSessionId(): string {
+	return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-function setCache(key: string, data: any): void {
-	cache.set(key, {
-		data,
-		timestamp: Date.now(),
-	});
+function generateState(): string {
+	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
 export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
-	.get("/servers", async () => {
-		console.log("📡 Fetching MCP servers from registry...");
-		const cacheKey = "all-servers";
-		const cached = getCached(cacheKey);
-		
-		if (cached) {
-			console.log("✅ Returning cached data with", cached.servers?.length || 0, "servers");
-			return cached;
-		}
+	.get("/servers", async ({ set }) => {
+		console.log("📡 Fetching MCP servers from database...");
 		
 		try {
-			console.log("🌐 Making request to MCP registry...");
-			const response = await fetch(
-				"https://registry.modelcontextprotocol.io/v0/servers"
-			);
+			const servers = await db.select().from(mcpServerRegistry);
 			
-			if (!response.ok) {
-				console.error("❌ Registry API error:", response.status, response.statusText);
-				throw new Error(`Registry API error: ${response.statusText}`);
-			}
+			console.log(`✅ Found ${servers.length} servers in database`);
 			
-			const data = await response.json();
-			console.log("✅ Received data from registry:", {
-				hasServers: !!data.servers,
-				serverCount: data.servers?.length || 0,
-				keys: Object.keys(data)
-			});
+			// Set HTTP cache headers for 1 day
+			set.headers["Cache-Control"] = "public, max-age=86400";
 			
-			setCache(cacheKey, data);
-			
-			return data;
+			return {
+				servers: servers.map((server) => ({
+					id: server.id,
+					name: server.name,
+					description: server.description,
+					transport: server.transport,
+					oauth: server.oauth,
+					iconUrl: server.iconUrl,
+					config: server.config,
+					domains: server.domains,
+				})),
+			};
 		} catch (error) {
-			console.error("❌ Failed to fetch MCP servers:", error);
+			console.error("❌ Failed to fetch MCP servers from database:", error);
+			set.status = 500;
 			return {
 				error: "Failed to fetch MCP servers",
 				servers: [],
 			};
 		}
 	})
-	.get("/servers/:id", async ({ params }) => {
+	.get("/servers/:id", async ({ params, set }) => {
 		const { id } = params;
-		const cacheKey = `server-${id}`;
-		const cached = getCached(cacheKey);
-		
-		if (cached) {
-			return cached;
-		}
 		
 		try {
-			// First fetch all servers to find the specific one
-			const response = await fetch(
-				"https://registry.modelcontextprotocol.io/v0/servers"
-			);
-			
-			if (!response.ok) {
-				throw new Error(`Registry API error: ${response.statusText}`);
-			}
-			
-			const data = await response.json();
-			const server = data.servers?.find((s: any) => s.id === id);
+			const [server] = await db
+				.select()
+				.from(mcpServerRegistry)
+				.where(eq(mcpServerRegistry.id, id))
+				.limit(1);
 			
 			if (!server) {
+				set.status = 404;
 				return {
 					error: "Server not found",
 				};
 			}
 			
-			setCache(cacheKey, server);
-			return server;
+			// Set HTTP cache headers for 1 day
+			set.headers["Cache-Control"] = "public, max-age=86400";
+			
+			return {
+				id: server.id,
+				name: server.name,
+				description: server.description,
+				transport: server.transport,
+				oauth: server.oauth,
+				iconUrl: server.iconUrl,
+				config: server.config,
+				domains: server.domains,
+			};
 		} catch (error) {
 			console.error(`Failed to fetch MCP server ${id}:`, error);
+			set.status = 500;
 			return {
 				error: "Failed to fetch MCP server",
 			};
+		}
+	})
+	// OAuth flow endpoints
+	.post("/auth/connect", async ({ request }) => {
+		try {
+			const body = await request.json();
+			const { serverUrl, callbackUrl, userId } = body as { serverUrl: string; callbackUrl: string; userId: string };
+			
+			if (!serverUrl || !callbackUrl || !userId) {
+				return new Response(
+					JSON.stringify({ error: "Missing required fields" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } }
+				);
+			}
+			
+			// Generate session ID and state
+			const sessionId = generateSessionId();
+			const state = generateState();
+			
+			// Store session
+			oauthSessions.set(sessionId, {
+				sessionId,
+				serverUrl,
+				userId,
+				state,
+				createdAt: Date.now(),
+			});
+			
+			// Try to get OAuth metadata from the server
+			try {
+				const serverResponse = await fetch(`${serverUrl}/.well-known/mcp`);
+				if (serverResponse.ok) {
+					const metadata = await serverResponse.json();
+					// If server has OAuth metadata, initiate OAuth flow
+					if (metadata.oauth) {
+						const authUrl = new URL(metadata.oauth.authorizationUrl);
+						authUrl.searchParams.set("client_id", metadata.oauth.clientId || "");
+						authUrl.searchParams.set("redirect_uri", callbackUrl);
+						authUrl.searchParams.set("state", state);
+						authUrl.searchParams.set("response_type", "code");
+						
+						return new Response(
+							JSON.stringify({
+								sessionId,
+								authUrl: authUrl.toString(),
+								state,
+							}),
+							{ headers: { "Content-Type": "application/json" } }
+						);
+					}
+				}
+			} catch (error) {
+				console.warn("Could not fetch server OAuth metadata:", error);
+			}
+			
+			// If no OAuth metadata, return session for manual setup
+			return new Response(
+				JSON.stringify({
+					sessionId,
+					requiresOAuth: false,
+				}),
+				{ headers: { "Content-Type": "application/json" } }
+			);
+		} catch (error) {
+			console.error("OAuth connect error:", error);
+			return new Response(
+				JSON.stringify({ error: "Failed to initiate OAuth flow" }),
+				{ status: 500, headers: { "Content-Type": "application/json" } }
+			);
+		}
+	})
+	.get("/auth/callback", async ({ query }) => {
+		try {
+			const { code, state, sessionId } = query as { code?: string; state?: string; sessionId?: string };
+			
+			if (!sessionId || !code || !state) {
+				return new Response(
+					JSON.stringify({ error: "Missing required parameters" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } }
+				);
+			}
+			
+			const session = oauthSessions.get(sessionId);
+			if (!session) {
+				return new Response(
+					JSON.stringify({ error: "Invalid session" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } }
+				);
+			}
+			
+			// Verify state
+			if (session.state !== state) {
+				return new Response(
+					JSON.stringify({ error: "Invalid state" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } }
+				);
+			}
+			
+			// Get OAuth metadata to exchange code for token
+			try {
+				const serverResponse = await fetch(`${session.serverUrl}/.well-known/mcp`);
+				if (serverResponse.ok) {
+					const metadata = await serverResponse.json();
+					if (metadata.oauth?.tokenUrl) {
+						// Exchange code for token
+						const tokenResponse = await fetch(metadata.oauth.tokenUrl, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/x-www-form-urlencoded",
+							},
+							body: new URLSearchParams({
+								code,
+								grant_type: "authorization_code",
+								redirect_uri: metadata.oauth.redirectUri || "",
+								client_id: metadata.oauth.clientId || "",
+							}),
+						});
+						
+						if (tokenResponse.ok) {
+							const tokens = await tokenResponse.json();
+							oauthSessions.delete(sessionId);
+							
+							return new Response(
+								JSON.stringify({
+									success: true,
+									sessionId,
+									tokens,
+								}),
+								{ headers: { "Content-Type": "application/json" } }
+							);
+						}
+					}
+				}
+			} catch (error) {
+				console.error("Token exchange error:", error);
+			}
+			
+			// If exchange fails, return the code for manual handling
+			oauthSessions.delete(sessionId);
+			return new Response(
+				JSON.stringify({
+					success: true,
+					sessionId,
+					code,
+					state,
+				}),
+				{ headers: { "Content-Type": "application/json" } }
+			);
+		} catch (error) {
+			console.error("OAuth callback error:", error);
+			return new Response(
+				JSON.stringify({ error: "Failed to process OAuth callback" }),
+				{ status: 500, headers: { "Content-Type": "application/json" } }
+			);
 		}
 	});
 

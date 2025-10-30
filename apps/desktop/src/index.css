@@ -10,7 +10,7 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-white dark:bg-black;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
@@ -53,7 +53,7 @@ body {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -130,6 +130,14 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Rounded corners for macOS window */
+  @supports (backdrop-filter: blur(1px)) {
+    html {
+      border-radius: 10px;
+      overflow: hidden;
+    }
   }
 }
 

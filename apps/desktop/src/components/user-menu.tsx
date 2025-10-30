@@ -11,11 +11,11 @@ import {
 	TooltipTrigger,
 	Button,
 	Skeleton,
-} from "@cortex/shared/components";
+} from "@cortex/ui/components";
 import { authClient } from "@/lib/auth-client";
 import { useRouter, Link } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun, Monitor, User } from "lucide-react";
 
 export default function UserMenu() {
 	const router = useRouter();
@@ -29,12 +29,12 @@ export default function UserMenu() {
 	};
 
 	if (isPending) {
-		return <Skeleton className="h-9 w-24" />;
+		return <Skeleton className="h-9 w-full" />;
 	}
 
 	if (!session) {
 		return (
-			<Button variant="outline" asChild>
+			<Button variant="outline" asChild className="w-full">
 				<Link to="/login">Sign In</Link>
 			</Button>
 		);
@@ -46,7 +46,10 @@ export default function UserMenu() {
 				<DropdownMenu>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
-							<Button variant="outline">{session.user.name}</Button>
+							<Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2">
+								<User className="h-4 w-4" />
+								<span className="truncate">{session.user.name}</span>
+							</Button>
 						</DropdownMenuTrigger>
 					</TooltipTrigger>
 					<DropdownMenuContent className="bg-card" align="end">

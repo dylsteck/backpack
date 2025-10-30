@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import AppCard from "@/components/app-card";
-import { Button } from "@cortex/shared/components";
+import { Button } from "@cortex/ui/components";
 
 const mockAppsData = [
 	{ name: "Notion", amount: "$2,450.50", iconColor: "#000000", iconText: "N" },

@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import z from "zod";
 import Loader from "./loader";
-import { Button, Input, Label } from "@cortex/shared/components";
+import { Button, Input, Label } from "@cortex/ui/components";
 import { useRouter } from "@tanstack/react-router";
 
 export default function SignUpForm({

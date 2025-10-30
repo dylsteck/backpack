@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "@cortex/shared/components";
+import { Card } from "@cortex/ui/components";
 
 const mockProjects = [
 	{ id: 1, name: "#emerald", tag: "emerald", image: "", period: "now" },

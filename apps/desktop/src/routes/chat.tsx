@@ -3,7 +3,7 @@ import { authClient } from "@/lib/auth-client";
 import { useChat } from "@ai-sdk/react";
 import ChatInterface from "@/components/chat-interface";
 import Loader from "@/components/loader";
-import { Badge } from "@cortex/shared/components";
+import { Badge } from "@cortex/ui/components";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/chat")({
@@ -16,25 +16,27 @@ function ChatPage() {
 		enabled: !!session?.user,
 	});
 
-	const { messages, isLoading, submit } = useChat({
-		url: `${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/chat`,
-		onRequest: async ({ headers }) => {
-			// Get the session token from auth client
+	const { messages, status, append } = useChat({
+		api: `${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/chat`,
+		fetch: async (input, init) => {
 			const sessionData = await authClient.getSession();
 			if (sessionData?.data?.session?.token) {
+				const headers = new Headers(init?.headers);
 				headers.set("Authorization", `Bearer ${sessionData.data.session.token}`);
+				return fetch(input, { ...init, headers });
 			}
+			return fetch(input, init);
 		},
 	});
 
+	const isLoading = status === "streaming";
+
 	// Custom send function
 	const handleSend = (message: string) => {
-		submit([
-			{
-				role: "user",
-				content: message,
-			},
-		]);
+		append({
+			role: "user",
+			content: message,
+		});
 	};
 
 	if (isPending) {

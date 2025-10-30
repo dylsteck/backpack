@@ -7,7 +7,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@cortex/shared/components";
+} from "@cortex/ui/components";
 
 export function ModeToggle() {
 	const { setTheme } = useTheme();

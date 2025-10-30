@@ -8,6 +8,13 @@
       "when": 1761537367988,
       "tag": "0000_deep_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1761788267887,
+      "tag": "0001_heavy_makkari",
+      "breakpoints": true
     }
   ]
 }
