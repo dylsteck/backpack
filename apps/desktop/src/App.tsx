@@ -1,12 +1,9 @@
 import React, { useEffect, Suspense } from "react";
 import { syncThemeWithLocal } from "./helpers/theme_helpers";
-import { useTranslation } from "react-i18next";
-import { updateAppLanguage } from "./helpers/language_helpers";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./utils/routes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "./lib/trpc";
-import "./localization/i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,12 +15,9 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { i18n } = useTranslation();
-
   useEffect(() => {
     syncThemeWithLocal();
-    updateAppLanguage(i18n);
-  }, [i18n]);
+  }, []);
 
   return <RouterProvider router={router} />;
 }

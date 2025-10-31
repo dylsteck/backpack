@@ -1,13 +1,10 @@
 import * as React from "react"
 import {
   Home,
-  FileText,
-  Settings2,
-  Github,
-  BookOpen,
   Grid3x3,
 } from "lucide-react"
 import { Link } from "@tanstack/react-router"
+import iconImage from "@/assets/images/icon.png"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -21,7 +18,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import ToggleTheme from "@/components/ToggleTheme"
-import LangToggle from "@/components/LangToggle"
 
 const data = {
   navMain: [
@@ -36,39 +32,8 @@ const data = {
       url: "/apps",
       icon: Grid3x3,
     },
-    {
-      title: "Second Page",
-      url: "/second",
-      icon: FileText,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "Theme",
-          url: "#theme",
-        },
-        {
-          title: "Language",
-          url: "#language",
-        },
-      ],
-    },
   ],
-  navSecondary: [
-    {
-      title: "Documentation",
-      url: "https://github.com/Araxeus/electron-shadcn",
-      icon: BookOpen,
-    },
-    {
-      title: "GitHub",
-      url: "https://github.com/Araxeus/electron-shadcn",
-      icon: Github,
-    },
-  ],
+  navSecondary: [],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -88,12 +53,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Home className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <img src={iconImage} alt="App icon" className="size-8 rounded-lg" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Electron App</span>
-                  <span className="truncate text-xs">with shadcn/ui</span>
+                  <span className="truncate font-semibold">Cortex</span>
+                  <span className="truncate text-xs">Your whole life in one app</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -109,10 +74,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Theme</span>
             <ToggleTheme />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Language</span>
-            <LangToggle />
           </div>
         </div>
       </SidebarFooter>

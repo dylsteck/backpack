@@ -4,6 +4,22 @@
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
+// Image imports
+declare module "*.png" {
+  const value: string;
+  export default value;
+}
+
+declare module "*.jpg" {
+  const value: string;
+  export default value;
+}
+
+declare module "*.svg" {
+  const value: string;
+  export default value;
+}
+
 // Preload types
 interface ThemeModeContext {
   toggle: () => Promise<boolean>;
