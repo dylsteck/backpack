@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
-import { db, mcpServerRegistry } from "@cortex/db";
+import { db } from "@cortex/db";
+import { mcpServerRegistry } from "@cortex/db/schema/mcp";
 import { eq } from "drizzle-orm";
 
 const CURSOR_REPO_BASE = "https://raw.githubusercontent.com/cursor/mcp-servers/main";
@@ -32,7 +33,7 @@ async function syncCursorServers() {
 		if (!indexResponse.ok) {
 			throw new Error(`Failed to fetch index.json: ${indexResponse.statusText}`);
 		}
-		const serverIds: string[] = await indexResponse.json();
+		const serverIds = (await indexResponse.json()) as string[];
 		console.log(`📋 Found ${serverIds.length} servers to sync`);
 
 		// Fetch and process each server
@@ -47,7 +48,7 @@ async function syncCursorServers() {
 					continue;
 				}
 
-				const serverJson: CursorServerJson = await serverResponse.json();
+				const serverJson = (await serverResponse.json()) as CursorServerJson;
 				const iconUrl = `${CURSOR_REPO_BASE}/servers/${serverId}/icon.svg`;
 
 				const server = {

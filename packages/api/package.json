@@ -21,7 +21,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@cortex/auth": "workspace:*",
     "@cortex/db": "workspace:*",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",

@@ -29,12 +29,12 @@ export default function BaseLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="relative flex min-h-screen w-full">
+      <div className="relative flex h-screen w-full">
         <SidebarIcon />
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="flex flex-col overflow-hidden">
           <DragWindowRegion title="electron-shadcn" />
-          <div className="h-[44px]" /> {/* Spacer for top bar */}
+          <div className="h-[44px] flex-shrink-0" />
           <main className="flex-1 overflow-auto p-4">{children}</main>
         </SidebarInset>
       </div>

@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
-import { db, mcpServerRegistry } from "@cortex/db";
-import { eq } from "drizzle-orm";
+import { db } from "@cortex/db";
+import { mcpServerRegistry } from "@cortex/db/schema/mcp";
+import { eq, sql } from "drizzle-orm";
 
 // OAuth session store (in-memory, for production use Redis or database)
 interface OAuthSession {
@@ -59,11 +60,11 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 		const { id } = params;
 		
 		try {
-			const [server] = await db
+			const servers = await db
 				.select()
 				.from(mcpServerRegistry)
-				.where(eq(mcpServerRegistry.id, id))
-				.limit(1);
+				.where(sql`${mcpServerRegistry.id} = ${id}` as any);
+			const server = servers[0];
 			
 			if (!server) {
 				set.status = 404;
@@ -123,7 +124,14 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 			try {
 				const serverResponse = await fetch(`${serverUrl}/.well-known/mcp`);
 				if (serverResponse.ok) {
-					const metadata = await serverResponse.json();
+					const metadata = (await serverResponse.json()) as {
+						oauth?: {
+							authorizationUrl: string;
+							clientId?: string;
+							tokenUrl?: string;
+							redirectUri?: string;
+						};
+					};
 					// If server has OAuth metadata, initiate OAuth flow
 					if (metadata.oauth) {
 						const authUrl = new URL(metadata.oauth.authorizationUrl);
@@ -193,7 +201,13 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 			try {
 				const serverResponse = await fetch(`${session.serverUrl}/.well-known/mcp`);
 				if (serverResponse.ok) {
-					const metadata = await serverResponse.json();
+					const metadata = (await serverResponse.json()) as {
+						oauth?: {
+							tokenUrl?: string;
+							redirectUri?: string;
+							clientId?: string;
+						};
+					};
 					if (metadata.oauth?.tokenUrl) {
 						// Exchange code for token
 						const tokenResponse = await fetch(metadata.oauth.tokenUrl, {

@@ -15,6 +15,13 @@
       "when": 1761788267887,
       "tag": "0001_heavy_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761884044641,
+      "tag": "0002_white_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

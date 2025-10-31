@@ -1,48 +1,27 @@
 import { Elysia } from "elysia";
-import { streamText } from "ai";
+import { streamText, type CoreMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { experimental_createMCPClient } from "@ai-sdk/mcp";
-import { auth } from "@cortex/auth";
 import { db } from "@cortex/db";
 import { mcpConnection } from "@cortex/db";
-import { eq } from "drizzle-orm";
 
 export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 	.post("/", async ({ request }) => {
 		const clients: Array<{ close: () => Promise<void> }> = [];
 
 		try {
-			// Get session from auth header
-			const authHeader = request.headers.get("authorization");
-			if (!authHeader) {
-				return new Response("Unauthorized", { status: 401 });
-			}
-
-			// Verify session
-			const sessionToken = authHeader.replace("Bearer ", "");
-			const session = await auth.api.getSession({
-				headers: request.headers,
-			});
-
-			if (!session?.user) {
-				return new Response("Unauthorized", { status: 401 });
-			}
-
-			const userId = session.user.id;
-
 			// Parse request body
-			const body = await request.json();
+			const body = (await request.json()) as { messages?: CoreMessage[] };
 			const { messages } = body;
 
 			if (!messages || !Array.isArray(messages)) {
 				return new Response("Invalid request", { status: 400 });
 			}
 
-			// Fetch user's MCP connections
+			// Fetch all MCP connections
 			const connections = await db
 				.select()
-				.from(mcpConnection)
-				.where(eq(mcpConnection.userId, userId));
+				.from(mcpConnection);
 
 			// Create MCP clients and collect tools
 			const allTools: Record<string, any> = {};
@@ -119,7 +98,7 @@ export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 				tools: allTools,
 			});
 
-			return result.toDataStreamResponse();
+			return result.toTextStreamResponse();
 		} catch (error) {
 			console.error("Chat error:", error);
 			return new Response(

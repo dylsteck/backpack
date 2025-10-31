@@ -1,13 +1,23 @@
-import React, { useEffect } from "react";
-import { createRoot } from "react-dom/client";
+import React, { useEffect, Suspense } from "react";
 import { syncThemeWithLocal } from "./helpers/theme_helpers";
 import { useTranslation } from "react-i18next";
 import { updateAppLanguage } from "./helpers/language_helpers";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./utils/routes";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc, trpcClient } from "./lib/trpc";
 import "./localization/i18n";
 
-export default function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function AppContent() {
   const { i18n } = useTranslation();
 
   useEffect(() => {
@@ -18,9 +28,14 @@ export default function App() {
   return <RouterProvider router={router} />;
 }
 
-const root = createRoot(document.getElementById("app")!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+          <AppContent />
+        </Suspense>
+      </trpc.Provider>
+    </QueryClientProvider>
+  );
+}

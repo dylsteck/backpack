@@ -1,7 +1,7 @@
-import { protectedProcedure, publicProcedure, router } from "../index";
+import { publicProcedure, router } from "../index";
 import { z } from "zod";
 import { db, mcpConnection, mcpServerRegistry } from "@cortex/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 const transportConfigSchema = z.object({
 	command: z.string().optional(),
@@ -35,18 +35,17 @@ export const mcpRouter = router({
 		}
 	}),
 
-	// Get user's connected MCP servers
-	getUserConnections: protectedProcedure.query(async ({ ctx }) => {
+	// Get all MCP connections
+	getUserConnections: publicProcedure.query(async () => {
 		const connections = await db
 			.select()
-			.from(mcpConnection)
-			.where(eq(mcpConnection.userId, ctx.session.user.id));
+			.from(mcpConnection);
 
 		return connections;
 	}),
 
 	// Add a new MCP connection
-	addConnection: protectedProcedure
+	addConnection: publicProcedure
 		.input(
 			z.object({
 				serverId: z.string(),
@@ -56,7 +55,7 @@ export const mcpRouter = router({
 				transportConfig: transportConfigSchema,
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			const id = crypto.randomUUID();
 			const now = new Date();
 
@@ -64,7 +63,6 @@ export const mcpRouter = router({
 				.insert(mcpConnection)
 				.values({
 					id,
-					userId: ctx.session.user.id,
 					serverId: input.serverId,
 					serverName: input.serverName,
 					vendor: input.vendor || null,
@@ -80,7 +78,7 @@ export const mcpRouter = router({
 		}),
 
 	// Update an existing MCP connection
-	updateConnection: protectedProcedure
+	updateConnection: publicProcedure
 		.input(
 			z.object({
 				id: z.string(),
@@ -88,7 +86,7 @@ export const mcpRouter = router({
 				status: z.enum(["connected", "disconnected", "error"]).optional(),
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			const now = new Date();
 
 			const [connection] = await db
@@ -98,29 +96,19 @@ export const mcpRouter = router({
 					status: input.status,
 					updatedAt: now,
 				})
-				.where(
-					and(
-						eq(mcpConnection.id, input.id),
-						eq(mcpConnection.userId, ctx.session.user.id)
-					)
-				)
+				.where(eq(mcpConnection.id, input.id))
 				.returning();
 
 			return connection;
 		}),
 
 	// Remove an MCP connection
-	removeConnection: protectedProcedure
+	removeConnection: publicProcedure
 		.input(z.object({ id: z.string() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			await db
 				.delete(mcpConnection)
-				.where(
-					and(
-						eq(mcpConnection.id, input.id),
-						eq(mcpConnection.userId, ctx.session.user.id)
-					)
-				);
+				.where(eq(mcpConnection.id, input.id));
 
 			return { success: true };
 		}),

@@ -1,5 +1,4 @@
 import { pgTable, text, timestamp, json, pgEnum, boolean } from "drizzle-orm/pg-core";
-import { user } from "./auth";
 
 export const transportTypeEnum = pgEnum("transport_type", ["stdio", "http", "https", "sse", "streamable-http"]);
 export const connectionStatusEnum = pgEnum("connection_status", ["connected", "disconnected", "error"]);
@@ -24,9 +23,6 @@ export const mcpServerRegistry = pgTable("mcp_server_registry", {
 
 export const mcpConnection = pgTable("mcp_connection", {
 	id: text("id").primaryKey(),
-	userId: text("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
 	serverId: text("server_id").notNull(),
 	serverName: text("server_name").notNull(),
 	vendor: text("vendor"),

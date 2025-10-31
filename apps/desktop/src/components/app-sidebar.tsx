@@ -5,6 +5,7 @@ import {
   Settings2,
   Github,
   BookOpen,
+  Grid3x3,
 } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 
@@ -29,6 +30,11 @@ const data = {
       url: "/",
       icon: Home,
       isActive: true,
+    },
+    {
+      title: "Apps",
+      url: "/apps",
+      icon: Grid3x3,
     },
     {
       title: "Second Page",

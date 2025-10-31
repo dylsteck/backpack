@@ -7,7 +7,6 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY /apps/server/package.json ./apps/server/package.json
 COPY /packages/api/package.json ./packages/api/package.json
-COPY /packages/auth/package.json ./packages/auth/package.json
 COPY /packages/db/package.json ./packages/db/package.json
 
 # Install dependencies with Bun
@@ -16,7 +15,6 @@ RUN bun install
 # Copy source code
 COPY /apps/server ./apps/server
 COPY /packages/api ./packages/api
-COPY /packages/auth ./packages/auth
 COPY /packages/db ./packages/db
 COPY tsconfig.base.json ./
 
