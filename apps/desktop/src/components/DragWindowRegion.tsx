@@ -14,12 +14,12 @@ export default function DragWindowRegion({ title }: DragWindowRegionProps) {
   return (
     <div className="flex w-screen items-stretch justify-between">
       <div className="draglayer w-full">
-        {title && !isMacOS() && (
-          <div className="flex flex-1 p-2 text-xs whitespace-nowrap text-gray-400 select-none">
+        {title && (
+          <div className="flex flex-1 items-center pl-4 text-base font-normal text-foreground select-none">
             {title}
           </div>
         )}
-        {isMacOS() && (
+        {!title && isMacOS() && (
           <div className="flex flex-1 p-2">
             {/* Maintain the same height but do not display content */}
           </div>

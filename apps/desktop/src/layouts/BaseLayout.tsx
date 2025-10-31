@@ -1,8 +1,13 @@
 import React from "react";
+import { useLocation } from "@tanstack/react-router";
 import DragWindowRegion from "@/components/DragWindowRegion";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { getRouteTitle } from "@/utils/route-titles";
+
+const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH_ICON = "3rem";
 
 function SidebarIcon() {
   const { state } = useSidebar();
@@ -14,10 +19,32 @@ function SidebarIcon() {
 
   return (
     <div 
-      className="fixed top-[5.5px] z-50 flex items-center transition-[left] duration-200 ease-linear"
+      className="fixed top-0 h-[44px] z-50 flex items-center transition-[left] duration-200 ease-linear"
       style={{ left: leftPosition }}
     >
       <SidebarTrigger className="hover:bg-sidebar-accent" />
+    </div>
+  );
+}
+
+function TopbarTitle() {
+  const { state } = useSidebar();
+  const location = useLocation();
+  const pageTitle = getRouteTitle(location.pathname);
+  
+  // Calculate position to be right of sidebar icon
+  // Sidebar icon is ~32px wide (h-8 w-8), positioned at leftPosition
+  // We add the icon width + padding to position title to the right
+  const leftPosition = state === "collapsed"
+    ? "calc(76px + var(--sidebar-width-icon) + 2rem)"
+    : "calc(var(--sidebar-width) + 0.5rem)";
+
+  return (
+    <div 
+      className="fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none"
+      style={{ left: leftPosition }}
+    >
+      {pageTitle}
     </div>
   );
 }
@@ -31,9 +58,10 @@ export default function BaseLayout({
     <SidebarProvider>
       <div className="relative flex h-screen w-full">
         <SidebarIcon />
+        <TopbarTitle />
         <AppSidebar />
         <SidebarInset className="flex flex-col overflow-hidden">
-          <DragWindowRegion title="electron-shadcn" />
+          <DragWindowRegion />
           <div className="h-[44px] flex-shrink-0" />
           <main className="flex-1 overflow-auto p-4">{children}</main>
         </SidebarInset>
