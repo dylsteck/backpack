@@ -6,12 +6,11 @@ function AppsPage() {
   const { data, isLoading, error } = (trpc as any).mcp.getAvailableServers.useQuery();
 
   return (
-    <div className="flex flex-col p-6">
+    <div className="flex flex-col h-full w-full -m-4">
       <ViewToggle
         data={data?.servers || []}
         isLoading={isLoading}
         error={error}
-        title="My apps"
         getIconUrl={(server) => server.iconUrl}
         getName={(server) => server.name}
         getFields={(server) => ({
@@ -22,7 +21,6 @@ function AppsPage() {
           oauth: server.oauth,
           iconUrl: server.iconUrl,
           config: server.config,
-          domains: server.domains,
         })}
         emptyMessage="No apps available"
       />

@@ -7,8 +7,7 @@
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.js",
-    "sync-cursor-servers": "bun run scripts/sync-cursor-servers.ts"
+    "start": "bun run dist/index.js"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^0.0.1",

@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, mcpConnection, mcpServerRegistry } from "@cortex/db";
+import { db, connections, apps } from "@cortex/db";
 import { eq } from "drizzle-orm";
 
 const transportConfigSchema = z.object({
@@ -15,7 +15,7 @@ export const mcpRouter = router({
 	// Get all available servers from database
 	getAvailableServers: publicProcedure.query(async () => {
 		try {
-			const servers = await db.select().from(mcpServerRegistry);
+			const servers = await db.select().from(apps);
 			
 			return {
 				servers: servers.map((server) => ({
@@ -26,7 +26,6 @@ export const mcpRouter = router({
 					oauth: server.oauth,
 					iconUrl: server.iconUrl,
 					config: server.config,
-					domains: server.domains,
 				})),
 			};
 		} catch (error) {
@@ -37,11 +36,11 @@ export const mcpRouter = router({
 
 	// Get all MCP connections
 	getUserConnections: publicProcedure.query(async () => {
-		const connections = await db
+		const connectionList = await db
 			.select()
-			.from(mcpConnection);
+			.from(connections);
 
-		return connections;
+		return connectionList;
 	}),
 
 	// Add a new MCP connection
@@ -60,7 +59,7 @@ export const mcpRouter = router({
 			const now = new Date();
 
 			const [connection] = await db
-				.insert(mcpConnection)
+				.insert(connections)
 				.values({
 					id,
 					serverId: input.serverId,
@@ -90,13 +89,13 @@ export const mcpRouter = router({
 			const now = new Date();
 
 			const [connection] = await db
-				.update(mcpConnection)
+				.update(connections)
 				.set({
 					transportConfig: input.transportConfig,
 					status: input.status,
 					updatedAt: now,
 				})
-				.where(eq(mcpConnection.id, input.id))
+				.where(eq(connections.id, input.id))
 				.returning();
 
 			return connection;
@@ -107,8 +106,8 @@ export const mcpRouter = router({
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
 			await db
-				.delete(mcpConnection)
-				.where(eq(mcpConnection.id, input.id));
+				.delete(connections)
+				.where(eq(connections.id, input.id));
 
 			return { success: true };
 		}),

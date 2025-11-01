@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@cortex/db";
-import { mcpServerRegistry } from "@cortex/db/schema/mcp";
+import { apps } from "@cortex/db/schema/mcp";
 import { eq, sql } from "drizzle-orm";
 
 // OAuth session store (in-memory, for production use Redis or database)
@@ -28,7 +28,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 		console.log("📡 Fetching MCP servers from database...");
 		
 		try {
-			const servers = await db.select().from(mcpServerRegistry);
+			const servers = await db.select().from(apps);
 			
 			console.log(`✅ Found ${servers.length} servers in database`);
 			
@@ -44,7 +44,6 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 					oauth: server.oauth,
 					iconUrl: server.iconUrl,
 					config: server.config,
-					domains: server.domains,
 				})),
 			};
 		} catch (error) {
@@ -62,8 +61,8 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 		try {
 			const servers = await db
 				.select()
-				.from(mcpServerRegistry)
-				.where(sql`${mcpServerRegistry.id} = ${id}` as any);
+				.from(apps)
+				.where(sql`${apps.id} = ${id}` as any);
 			const server = servers[0];
 			
 			if (!server) {
@@ -84,7 +83,6 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 				oauth: server.oauth,
 				iconUrl: server.iconUrl,
 				config: server.config,
-				domains: server.domains,
 			};
 		} catch (error) {
 			console.error(`Failed to fetch MCP server ${id}:`, error);

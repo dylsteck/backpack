@@ -3,7 +3,7 @@ import { pgTable, text, timestamp, json, pgEnum, boolean } from "drizzle-orm/pg-
 export const transportTypeEnum = pgEnum("transport_type", ["stdio", "http", "https", "sse", "streamable-http"]);
 export const connectionStatusEnum = pgEnum("connection_status", ["connected", "disconnected", "error"]);
 
-export const mcpServerRegistry = pgTable("mcp_server_registry", {
+export const apps = pgTable("apps", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
 	description: text("description").notNull(),
@@ -17,11 +17,12 @@ export const mcpServerRegistry = pgTable("mcp_server_registry", {
 		env?: Record<string, string>;
 		headers?: Record<string, string>;
 	}>(),
-	domains: json("domains").$type<string[]>(),
-	lastUpdated: timestamp("last_updated").notNull(),
+	connectionType: text("connection_type").notNull().default("mcp"),
+	createdAt: timestamp("created_at").notNull(),
+	updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const mcpConnection = pgTable("mcp_connection", {
+export const connections = pgTable("connections", {
 	id: text("id").primaryKey(),
 	serverId: text("server_id").notNull(),
 	serverName: text("server_name").notNull(),

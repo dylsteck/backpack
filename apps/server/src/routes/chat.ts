@@ -3,7 +3,7 @@ import { streamText, type CoreMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { experimental_createMCPClient } from "@ai-sdk/mcp";
 import { db } from "@cortex/db";
-import { mcpConnection } from "@cortex/db";
+import { connections } from "@cortex/db";
 
 export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 	.post("/", async ({ request }) => {
@@ -19,14 +19,14 @@ export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 			}
 
 			// Fetch all MCP connections
-			const connections = await db
+			const connectionList = await db
 				.select()
-				.from(mcpConnection);
+				.from(connections);
 
 			// Create MCP clients and collect tools
 			const allTools: Record<string, any> = {};
 
-			for (const connection of connections) {
+			for (const connection of connectionList) {
 				if (connection.status !== "connected") continue;
 
 				try {

@@ -128,62 +128,18 @@ export function ViewToggle({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
-        Error: {error.message}
+      <div className="flex flex-col h-full w-full items-center justify-center px-6">
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+          Error: {error.message}
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {viewMode === "gallery" ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[60px]">Icon</TableHead>
-                  {tableColumns.slice(0, 5).map((col) => (
-                    <TableHead key={col}>{col}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[1, 2, 3].map((i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-8 w-8 rounded" />
-                    </TableCell>
-                    {tableColumns.slice(0, 5).map((col) => (
-                      <TableCell key={col}>
-                        <Skeleton className="h-4 w-24" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col space-y-4">
-      {(title || data.length > 0) && (
-        <div className="flex items-center justify-between">
-          {title && (
-            <h2 className="text-2xl font-semibold">
-              {title} {data.length > 0 && `(${data.length})`}
-            </h2>
-          )}
+      <div className="flex flex-col h-full w-full">
+        <div className="flex items-center justify-end mb-6 px-6 pt-6">
           <ToggleGroup
             type="single"
             value={viewMode}
@@ -202,14 +158,81 @@ export function ViewToggle({
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-      )}
+        <div className="flex-1 overflow-auto px-6 pb-6">
+          {viewMode === "gallery" ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">Icon</TableHead>
+                    {tableColumns.slice(0, 5).map((col) => (
+                      <TableHead key={col}>{col}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[1, 2, 3].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </TableCell>
+                      {tableColumns.slice(0, 5).map((col) => (
+                        <TableCell key={col}>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="flex flex-col h-full w-full">
+      <div className="flex items-center justify-between mb-6 px-6 pt-6">
+        {title && (
+          <h2 className="text-2xl font-semibold">
+            {title} {data.length > 0 && `(${data.length})`}
+          </h2>
+        )}
+        {!title && <div />}
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value) setViewMode(value as ViewMode);
+          }}
+          variant="outline"
+        >
+          <ToggleGroupItem value="gallery" aria-label="Gallery view">
+            <LayoutGrid className="size-4" />
+            <span className="ml-2">Gallery</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="table" aria-label="Table view">
+            <TableIcon className="size-4" />
+            <span className="ml-2">Table</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      <div className="flex-1 overflow-auto px-6 pb-6">
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center h-full">
           <p className="text-muted-foreground">{emptyMessage}</p>
         </div>
       ) : viewMode === "gallery" ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {data.map((item, index) => {
             if (renderGalleryCard) {
               return <React.Fragment key={index}>{renderGalleryCard(item)}</React.Fragment>;
@@ -222,17 +245,17 @@ export function ViewToggle({
             return (
               <div
                 key={itemId}
-                className="group relative flex flex-col rounded-lg border bg-card p-4 transition-all hover:shadow-md hover:border-primary/50"
+                className="group relative flex flex-col rounded-lg border bg-card p-5 transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer"
               >
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-muted shrink-0">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-muted shrink-0 mx-auto">
                   <ImageWithFallback
                     src={iconUrl}
                     alt={name}
-                    className="h-10 w-10 rounded-lg object-contain"
+                    className="h-14 w-14 rounded-lg object-contain"
                     fallbackText={name}
                   />
                 </div>
-                <h3 className="text-sm font-semibold">{name}</h3>
+                <h3 className="text-sm font-semibold text-center">{name}</h3>
               </div>
             );
           })}
@@ -283,6 +306,7 @@ export function ViewToggle({
           </Table>
         </div>
       )}
+      </div>
     </div>
   );
 }
