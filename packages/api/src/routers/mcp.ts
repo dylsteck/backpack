@@ -26,6 +26,7 @@ export const mcpRouter = router({
 					oauth: server.oauth,
 					iconUrl: server.iconUrl,
 					config: server.config,
+					connectionType: server.connectionType,
 				})),
 			};
 		} catch (error) {

@@ -60,10 +60,10 @@ export default function BaseLayout({
         <SidebarIcon />
         <TopbarTitle />
         <AppSidebar />
-        <SidebarInset className="flex flex-col overflow-hidden">
+        <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
           <DragWindowRegion />
           <div className="h-[44px] flex-shrink-0" />
-          <main className="flex-1 overflow-auto p-4">{children}</main>
+          <main className="flex-1 p-4">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

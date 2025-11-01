@@ -44,6 +44,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 					oauth: server.oauth,
 					iconUrl: server.iconUrl,
 					config: server.config,
+					connectionType: server.connectionType,
 				})),
 			};
 		} catch (error) {
@@ -83,6 +84,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 				oauth: server.oauth,
 				iconUrl: server.iconUrl,
 				config: server.config,
+				connectionType: server.connectionType,
 			};
 		} catch (error) {
 			console.error(`Failed to fetch MCP server ${id}:`, error);

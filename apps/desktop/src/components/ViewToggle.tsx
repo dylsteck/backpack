@@ -59,6 +59,7 @@ interface ViewToggleProps {
   error?: Error | null;
   emptyMessage?: string;
   title?: string;
+  onAppClick?: (item: any) => void;
 }
 
 export function ViewToggle({
@@ -72,6 +73,7 @@ export function ViewToggle({
   error = null,
   emptyMessage = "No items available",
   title,
+  onAppClick,
 }: ViewToggleProps) {
   const [viewMode, setViewMode] = React.useState<ViewMode>("gallery");
 
@@ -128,7 +130,7 @@ export function ViewToggle({
 
   if (error) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center px-6">
+      <div className="flex flex-col w-full items-center justify-center px-6 py-12">
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
           Error: {error.message}
         </div>
@@ -138,8 +140,8 @@ export function ViewToggle({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full w-full">
-        <div className="flex items-center justify-end mb-6 px-6 pt-6">
+      <div className="flex flex-col w-full">
+        <div className="flex items-center justify-end px-4 pt-1 pb-2 shrink-0 sticky top-0 z-10 bg-background border-b border-border/40">
           <ToggleGroup
             type="single"
             value={viewMode}
@@ -147,20 +149,22 @@ export function ViewToggle({
               if (value) setViewMode(value as ViewMode);
             }}
             variant="outline"
+            size="sm"
+            className="h-8"
           >
-            <ToggleGroupItem value="gallery" aria-label="Gallery view">
-              <LayoutGrid className="size-4" />
-              <span className="ml-2">Gallery</span>
+            <ToggleGroupItem value="gallery" aria-label="Gallery view" className="px-2.5">
+              <LayoutGrid className="size-3.5" />
+              <span className="ml-1.5 text-xs">Gallery</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="table" aria-label="Table view">
-              <TableIcon className="size-4" />
-              <span className="ml-2">Table</span>
+            <ToggleGroupItem value="table" aria-label="Table view" className="px-2.5">
+              <TableIcon className="size-3.5" />
+              <span className="ml-1.5 text-xs">Table</span>
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-        <div className="flex-1 overflow-auto px-6 pb-6">
+        <div className="px-4 pb-4">
           {viewMode === "gallery" ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-32 w-full" />
               ))}
@@ -199,10 +203,10 @@ export function ViewToggle({
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="flex items-center justify-between mb-6 px-6 pt-6">
+    <div className="flex flex-col w-full">
+      <div className="flex items-center justify-between px-4 pt-1 pb-2 shrink-0 sticky top-0 z-10 bg-background border-b border-border/40">
         {title && (
-          <h2 className="text-2xl font-semibold">
+          <h2 className="text-xl font-semibold">
             {title} {data.length > 0 && `(${data.length})`}
           </h2>
         )}
@@ -214,25 +218,27 @@ export function ViewToggle({
             if (value) setViewMode(value as ViewMode);
           }}
           variant="outline"
+          size="sm"
+          className="h-8"
         >
-          <ToggleGroupItem value="gallery" aria-label="Gallery view">
-            <LayoutGrid className="size-4" />
-            <span className="ml-2">Gallery</span>
+          <ToggleGroupItem value="gallery" aria-label="Gallery view" className="px-2.5">
+            <LayoutGrid className="size-3.5" />
+            <span className="ml-1.5 text-xs">Gallery</span>
           </ToggleGroupItem>
-          <ToggleGroupItem value="table" aria-label="Table view">
-            <TableIcon className="size-4" />
-            <span className="ml-2">Table</span>
+          <ToggleGroupItem value="table" aria-label="Table view" className="px-2.5">
+            <TableIcon className="size-3.5" />
+            <span className="ml-1.5 text-xs">Table</span>
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 pb-6">
+      <div className="px-4 pb-4">
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center h-full">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center min-h-[200px]">
           <p className="text-muted-foreground">{emptyMessage}</p>
         </div>
       ) : viewMode === "gallery" ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {data.map((item, index) => {
             if (renderGalleryCard) {
               return <React.Fragment key={index}>{renderGalleryCard(item)}</React.Fragment>;
@@ -246,6 +252,7 @@ export function ViewToggle({
               <div
                 key={itemId}
                 className="group relative flex flex-col rounded-lg border bg-card p-5 transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer"
+                onClick={() => onAppClick?.(item)}
               >
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-muted shrink-0 mx-auto">
                   <ImageWithFallback
@@ -286,7 +293,11 @@ export function ViewToggle({
                 const itemId = item.id ?? index;
 
                 return (
-                  <TableRow key={itemId}>
+                  <TableRow 
+                    key={itemId}
+                    className={onAppClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                    onClick={() => onAppClick?.(item)}
+                  >
                     <TableCell>
                       <ImageWithFallback
                         src={iconUrl}

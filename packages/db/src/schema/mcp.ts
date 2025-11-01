@@ -3,20 +3,30 @@ import { pgTable, text, timestamp, json, pgEnum, boolean } from "drizzle-orm/pg-
 export const transportTypeEnum = pgEnum("transport_type", ["stdio", "http", "https", "sse", "streamable-http"]);
 export const connectionStatusEnum = pgEnum("connection_status", ["connected", "disconnected", "error"]);
 
+/**
+ * Comprehensive type for app config field values.
+ * Covers all observed patterns:
+ * - MCP URL-based: { url: string; headers?: Record<string, string> }
+ * - MCP Command-based: { command: string; args: string[]; env?: Record<string, string> }
+ * - API: { url: string; oas?: string }
+ */
+export type AppConfig = {
+	url?: string;
+	command?: string;
+	args?: string[];
+	env?: Record<string, string>;
+	headers?: Record<string, string>;
+	oas?: string;
+};
+
 export const apps = pgTable("apps", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
 	description: text("description").notNull(),
-	transport: json("transport").notNull().$type<string[]>(),
+	transport: json("transport").$type<string[]>(),
 	oauth: boolean("oauth").notNull().default(false),
 	iconUrl: text("icon_url").notNull(),
-	config: json("config").notNull().$type<{
-		url?: string;
-		command?: string;
-		args?: string[];
-		env?: Record<string, string>;
-		headers?: Record<string, string>;
-	}>(),
+	config: json("config").notNull().$type<AppConfig>(),
 	connectionType: text("connection_type").notNull().default("mcp"),
 	createdAt: timestamp("created_at").notNull(),
 	updatedAt: timestamp("updated_at").notNull(),
