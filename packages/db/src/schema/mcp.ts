@@ -49,6 +49,7 @@ export const connections = pgTable("connections", {
 	secretUri: text("secret_uri"),
 	credentialStorage: text("credential_storage").notNull().default("onepassword"),
 	encryptedCredentials: text("encrypted_credentials"), // Base64 encoded credentials for database storage
+	connectionMetadata: json("connection_metadata").$type<Record<string, any>>(),
 	createdAt: timestamp("created_at").notNull(),
 	updatedAt: timestamp("updated_at").notNull(),
 });

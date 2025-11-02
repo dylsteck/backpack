@@ -48,10 +48,10 @@ function TopbarTitle() {
       {/* Title text positioned correctly */}
       <div 
         className="fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none pointer-events-none"
-        style={{ left: leftPosition }}
-      >
+      style={{ left: leftPosition }}
+    >
         <span className="pointer-events-auto">{pageTitle}</span>
-      </div>
+    </div>
     </>
   );
 }

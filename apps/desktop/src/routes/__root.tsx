@@ -1,5 +1,6 @@
 import BaseLayout from "@/layouts/BaseLayout";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { RootErrorBoundary } from "@/components/RootErrorBoundary";
 /* import { TanStackRouterDevtools } from '@tanstack/react-router-devtools' */
 
 function Root() {
@@ -14,4 +15,5 @@ function Root() {
 
 export const Route = createRootRoute({
   component: Root,
+  errorComponent: RootErrorBoundary,
 });

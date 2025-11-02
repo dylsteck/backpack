@@ -50,13 +50,13 @@ export const appsRouter = router({
 				servers: servers.map((server) => {
 					const connection = connectionMap.get(server.id);
 					return {
-						id: server.id,
-						name: server.name,
-						description: server.description,
-						transport: server.transport,
-						oauth: server.oauth,
-						iconUrl: server.iconUrl,
-						config: server.config,
+					id: server.id,
+					name: server.name,
+					description: server.description,
+					transport: server.transport,
+					oauth: server.oauth,
+					iconUrl: server.iconUrl,
+					config: server.config,
 						connectionType: server.connectionType,
 						connection: connection ? {
 							id: connection.id,
@@ -159,6 +159,7 @@ export const appsRouter = router({
 			z.object({
 				appId: z.string(),
 				apiKey: z.string(),
+				connectionMetadata: z.record(z.string(), z.unknown()).optional(),
 			})
 		)
 		.mutation(async ({ input }) => {
@@ -197,6 +198,7 @@ export const appsRouter = router({
 					secretUri: secretUri || null,
 					credentialStorage: credentialStorage as "onepassword" | "database",
 					encryptedCredentials: null as string | null,
+					connectionMetadata: input.connectionMetadata || null,
 					updatedAt: now,
 				};
 

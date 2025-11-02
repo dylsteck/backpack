@@ -79,6 +79,7 @@ function ImageWithFallback({
 
 export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps) {
   const [apiKey, setApiKey] = React.useState("");
+  const [fid, setFid] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
@@ -99,11 +100,13 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const requiresOAuth = app?.oauth === true;
   const isConnected = app?.connection?.status === "connected";
   const connection = app?.connection;
+  const isFarcaster = app?.id === "farcaster" || app?.name.toLowerCase().includes("farcaster");
 
   React.useEffect(() => {
     if (!open) {
       // Reset state when dialog closes
       setApiKey("");
+      setFid("");
       setError(null);
       setSuccess(false);
       setIsSubmitting(false);
@@ -143,13 +146,21 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       return;
     }
 
+    if (isFarcaster && !fid.trim()) {
+      setError("Please enter your Farcaster ID (FID)");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      const connectionMetadata = isFarcaster && fid.trim() ? { fid: fid.trim() } : undefined;
+      
       await saveApiKeyMutation.mutateAsync({
         appId: app.id,
         apiKey: apiKey.trim(),
+        connectionMetadata,
       });
       setSuccess(true);
       setTimeout(() => {
@@ -312,9 +323,24 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                   className="font-mono text-xs"
                 />
               </div>
+              {isFarcaster && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Farcaster ID (FID)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Enter your FID"
+                    value={fid}
+                    onChange={(e) => setFid(e.target.value)}
+                    disabled={isSubmitting || success}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              )}
               <Button
                 onClick={handleSaveApiKey}
-                disabled={isSubmitting || success || !apiKey.trim()}
+                disabled={isSubmitting || success || !apiKey.trim() || (isFarcaster && !fid.trim())}
                 className="w-full"
               >
                 {isSubmitting ? "Saving..." : success ? "Saved!" : "Save API Key"}
