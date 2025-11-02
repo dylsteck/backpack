@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@cortex/db";
-import { apps } from "@cortex/db/schema/mcp";
+import { apps, connections } from "@cortex/db/schema/mcp";
 import { eq, sql } from "drizzle-orm";
 
 // OAuth session store (in-memory, for production use Redis or database)
@@ -23,7 +23,7 @@ function generateState(): string {
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
+export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 	.get("/servers", async ({ set }) => {
 		console.log("📡 Fetching MCP servers from database...");
 		
@@ -56,8 +56,39 @@ export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
 			};
 		}
 	})
+	.get("/connections", async ({ set }) => {
+		console.log("📡 Fetching connections from database...");
+		
+		try {
+			const connectionList = await db
+				.select()
+				.from(connections);
+			
+			console.log(`✅ Found ${connectionList.length} connections in database`);
+			
+			return {
+				connections: connectionList.map((conn) => ({
+					id: conn.id,
+					serverId: conn.serverId,
+					serverName: conn.serverName,
+					vendor: conn.vendor,
+					transportType: conn.transportType,
+					status: conn.status,
+					credentialStorage: conn.credentialStorage,
+					createdAt: conn.createdAt,
+					updatedAt: conn.updatedAt,
+				})),
+			};
+		} catch (error) {
+			console.error("❌ Failed to fetch connections from database:", error);
+			set.status = 500;
+			return {
+				error: "Failed to fetch connections",
+				connections: [],
+			};
+		}
+	})
 	.get("/servers/:id", async ({ params, set }) => {
-		const { id } = params;
 		
 		try {
 			const servers = await db

@@ -87,28 +87,28 @@ export function AppDetailsSidebar({ app, open, onOpenChange }: AppDetailsSidebar
         <div className="p-4 pb-0">
           <SheetHeader className="pb-4">
             <div className="flex items-start gap-3">
-              <ImageWithFallback
-                src={app.iconUrl}
-                alt={app.name}
+            <ImageWithFallback
+              src={app.iconUrl}
+              alt={app.name}
                 className="h-14 w-14 rounded-xl object-contain shrink-0 border"
-                fallbackText={app.name}
-              />
+              fallbackText={app.name}
+            />
               <div className="flex-1 min-w-0 pt-0.5">
                 <SheetTitle className="text-xl font-bold mb-2">{app.name}</SheetTitle>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   <Badge variant={isMcp ? "default" : "secondary"} className="text-xs">
-                    {connectionType.toUpperCase()}
-                  </Badge>
-                  {app.oauth && (
+                  {connectionType.toUpperCase()}
+                </Badge>
+                {app.oauth && (
                     <Badge variant="outline" className="text-xs">OAuth</Badge>
-                  )}
-                </div>
-                <SheetDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {app.description}
-                </SheetDescription>
+                )}
               </div>
+              <SheetDescription className="text-sm text-muted-foreground leading-relaxed">
+                {app.description}
+              </SheetDescription>
             </div>
-          </SheetHeader>
+          </div>
+        </SheetHeader>
         </div>
 
         <div className="px-4 pb-4 space-y-4">

@@ -2,22 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ViewToggle } from "@/components/ViewToggle";
-import { AppDetailsSidebar } from "@/components/AppDetailsSidebar";
+import { AppSetupDialog } from "@/components/AppSetupDialog";
 
 function AppsPage() {
-  const { data, isLoading, error } = (trpc as any).mcp.getAvailableServers.useQuery();
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data, isLoading, error, refetch } = (trpc as any).apps.getAvailableServers.useQuery();
+  const [setupApp, setSetupApp] = useState<any>(null);
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
 
-  const handleAppClick = (app: any) => {
-    setSelectedApp(app);
-    setIsModalOpen(true);
+  const handleSetupClick = (app: any) => {
+    setSetupApp(app);
+    setIsSetupOpen(true);
   };
 
-  const handleCloseModal = (open: boolean) => {
-    setIsModalOpen(open);
+  const handleCloseSetup = (open: boolean) => {
+    setIsSetupOpen(open);
     if (!open) {
-      setSelectedApp(null);
+      setSetupApp(null);
+      // Refetch apps to update connection status
+      refetch();
     }
   };
 
@@ -38,14 +40,15 @@ function AppsPage() {
           iconUrl: server.iconUrl,
           config: server.config,
           connectionType: server.connectionType,
+          connection: server.connection,
         })}
         emptyMessage="No apps available"
-        onAppClick={handleAppClick}
+        onSetupClick={handleSetupClick}
       />
-      <AppDetailsSidebar
-        app={selectedApp}
-        open={isModalOpen}
-        onOpenChange={handleCloseModal}
+      <AppSetupDialog
+        app={setupApp}
+        open={isSetupOpen}
+        onOpenChange={handleCloseSetup}
       />
     </div>
   );

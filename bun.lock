@@ -143,6 +143,7 @@
     "apps/server": {
       "name": "server",
       "dependencies": {
+        "@1password/sdk": "^0.4.0-beta.1",
         "@ai-sdk/mcp": "^0.0.1",
         "@ai-sdk/openai": "^2.0.53",
         "@cortex/api": "workspace:*",
@@ -244,6 +245,10 @@
     "zod": "^4.1.11",
   },
   "packages": {
+    "@1password/sdk": ["@1password/sdk@0.4.0-beta.1", "", { "dependencies": { "@1password/sdk-core": "0.4.0-beta.1" } }, "sha512-oLZUV/PaZcKu+5qRnqyZXStnAXzj76ZFmSHCKb4ykM75iQ6WFmWrKX9WVad3s5GL9sPATo+OGbZ8OGTXrE7rnA=="],
+
+    "@1password/sdk-core": ["@1password/sdk-core@0.4.0-beta.1", "", {}, "sha512-YXblRzkcGPj6W/T5WJ++Ndr3bbu/+9sf14PLUeV73HcydTbjnD4HJeCpvxzc4O5iLqBquQ76EkSsAGmS0t2L8g=="],
+
     "@adobe/css-tools": ["@adobe/css-tools@4.4.4", "", {}, "sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg=="],
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@2.0.1", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.12", "@vercel/oidc": "3.0.3" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-vPVIbnP35ZnayS937XLo85vynR85fpBQWHCdUweq7apzqFOTU2YkUd4V3msebEHbQ2Zro60ZShDDy9SMiyWTqA=="],

@@ -10,6 +10,7 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
+    "@1password/sdk": "^0.4.0-beta.1",
     "@ai-sdk/mcp": "^0.0.1",
     "@ai-sdk/openai": "^2.0.53",
     "@cortex/api": "workspace:*",
