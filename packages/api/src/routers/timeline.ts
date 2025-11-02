@@ -91,7 +91,7 @@ export const timelineRouter = router({
 				items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
 				return {
-					items: items.slice(0, input.limit),
+					items,
 					nextCursor,
 				};
 			} catch (error) {

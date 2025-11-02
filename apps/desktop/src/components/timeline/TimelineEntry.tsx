@@ -38,7 +38,6 @@ export function TimelineEntry({
 			<div className="flex-1 min-w-0">{children}</div>
 			<div className="text-xs text-muted-foreground whitespace-nowrap">
 				<div>{time}</div>
-				{date && <div>{date}</div>}
 			</div>
 		</div>
 	);

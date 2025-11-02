@@ -4,7 +4,7 @@ import { CastEntry } from "./timeline/CastEntry";
 import { TimelineDemo } from "./timeline/TimelineDemo";
 import { DateSeparator } from "./timeline/DateSeparator";
 import { trpc } from "@/lib/trpc";
-import type { FarcasterCastV2 } from "@cortex/api/services/farcaster";
+import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 
 function formatTime(timestamp: Date): string {
 	const date = new Date(timestamp);
@@ -60,26 +60,34 @@ export function Timeline() {
 		return data.pages.flatMap((page: any) => page.items || []);
 	}, [data]);
 
-	// Set up infinite scroll
+	// Set up infinite scroll with IntersectionObserver
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+	const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
 	React.useEffect(() => {
-		const container = scrollContainerRef.current;
-		if (!container || !hasNextPage || isFetchingNextPage) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const first = entries[0];
+				if (first?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+					fetchNextPage();
+				}
+			},
+			{
+				root: scrollContainerRef.current,
+				rootMargin: "200px",
+			}
+		);
 
-		const handleScroll = () => {
-			const scrollHeight = container.scrollHeight;
-			const scrollTop = container.scrollTop;
-			const clientHeight = container.clientHeight;
+		const currentLoadMore = loadMoreRef.current;
+		if (currentLoadMore) {
+			observer.observe(currentLoadMore);
+		}
 
-			// Load more when user scrolls to within 200px of bottom
-			if (scrollHeight - scrollTop - clientHeight < 200) {
-				fetchNextPage();
+		return () => {
+			if (currentLoadMore) {
+				observer.unobserve(currentLoadMore);
 			}
 		};
-
-		container.addEventListener("scroll", handleScroll);
-		return () => container.removeEventListener("scroll", handleScroll);
 	}, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
 	if (isLoading) {
@@ -171,6 +179,9 @@ export function Timeline() {
 					)}
 					{isFetchingNextPage && (
 						<div className="text-sm text-muted-foreground text-center py-4">Loading more...</div>
+					)}
+					{hasNextPage && (
+						<div ref={loadMoreRef} className="h-4" />
 					)}
 				</div>
 			</div>
