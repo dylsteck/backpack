@@ -24,7 +24,7 @@ function AppsPage() {
   };
 
   return (
-    <div className="flex flex-col w-full -m-4">
+    <div className="flex flex-col w-full p-4">
       <ViewToggle
         data={data?.servers || []}
         isLoading={isLoading}

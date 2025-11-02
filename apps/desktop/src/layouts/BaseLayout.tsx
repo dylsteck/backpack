@@ -40,12 +40,19 @@ function TopbarTitle() {
     : "calc(var(--sidebar-width) + 0.5rem)";
 
   return (
-    <div 
-      className="fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none"
-      style={{ left: leftPosition }}
-    >
-      {pageTitle}
-    </div>
+    <>
+      {/* Full-width background bar to prevent bleed-through */}
+      <div 
+        className="fixed top-0 left-0 right-0 h-[44px] z-40 bg-background/95 backdrop-blur-sm border-b"
+      />
+      {/* Title text positioned correctly */}
+      <div 
+        className="fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none pointer-events-none"
+        style={{ left: leftPosition }}
+      >
+        <span className="pointer-events-auto">{pageTitle}</span>
+      </div>
+    </>
   );
 }
 
@@ -63,7 +70,7 @@ export default function BaseLayout({
         <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
           <DragWindowRegion />
           <div className="h-[44px] flex-shrink-0" />
-          <main className="flex-1 p-4">{children}</main>
+          <main className="flex-1">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
