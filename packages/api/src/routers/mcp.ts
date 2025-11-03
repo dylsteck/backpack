@@ -345,5 +345,66 @@ export const appsRouter = router({
 				throw new Error(error?.message || "Failed to connect Chrome");
 			}
 		}),
+
+	// Connect Brave browser history
+	connectBrave: publicProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				localPath: z.string(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
+				const appName = app[0]?.name || input.appId;
+
+				const existingConnection = await db
+					.select()
+					.from(connections)
+					.where(eq(connections.serverId, input.appId))
+					.limit(1);
+
+				const now = new Date();
+				const connectionData = {
+					serverId: input.appId,
+					serverName: appName,
+					transportType: "http" as const,
+					transportConfig: {} as any,
+					status: "connected" as const,
+					secretUri: null,
+					credentialStorage: "database" as const,
+					encryptedCredentials: null as string | null,
+					connectionMetadata: { localPath: input.localPath } as any,
+					updatedAt: now,
+				};
+
+				if (existingConnection.length > 0) {
+					const [updated] = await db
+						.update(connections)
+						.set({
+							...connectionData,
+							updatedAt: now,
+						})
+						.where(eq(connections.serverId, input.appId))
+						.returning();
+					return { success: true, connection: updated };
+				} else {
+					const id = crypto.randomUUID();
+					const [created] = await db
+						.insert(connections)
+						.values({
+							id,
+							...connectionData,
+							createdAt: now,
+						})
+						.returning();
+					return { success: true, connection: created };
+				}
+			} catch (error: any) {
+				console.error("Error in connectBrave mutation:", error);
+				throw new Error(error?.message || "Failed to connect Brave");
+			}
+		}),
 });
 

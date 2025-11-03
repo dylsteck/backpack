@@ -88,10 +88,13 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const [loadingCredentials, setLoadingCredentials] = React.useState(false);
   const [chromePath, setChromePath] = React.useState("");
   const [detectingPath, setDetectingPath] = React.useState(false);
+  const [bravePath, setBravePath] = React.useState("");
+  const [detectingBravePath, setDetectingBravePath] = React.useState(false);
 
   const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation();
   const saveOAuthTokensMutation = (trpc as any).apps.saveOAuthTokens.useMutation();
   const connectChromeMutation = (trpc as any).apps.connectChrome.useMutation();
+  const connectBraveMutation = (trpc as any).apps.connectBrave.useMutation();
   const getCredentialsQuery = (trpc as any).apps.getCredentials.useQuery(
     { connectionId: app?.connection?.id || "" },
     { enabled: false } // Don't auto-fetch, only fetch on demand
@@ -102,6 +105,7 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const isApi = connectionType === "api";
   const isFile = connectionType === "file";
   const isChrome = app?.id === "chrome" || app?.name.toLowerCase().includes("chrome");
+  const isBrave = app?.id === "brave" || app?.name.toLowerCase().includes("brave");
   const requiresOAuth = app?.oauth === true;
   const isConnected = app?.connection?.status === "connected";
   const connection = app?.connection;
@@ -118,6 +122,8 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       setStoredCredentials(null);
       setChromePath("");
       setDetectingPath(false);
+      setBravePath("");
+      setDetectingBravePath(false);
     }
   }, [open]);
 
@@ -130,6 +136,16 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       }
     }
   }, [open, isFile, isChrome]);
+
+  React.useEffect(() => {
+    if (open && isFile && isBrave && !bravePath && !detectingBravePath) {
+      if (window.braveHistory && typeof window.braveHistory.detectHistoryPath === "function") {
+        handleDetectBravePath();
+      } else {
+        setBravePath("~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History");
+      }
+    }
+  }, [open, isFile, isBrave]);
 
   const handleDetectChromePath = async () => {
     if (!window.chromeHistory || typeof window.chromeHistory.detectHistoryPath !== "function") {
@@ -178,6 +194,59 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     } catch (err: any) {
       console.error("Error connecting Chrome:", err);
       const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to connect Chrome";
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDetectBravePath = async () => {
+    if (!window.braveHistory || typeof window.braveHistory.detectHistoryPath !== "function") {
+      setError("Auto-detection not available. You can manually enter the path below.");
+      return;
+    }
+    
+    setDetectingBravePath(true);
+    setError(null);
+    try {
+      const result = await window.braveHistory.detectHistoryPath();
+      if (result.success && result.defaultPath) {
+        setBravePath(result.defaultPath);
+        const verifyResult = await window.braveHistory.verifyPath(result.defaultPath);
+        if (!verifyResult.success && verifyResult.error) {
+          setError(verifyResult.error);
+        }
+      } else if (result.error) {
+        setError(result.error);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to detect Brave path. You can enter it manually.");
+    } finally {
+      setDetectingBravePath(false);
+    }
+  };
+
+  const handleConnectBrave = async () => {
+    if (!app || !bravePath.trim()) {
+      setError("Please select a Brave history database path");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await connectBraveMutation.mutateAsync({
+        appId: app.id,
+        localPath: bravePath.trim(),
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        onOpenChange(false);
+      }, 1500);
+    } catch (err: any) {
+      console.error("Error connecting Brave:", err);
+      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to connect Brave";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -461,6 +530,47 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                 className="w-full"
               >
                 {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Chrome"}
+              </Button>
+            </div>
+          ) : isFile && isBrave ? (
+            // Brave File Connection
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Brave History Database Path
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"
+                    value={bravePath}
+                    onChange={(e) => setBravePath(e.target.value)}
+                    disabled={isSubmitting || success || detectingBravePath}
+                    className="font-mono text-xs"
+                  />
+                  {window.braveHistory && typeof window.braveHistory.detectHistoryPath === "function" && (
+                    <Button
+                      onClick={handleDetectBravePath}
+                      variant="outline"
+                      size="sm"
+                      disabled={detectingBravePath || isSubmitting}
+                    >
+                      {detectingBravePath ? "Detecting..." : "Detect"}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {window.braveHistory && typeof window.braveHistory.detectHistoryPath === "function"
+                    ? "We'll automatically detect your Brave history database location, or you can enter it manually."
+                    : "Enter the path to your Brave History database file."}
+                </p>
+              </div>
+              <Button
+                onClick={handleConnectBrave}
+                disabled={isSubmitting || success || !bravePath.trim() || detectingBravePath}
+                className="w-full"
+              >
+                {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Brave"}
               </Button>
             </div>
           ) : isMcp && requiresOAuth ? (

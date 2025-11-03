@@ -37,9 +37,22 @@ function exposeChromeContext() {
     readHistory: (path) => ipcRenderer.invoke(CHROME_READ_HISTORY_CHANNEL, path)
   });
 }
+const BRAVE_DETECT_HISTORY_PATH_CHANNEL = "brave:detect-history-path";
+const BRAVE_READ_HISTORY_CHANNEL = "brave:read-history";
+const BRAVE_VERIFY_PATH_CHANNEL = "brave:verify-path";
+function exposeBraveContext() {
+  const electron = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron;
+  contextBridge.exposeInMainWorld("braveHistory", {
+    detectHistoryPath: () => ipcRenderer.invoke(BRAVE_DETECT_HISTORY_PATH_CHANNEL),
+    verifyPath: (path) => ipcRenderer.invoke(BRAVE_VERIFY_PATH_CHANNEL, path),
+    readHistory: (path) => ipcRenderer.invoke(BRAVE_READ_HISTORY_CHANNEL, path)
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
   exposeChromeContext();
+  exposeBraveContext();
 }
 exposeContexts();

@@ -57,9 +57,34 @@ interface ChromeHistoryContext {
     error?: string;
   }>;
 }
+interface BraveHistoryContext {
+  detectHistoryPath: () => Promise<{
+    success: boolean;
+    defaultPath: string;
+    profiles: string[];
+    error?: string;
+  }>;
+  verifyPath: (path: string) => Promise<{
+    success: boolean;
+    error?: string;
+    locked?: boolean;
+  }>;
+  readHistory: (path: string) => Promise<{
+    success: boolean;
+    data?: Array<{
+      url: string;
+      title: string;
+      timestamp: string;
+      visitCount: number;
+      lastVisitTime: number;
+    }>;
+    error?: string;
+  }>;
+}
 
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   chromeHistory: ChromeHistoryContext;
+  braveHistory: BraveHistoryContext;
 }

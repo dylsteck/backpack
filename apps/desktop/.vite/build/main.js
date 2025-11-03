@@ -77,7 +77,7 @@ function addWindowEventListeners(mainWindow) {
 const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
 const CHROME_READ_HISTORY_CHANNEL = "chrome:read-history";
 const CHROME_VERIFY_PATH_CHANNEL = "chrome:verify-path";
-function expandPath(filePath) {
+function expandPath$1(filePath) {
   if (filePath.startsWith("~")) {
     const homeDir = os__namespace.homedir();
     return filePath.replace(/^~/, homeDir);
@@ -222,7 +222,7 @@ function addChromeEventListeners() {
   });
   require$$0.ipcMain.handle(CHROME_VERIFY_PATH_CHANNEL, (_event, filePath) => {
     try {
-      const expandedPath = expandPath(filePath);
+      const expandedPath = expandPath$1(filePath);
       if (!fs__namespace.existsSync(expandedPath)) {
         return { success: false, error: "File does not exist" };
       }
@@ -250,7 +250,7 @@ function addChromeEventListeners() {
   });
   require$$0.ipcMain.handle(CHROME_READ_HISTORY_CHANNEL, (_event, historyPath) => {
     try {
-      const expandedPath = expandPath(historyPath);
+      const expandedPath = expandPath$1(historyPath);
       if (!fs__namespace.existsSync(expandedPath)) {
         return { success: false, error: `History file does not exist at: ${expandedPath}` };
       }
@@ -261,10 +261,198 @@ function addChromeEventListeners() {
     }
   });
 }
+const BRAVE_DETECT_HISTORY_PATH_CHANNEL = "brave:detect-history-path";
+const BRAVE_READ_HISTORY_CHANNEL = "brave:read-history";
+const BRAVE_VERIFY_PATH_CHANNEL = "brave:verify-path";
+function expandPath(filePath) {
+  if (filePath.startsWith("~")) {
+    const homeDir = os__namespace.homedir();
+    return filePath.replace(/^~/, homeDir);
+  }
+  return filePath;
+}
+function getBraveHistoryPath() {
+  const platform = process.platform;
+  const homeDir = os__namespace.homedir();
+  if (platform === "darwin") {
+    return path__namespace.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "BraveSoftware",
+      "Brave-Browser",
+      "Default",
+      "History"
+    );
+  } else if (platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || "";
+    return path__namespace.join(localAppData, "BraveSoftware", "Brave-Browser", "User Data", "Default", "History");
+  } else {
+    return path__namespace.join(homeDir, ".config", "BraveSoftware", "Brave-Browser", "Default", "History");
+  }
+}
+function detectBraveProfiles() {
+  const platform = process.platform;
+  const homeDir = os__namespace.homedir();
+  const profiles = [];
+  if (platform === "darwin") {
+    const braveDir = path__namespace.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "BraveSoftware",
+      "Brave-Browser"
+    );
+    if (fs__namespace.existsSync(braveDir)) {
+      const entries = fs__namespace.readdirSync(braveDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const historyPath = path__namespace.join(braveDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  } else if (platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || "";
+    const braveDir = path__namespace.join(localAppData, "BraveSoftware", "Brave-Browser", "User Data");
+    if (fs__namespace.existsSync(braveDir)) {
+      const entries = fs__namespace.readdirSync(braveDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith(".")) {
+          const historyPath = path__namespace.join(braveDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  } else {
+    const braveDir = path__namespace.join(homeDir, ".config", "BraveSoftware", "Brave-Browser");
+    if (fs__namespace.existsSync(braveDir)) {
+      const entries = fs__namespace.readdirSync(braveDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith(".")) {
+          const historyPath = path__namespace.join(braveDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  }
+  return profiles;
+}
+function readBraveHistory(historyPath) {
+  let db = null;
+  let tempPath = null;
+  try {
+    try {
+      db = new Database(historyPath, { readonly: true });
+    } catch (error) {
+      if (error.code === "SQLITE_BUSY" || error.message?.includes("locked")) {
+        const tempDir = require$$0.app.getPath("temp");
+        tempPath = path__namespace.join(tempDir, `brave-history-${Date.now()}.db`);
+        fs__namespace.copyFileSync(historyPath, tempPath);
+        db = new Database(tempPath, { readonly: true });
+      } else {
+        throw error;
+      }
+    }
+    const query = `
+			SELECT 
+				datetime(last_visit_time/1000000-11644473600, 'unixepoch', 'localtime') as last_visited,
+				url,
+				title,
+				visit_count,
+				last_visit_time
+			FROM urls
+			ORDER BY last_visit_time DESC
+			LIMIT 1000
+		`;
+    const rows = db.prepare(query).all();
+    return rows.map((row) => ({
+      url: row.url,
+      title: row.title || row.url,
+      timestamp: new Date(row.last_visited).toISOString(),
+      visitCount: row.visit_count || 0,
+      lastVisitTime: row.last_visit_time
+    }));
+  } finally {
+    if (db) {
+      db.close();
+    }
+    if (tempPath && fs__namespace.existsSync(tempPath)) {
+      fs__namespace.unlinkSync(tempPath);
+    }
+  }
+}
+function addBraveEventListeners() {
+  require$$0.ipcMain.handle(BRAVE_DETECT_HISTORY_PATH_CHANNEL, () => {
+    try {
+      const defaultPath = getBraveHistoryPath();
+      const profiles = detectBraveProfiles();
+      return {
+        success: true,
+        defaultPath,
+        profiles: profiles.length > 0 ? profiles : [defaultPath]
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        defaultPath: getBraveHistoryPath(),
+        profiles: []
+      };
+    }
+  });
+  require$$0.ipcMain.handle(BRAVE_VERIFY_PATH_CHANNEL, (_event, filePath) => {
+    try {
+      const expandedPath = expandPath(filePath);
+      if (!fs__namespace.existsSync(expandedPath)) {
+        return { success: false, error: "File does not exist" };
+      }
+      const stats = fs__namespace.statSync(expandedPath);
+      if (!stats.isFile()) {
+        return { success: false, error: "Path is not a file" };
+      }
+      try {
+        const db = new Database(expandedPath, { readonly: true });
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='urls'").get();
+        db.close();
+        if (!tables) {
+          return { success: false, error: "File is not a valid Brave history database" };
+        }
+        return { success: true };
+      } catch (error) {
+        if (error.code === "SQLITE_BUSY" || error.message?.includes("locked")) {
+          return { success: true, locked: true };
+        }
+        return { success: false, error: error.message };
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(BRAVE_READ_HISTORY_CHANNEL, (_event, historyPath) => {
+    try {
+      const expandedPath = expandPath(historyPath);
+      if (!fs__namespace.existsSync(expandedPath)) {
+        return { success: false, error: `History file does not exist at: ${expandedPath}` };
+      }
+      const history = readBraveHistory(expandedPath);
+      return { success: true, data: history };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+}
 function registerListeners(mainWindow) {
   addWindowEventListeners(mainWindow);
   addThemeEventListeners();
   addChromeEventListeners();
+  addBraveEventListeners();
 }
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var dist$1 = {};
