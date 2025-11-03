@@ -1,10 +1,14 @@
 import React from "react";
 import { TimelineEntry } from "./timeline/TimelineEntry";
 import { CastEntry } from "./timeline/CastEntry";
+import { BrowserHistoryEntry } from "./timeline/BrowserHistoryEntry";
+import { BrowserHistoryDetailSidebar } from "./timeline/BrowserHistoryDetailSidebar";
 import { TimelineDemo } from "./timeline/TimelineDemo";
 import { DateSeparator } from "./timeline/DateSeparator";
+import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
+import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
 
 function formatTime(timestamp: Date): string {
 	const date = new Date(timestamp);
@@ -47,18 +51,119 @@ export function Timeline() {
 		{ limit: 25 },
 		{
 			getNextPageParam: (lastPage: any) => lastPage?.nextCursor ?? undefined,
+			staleTime: 5 * 60 * 1000,
+			gcTime: 10 * 60 * 1000,
 		}
 	);
 
-	// Fetch Farcaster app icon URL
+	const [chromeHistory, setChromeHistory] = React.useState<BrowserHistoryEntryData[]>([]);
+	const [selectedHistoryItem, setSelectedHistoryItem] = React.useState<
+		BrowserHistoryEntryData | BrowserHistoryGroup | null
+	>(null);
+	const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
 	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
 	const farcasterIconUrl = appsData?.servers?.find((app: any) => app.id === "farcaster")?.iconUrl;
+	const chromeIconUrl = appsData?.servers?.find((app: any) => app.id === "chrome")?.iconUrl;
+	const chromeConnection = appsData?.servers?.find((app: any) => app.id === "chrome")?.connection;
 
-	// Flatten all pages into a single items array
+	React.useEffect(() => {
+		console.log("Apps data loaded:", {
+			appsData: !!appsData,
+			servers: appsData?.servers?.length,
+			chromeApp: appsData?.servers?.find((app: any) => app.id === "chrome"),
+			chromeConnection,
+			status: chromeConnection?.status,
+			localPath: chromeConnection?.connectionMetadata?.localPath,
+			hasChromeHistoryContext: !!window.chromeHistory,
+			hasReadHistory: typeof window.chromeHistory?.readHistory === "function",
+		});
+	}, [appsData, chromeConnection]);
+
 	const items = React.useMemo(() => {
 		if (!data?.pages) return [];
 		return data.pages.flatMap((page: any) => page.items || []);
 	}, [data]);
+
+	React.useEffect(() => {
+		if (chromeConnection?.status === "connected") {
+			const localPath = chromeConnection.connectionMetadata?.localPath;
+			if (localPath) {
+				if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
+					console.log("Reading Chrome history from:", localPath);
+					window.chromeHistory
+						.readHistory(localPath)
+						.then((result: any) => {
+							console.log("Chrome history result:", result);
+							if (result.success && result.data) {
+								console.log(`Loaded ${result.data.length} Chrome history entries`);
+								setChromeHistory(result.data);
+							} else {
+								console.error("Failed to read Chrome history:", result.error);
+							}
+						})
+						.catch((err: any) => {
+							console.error("Error reading Chrome history:", err);
+						});
+				} else {
+					console.log("Chrome history context not available yet, polling...");
+					let attemptCount = 0;
+					const maxAttempts = 30;
+					const checkInterval = setInterval(() => {
+						attemptCount++;
+						if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
+							console.log("Chrome history context available, reading history...");
+							clearInterval(checkInterval);
+							window.chromeHistory
+								.readHistory(localPath)
+								.then((result: any) => {
+									if (result.success && result.data) {
+										console.log(`Loaded ${result.data.length} Chrome history entries`);
+										setChromeHistory(result.data);
+									}
+								})
+								.catch((err: any) => {
+									console.error("Error reading Chrome history:", err);
+								});
+						} else if (attemptCount >= maxAttempts) {
+							console.warn("Chrome history context not available after 30 seconds");
+							clearInterval(checkInterval);
+						}
+					}, 1000);
+
+					return () => clearInterval(checkInterval);
+				}
+			} else {
+				console.warn("Chrome connection missing localPath");
+			}
+		}
+	}, [chromeConnection]);
+
+	const allItems = React.useMemo(() => {
+		const groupedHistory = groupBrowserHistory(chromeHistory);
+
+		const historyItems = groupedHistory.map((entry) => {
+			const timestamp = "entries" in entry ? entry.timestamp : new Date(entry.timestamp);
+			return {
+				id: "entries" in entry ? entry.id : `chrome-${entry.url}-${entry.timestamp}`,
+				timestamp,
+				source: "chrome",
+				type: "browser-history",
+				data: entry,
+			};
+		});
+
+		const serverItems = items.map((item: any) => ({
+			...item,
+			timestamp: item.timestamp instanceof Date ? item.timestamp : new Date(item.timestamp),
+		}));
+
+		return [...serverItems, ...historyItems].sort((a, b) => {
+			const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+			const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+			return bTime - aTime;
+		});
+	}, [items, chromeHistory]);
 
 	// Set up infinite scroll with IntersectionObserver
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -116,32 +221,20 @@ export function Timeline() {
 					<div className="max-w-3xl mx-auto w-full flex items-center justify-center px-6">
 					</div>
 				</div>
-				<div className="flex-1 overflow-y-auto">
-					<div className="max-w-3xl mx-auto py-3 px-3 space-y-6">
-						<div className="text-sm text-destructive">Error loading timeline: {error.message}</div>
-					</div>
+				<div className="flex-1 overflow-y-auto flex items-center justify-center">
+					<div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
 				</div>
 			</div>
 		);
 	}
 
-	const groupedItems = groupItemsByDate(items);
+	const groupedItems = groupItemsByDate(allItems);
 
 	return (
 		<div className="flex-1 flex flex-col">
-			{/* <div className="flex items-center justify-center bg-background/95 backdrop-blur-sm py-1 sticky top-0 z-30">
-				<div className="max-w-3xl mx-auto w-full flex items-center justify-center px-6">
-					<div className="flex items-center gap-3">
-						<span className="text-sm font-medium text-foreground">
-							{new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-						</span>
-						<div className="px-3 py-1 bg-muted rounded-md text-sm font-medium">{items.length}</div>
-					</div>
-				</div>
-			</div> */}
 			<div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
 				<div className="max-w-3xl mx-auto py-3 px-3 space-y-6">
-					{items.length === 0 ? (
+					{allItems.length === 0 ? (
 						<TimelineDemo />
 					) : (
 						groupedItems.map(([dateKey, dateItems]) => {
@@ -166,6 +259,26 @@ export function Timeline() {
 											);
 										}
 
+										if (item.type === "browser-history") {
+											return (
+												<TimelineEntry
+													key={item.id}
+													time={time}
+													date={date}
+													showDot
+													iconUrl={chromeIconUrl}
+												>
+													<BrowserHistoryEntry
+														entry={item.data}
+														onClick={() => {
+															setSelectedHistoryItem(item.data);
+															setSidebarOpen(true);
+														}}
+													/>
+												</TimelineEntry>
+											);
+										}
+
 										return (
 											<TimelineEntry key={item.id} time={time} date={date} showDot>
 												<div className="text-sm">{JSON.stringify(item.data)}</div>
@@ -185,6 +298,11 @@ export function Timeline() {
 					)}
 				</div>
 			</div>
+			<BrowserHistoryDetailSidebar
+				open={sidebarOpen}
+				onOpenChange={setSidebarOpen}
+				data={selectedHistoryItem}
+			/>
 		</div>
 	);
 }

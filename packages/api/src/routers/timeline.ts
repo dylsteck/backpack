@@ -40,26 +40,10 @@ export const timelineRouter = router({
 								continue;
 							}
 
-							let apiKey: string;
-							if (connection.credentialStorage === "onepassword") {
-								if (!connection.secretUri) {
-									continue;
-								}
-								const onePasswordService = await import("../../../apps/server/src/lib/onepassword").catch(() => null);
-								if (!onePasswordService) {
-									continue;
-								}
-								const secret = await onePasswordService.getSecret(connection.secretUri);
-								if (!secret) {
-									continue;
-								}
-								apiKey = secret;
-							} else {
 								if (!connection.encryptedCredentials) {
 									continue;
-								}
-								apiKey = decryptCredentials(connection.encryptedCredentials);
 							}
+							const apiKey = decryptCredentials(connection.encryptedCredentials);
 
 							const farcasterService = new FarcasterService(apiKey);
 							const response = await farcasterService.getUserCasts({
@@ -78,7 +62,6 @@ export const timelineRouter = router({
 								});
 							}
 
-							// Store next cursor from Farcaster API response
 							if (response.next?.cursor) {
 								nextCursor = response.next.cursor;
 							}

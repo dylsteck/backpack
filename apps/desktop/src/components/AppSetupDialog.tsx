@@ -86,9 +86,12 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const [showCredentials, setShowCredentials] = React.useState(false);
   const [storedCredentials, setStoredCredentials] = React.useState<string | null>(null);
   const [loadingCredentials, setLoadingCredentials] = React.useState(false);
+  const [chromePath, setChromePath] = React.useState("");
+  const [detectingPath, setDetectingPath] = React.useState(false);
 
   const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation();
   const saveOAuthTokensMutation = (trpc as any).apps.saveOAuthTokens.useMutation();
+  const connectChromeMutation = (trpc as any).apps.connectChrome.useMutation();
   const getCredentialsQuery = (trpc as any).apps.getCredentials.useQuery(
     { connectionId: app?.connection?.id || "" },
     { enabled: false } // Don't auto-fetch, only fetch on demand
@@ -97,6 +100,8 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const connectionType = app?.connectionType || "mcp";
   const isMcp = connectionType === "mcp";
   const isApi = connectionType === "api";
+  const isFile = connectionType === "file";
+  const isChrome = app?.id === "chrome" || app?.name.toLowerCase().includes("chrome");
   const requiresOAuth = app?.oauth === true;
   const isConnected = app?.connection?.status === "connected";
   const connection = app?.connection;
@@ -104,7 +109,6 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
 
   React.useEffect(() => {
     if (!open) {
-      // Reset state when dialog closes
       setApiKey("");
       setFid("");
       setError(null);
@@ -112,8 +116,73 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       setIsSubmitting(false);
       setShowCredentials(false);
       setStoredCredentials(null);
+      setChromePath("");
+      setDetectingPath(false);
     }
   }, [open]);
+
+  React.useEffect(() => {
+    if (open && isFile && isChrome && !chromePath && !detectingPath) {
+      if (window.chromeHistory && typeof window.chromeHistory.detectHistoryPath === "function") {
+        handleDetectChromePath();
+      } else {
+        setChromePath("~/Library/Application Support/Google/Chrome/Default/History");
+      }
+    }
+  }, [open, isFile, isChrome]);
+
+  const handleDetectChromePath = async () => {
+    if (!window.chromeHistory || typeof window.chromeHistory.detectHistoryPath !== "function") {
+      setError("Auto-detection not available. You can manually enter the path below.");
+      return;
+    }
+    
+    setDetectingPath(true);
+    setError(null);
+    try {
+      const result = await window.chromeHistory.detectHistoryPath();
+      if (result.success && result.defaultPath) {
+        setChromePath(result.defaultPath);
+        const verifyResult = await window.chromeHistory.verifyPath(result.defaultPath);
+        if (!verifyResult.success && verifyResult.error) {
+          setError(verifyResult.error);
+        }
+      } else if (result.error) {
+        setError(result.error);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to detect Chrome path. You can enter it manually.");
+    } finally {
+      setDetectingPath(false);
+    }
+  };
+
+  const handleConnectChrome = async () => {
+    if (!app || !chromePath.trim()) {
+      setError("Please select a Chrome history database path");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await connectChromeMutation.mutateAsync({
+        appId: app.id,
+        localPath: chromePath.trim(),
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        onOpenChange(false);
+      }, 1500);
+    } catch (err: any) {
+      console.error("Error connecting Chrome:", err);
+      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to connect Chrome";
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleLoadCredentials = async () => {
     if (!app?.connection?.id) return;
@@ -248,7 +317,7 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg font-bold">{app.name}</DialogTitle>
               <div className="flex flex-wrap gap-1.5 mt-1">
-                <Badge variant={isMcp ? "default" : "secondary"} className="text-xs">
+                <Badge variant={isMcp ? "default" : isFile ? "default" : "secondary"} className="text-xs">
                   {connectionType.toUpperCase()}
                 </Badge>
                 {requiresOAuth && (
@@ -285,10 +354,17 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
               <div className="font-medium mb-2">Connection Details</div>
               <div className="space-y-1 text-xs text-muted-foreground mb-3">
                 <div>Status: <span className="text-green-600 dark:text-green-400 font-medium">{connection?.status}</span></div>
+                {!isFile && (
+                  <>
                 <div>Storage: <span className="font-medium">{connection?.credentialStorage}</span></div>
                 <div>Transport: <span className="font-medium">{connection?.transportType}</span></div>
+                  </>
+                )}
+                {isFile && (
+                  <div>Path: <span className="font-mono font-medium text-xs break-all">{connection?.connectionMetadata?.localPath || "N/A"}</span></div>
+                )}
               </div>
-              {connection?.id && (
+              {connection?.id && !isFile && (
                 <Button
                   onClick={handleLoadCredentials}
                   variant="outline"
@@ -344,6 +420,47 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                 className="w-full"
               >
                 {isSubmitting ? "Saving..." : success ? "Saved!" : "Save API Key"}
+              </Button>
+            </div>
+          ) : isFile && isChrome ? (
+            // Chrome File Connection
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Chrome History Database Path
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="~/Library/Application Support/Google/Chrome/Default/History"
+                    value={chromePath}
+                    onChange={(e) => setChromePath(e.target.value)}
+                    disabled={isSubmitting || success || detectingPath}
+                    className="font-mono text-xs"
+                  />
+                  {window.chromeHistory && typeof window.chromeHistory.detectHistoryPath === "function" && (
+                    <Button
+                      onClick={handleDetectChromePath}
+                      variant="outline"
+                      size="sm"
+                      disabled={detectingPath || isSubmitting}
+                    >
+                      {detectingPath ? "Detecting..." : "Detect"}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {window.chromeHistory && typeof window.chromeHistory.detectHistoryPath === "function"
+                    ? "We'll automatically detect your Chrome history database location, or you can enter it manually."
+                    : "Enter the path to your Chrome History database file."}
+                </p>
+              </div>
+              <Button
+                onClick={handleConnectChrome}
+                disabled={isSubmitting || success || !chromePath.trim() || detectingPath}
+                className="w-full"
+              >
+                {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Chrome"}
               </Button>
             </div>
           ) : isMcp && requiresOAuth ? (

@@ -25,8 +25,21 @@ function exposeWindowContext() {
     close: () => ipcRenderer.invoke(WIN_CLOSE_CHANNEL)
   });
 }
+const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
+const CHROME_READ_HISTORY_CHANNEL = "chrome:read-history";
+const CHROME_VERIFY_PATH_CHANNEL = "chrome:verify-path";
+function exposeChromeContext() {
+  const electron = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron;
+  contextBridge.exposeInMainWorld("chromeHistory", {
+    detectHistoryPath: () => ipcRenderer.invoke(CHROME_DETECT_HISTORY_PATH_CHANNEL),
+    verifyPath: (path) => ipcRenderer.invoke(CHROME_VERIFY_PATH_CHANNEL, path),
+    readHistory: (path) => ipcRenderer.invoke(CHROME_READ_HISTORY_CHANNEL, path)
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
+  exposeChromeContext();
 }
 exposeContexts();

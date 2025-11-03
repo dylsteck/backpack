@@ -4,28 +4,6 @@ import { db, connections, apps } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { encryptCredentials, decryptCredentials } from "../lib/credentials";
 
-// Import 1Password service - try direct import first, fallback to dynamic
-let onePasswordService: typeof import("../../../apps/server/src/lib/onepassword") | null = null;
-
-async function getOnePassword() {
-	if (!onePasswordService) {
-		try {
-			// Try direct import first (works when running in server context)
-			onePasswordService = await import("../../../apps/server/src/lib/onepassword");
-		} catch (error) {
-			console.warn("1Password service not available:", error);
-			// Return mock functions if import fails
-			return {
-				isAvailable: async () => false,
-				saveApiKey: async () => null,
-				saveOAuthTokens: async () => null,
-				getSecret: async () => null,
-			};
-		}
-	}
-	return onePasswordService;
-}
-
 const transportConfigSchema = z.object({
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
@@ -65,6 +43,7 @@ export const appsRouter = router({
 							secretUri: connection.secretUri,
 							transportType: connection.transportType,
 							transportConfig: connection.transportConfig,
+							connectionMetadata: connection.connectionMetadata,
 						} : null,
 					};
 				}),
@@ -164,24 +143,9 @@ export const appsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			try {
-				const onePasswordService = await getOnePassword();
-				const onePasswordAvailable = await onePasswordService.isAvailable();
-				let secretUri: string | null = null;
-				let credentialStorage: "onepassword" | "database" = "database";
-
-				if (onePasswordAvailable) {
-					// Try to save to 1Password
-					secretUri = await onePasswordService.saveApiKey("Cortex", input.appId, input.apiKey);
-					if (secretUri) {
-						credentialStorage = "onepassword";
-					}
-				}
-
-				// Get app name from apps table
 				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 				const appName = app[0]?.name || input.appId;
 
-				// Create or update connection with credential info
 				const existingConnection = await db
 					.select()
 					.from(connections)
@@ -195,22 +159,14 @@ export const appsRouter = router({
 					transportType: "http" as const,
 					transportConfig: {} as any,
 					status: "connected" as const,
-					secretUri: secretUri || null,
-					credentialStorage: credentialStorage as "onepassword" | "database",
-					encryptedCredentials: null as string | null,
+					secretUri: null,
+					credentialStorage: "database" as const,
+					encryptedCredentials: encryptCredentials(input.apiKey),
 					connectionMetadata: input.connectionMetadata || null,
 					updatedAt: now,
 				};
 
-				// If 1Password failed or unavailable, store encrypted in DB
-				if (!secretUri) {
-					// Encrypt and store credentials in database
-					connectionData.credentialStorage = "database";
-					connectionData.encryptedCredentials = encryptCredentials(input.apiKey);
-				}
-
 				if (existingConnection.length > 0) {
-					// Update existing connection
 					const [updated] = await db
 						.update(connections)
 						.set({
@@ -219,9 +175,8 @@ export const appsRouter = router({
 						})
 						.where(eq(connections.serverId, input.appId))
 						.returning();
-					return { success: true, secretUri, credentialStorage, connection: updated };
+					return { success: true, connection: updated };
 				} else {
-					// Create new connection
 					const id = crypto.randomUUID();
 					const [created] = await db
 						.insert(connections)
@@ -231,7 +186,7 @@ export const appsRouter = router({
 							createdAt: now,
 						})
 						.returning();
-					return { success: true, secretUri, credentialStorage, connection: created };
+					return { success: true, connection: created };
 				}
 			} catch (error: any) {
 				console.error("Error in saveApiKey mutation:", error);
@@ -254,24 +209,9 @@ export const appsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
-			const onePasswordService = await getOnePassword();
-			const onePasswordAvailable = await onePasswordService.isAvailable();
-			let secretUri: string | null = null;
-			let credentialStorage: "onepassword" | "database" = "database";
-
-			if (onePasswordAvailable) {
-				// Try to save to 1Password
-				secretUri = await onePasswordService.saveOAuthTokens("Cortex", input.appId, input.tokens);
-				if (secretUri) {
-					credentialStorage = "onepassword";
-				}
-			}
-
-			// Get app name from apps table
 			const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 			const appName = app[0]?.name || input.appId;
 
-			// Create or update connection with credential info
 			const existingConnection = await db
 				.select()
 				.from(connections)
@@ -279,25 +219,18 @@ export const appsRouter = router({
 				.limit(1);
 
 			const now = new Date();
+			const tokensJson = JSON.stringify(input.tokens);
 			const connectionData = {
 				serverId: input.appId,
 				serverName: appName,
 				transportType: "http" as const,
 				transportConfig: {} as any,
 				status: "connected" as const,
-				secretUri: secretUri || null,
-				credentialStorage: credentialStorage as "onepassword" | "database",
-				encryptedCredentials: null as string | null,
+				secretUri: null,
+				credentialStorage: "database" as const,
+				encryptedCredentials: encryptCredentials(tokensJson),
 				updatedAt: now,
 			};
-
-			// If 1Password failed or unavailable, store encrypted in DB
-			if (!secretUri) {
-				// Encrypt and store OAuth tokens in database
-				const tokensJson = JSON.stringify(input.tokens);
-				connectionData.credentialStorage = "database";
-				connectionData.encryptedCredentials = encryptCredentials(tokensJson);
-			}
 
 			if (existingConnection.length > 0) {
 				const [updated] = await db
@@ -308,7 +241,7 @@ export const appsRouter = router({
 					})
 					.where(eq(connections.serverId, input.appId))
 					.returning();
-				return { success: true, secretUri, credentialStorage, connection: updated };
+				return { success: true, connection: updated };
 			} else {
 				const id = crypto.randomUUID();
 				const [created] = await db
@@ -319,7 +252,7 @@ export const appsRouter = router({
 						createdAt: now,
 					})
 					.returning();
-				return { success: true, secretUri, credentialStorage, connection: created };
+				return { success: true, connection: created };
 			}
 		}),
 
@@ -340,39 +273,76 @@ export const appsRouter = router({
 
 				const conn = connection[0];
 
-				if (conn.credentialStorage === "onepassword") {
-					if (!conn.secretUri) {
-						throw new Error("No secret URI found for 1Password storage");
-					}
-					const onePasswordService = await getOnePassword();
-					const secret = await onePasswordService.getSecret(conn.secretUri);
-					return { credentials: secret, storage: "onepassword" };
-				} else if (conn.credentialStorage === "database") {
 					if (!conn.encryptedCredentials) {
 						throw new Error("No encrypted credentials found");
 					}
+
 					const decrypted = decryptCredentials(conn.encryptedCredentials);
-					return { credentials: decrypted, storage: "database" };
-				} else {
-					throw new Error("Unknown credential storage type");
-				}
+				return { credentials: decrypted };
 			} catch (error: any) {
 				console.error("Error in getCredentials query:", error);
 				throw new Error(error?.message || "Failed to retrieve credentials");
 			}
 		}),
 
-	// Get secret from 1Password
-	getSecret: publicProcedure
-		.input(z.object({ secretUri: z.string() }))
-		.query(async ({ input }) => {
+	// Connect Chrome browser history
+	connectChrome: publicProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				localPath: z.string(),
+			})
+		)
+		.mutation(async ({ input }) => {
 			try {
-				const onePasswordService = await getOnePassword();
-				const secret = await onePasswordService.getSecret(input.secretUri);
-				return { secret };
+				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
+				const appName = app[0]?.name || input.appId;
+
+				const existingConnection = await db
+					.select()
+					.from(connections)
+					.where(eq(connections.serverId, input.appId))
+					.limit(1);
+
+				const now = new Date();
+				const connectionData = {
+					serverId: input.appId,
+					serverName: appName,
+					transportType: "http" as const,
+					transportConfig: {} as any,
+					status: "connected" as const,
+					secretUri: null,
+					credentialStorage: "database" as const,
+					encryptedCredentials: null as string | null,
+					connectionMetadata: { localPath: input.localPath } as any,
+					updatedAt: now,
+				};
+
+				if (existingConnection.length > 0) {
+					const [updated] = await db
+						.update(connections)
+						.set({
+							...connectionData,
+							updatedAt: now,
+						})
+						.where(eq(connections.serverId, input.appId))
+						.returning();
+					return { success: true, connection: updated };
+				} else {
+					const id = crypto.randomUUID();
+					const [created] = await db
+						.insert(connections)
+						.values({
+							id,
+							...connectionData,
+							createdAt: now,
+						})
+						.returning();
+					return { success: true, connection: created };
+				}
 			} catch (error: any) {
-				console.error("Error in getSecret query:", error);
-				throw new Error(error?.message || "Failed to retrieve secret");
+				console.error("Error in connectChrome mutation:", error);
+				throw new Error(error?.message || "Failed to connect Chrome");
 			}
 		}),
 });

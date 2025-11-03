@@ -1,12 +1,33 @@
 "use strict";
 const require$$0 = require("electron");
-const require$$1 = require("path");
-const require$$1$1 = require("fs");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const Database = require("better-sqlite3");
 const require$$3 = require("https");
 const require$$0$1 = require("stream");
 const require$$2 = require("events");
 const require$$0$2 = require("buffer");
-const require$$1$2 = require("util");
+const require$$1 = require("util");
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
+const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
+const os__namespace = /* @__PURE__ */ _interopNamespaceDefault(os);
 const THEME_MODE_CURRENT_CHANNEL = "theme-mode:current";
 const THEME_MODE_TOGGLE_CHANNEL = "theme-mode:toggle";
 const THEME_MODE_DARK_CHANNEL = "theme-mode:dark";
@@ -53,9 +74,197 @@ function addWindowEventListeners(mainWindow) {
     mainWindow.close();
   });
 }
+const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
+const CHROME_READ_HISTORY_CHANNEL = "chrome:read-history";
+const CHROME_VERIFY_PATH_CHANNEL = "chrome:verify-path";
+function expandPath(filePath) {
+  if (filePath.startsWith("~")) {
+    const homeDir = os__namespace.homedir();
+    return filePath.replace(/^~/, homeDir);
+  }
+  return filePath;
+}
+function getChromeHistoryPath() {
+  const platform = process.platform;
+  const homeDir = os__namespace.homedir();
+  if (platform === "darwin") {
+    return path__namespace.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "Google",
+      "Chrome",
+      "Default",
+      "History"
+    );
+  } else if (platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || "";
+    return path__namespace.join(localAppData, "Google", "Chrome", "User Data", "Default", "History");
+  } else {
+    return path__namespace.join(homeDir, ".config", "google-chrome", "Default", "History");
+  }
+}
+function detectChromeProfiles() {
+  const platform = process.platform;
+  const homeDir = os__namespace.homedir();
+  const profiles = [];
+  if (platform === "darwin") {
+    const chromeDir = path__namespace.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "Google",
+      "Chrome"
+    );
+    if (fs__namespace.existsSync(chromeDir)) {
+      const entries = fs__namespace.readdirSync(chromeDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const historyPath = path__namespace.join(chromeDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  } else if (platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || "";
+    const chromeDir = path__namespace.join(localAppData, "Google", "Chrome", "User Data");
+    if (fs__namespace.existsSync(chromeDir)) {
+      const entries = fs__namespace.readdirSync(chromeDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith(".")) {
+          const historyPath = path__namespace.join(chromeDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  } else {
+    const chromeDir = path__namespace.join(homeDir, ".config", "google-chrome");
+    if (fs__namespace.existsSync(chromeDir)) {
+      const entries = fs__namespace.readdirSync(chromeDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith(".")) {
+          const historyPath = path__namespace.join(chromeDir, entry.name, "History");
+          if (fs__namespace.existsSync(historyPath)) {
+            profiles.push(historyPath);
+          }
+        }
+      }
+    }
+  }
+  return profiles;
+}
+function readChromeHistory(historyPath) {
+  let db = null;
+  let tempPath = null;
+  try {
+    try {
+      db = new Database(historyPath, { readonly: true });
+    } catch (error) {
+      if (error.code === "SQLITE_BUSY" || error.message?.includes("locked")) {
+        const tempDir = require$$0.app.getPath("temp");
+        tempPath = path__namespace.join(tempDir, `chrome-history-${Date.now()}.db`);
+        fs__namespace.copyFileSync(historyPath, tempPath);
+        db = new Database(tempPath, { readonly: true });
+      } else {
+        throw error;
+      }
+    }
+    const query = `
+			SELECT 
+				datetime(last_visit_time/1000000-11644473600, 'unixepoch', 'localtime') as last_visited,
+				url,
+				title,
+				visit_count,
+				last_visit_time
+			FROM urls
+			ORDER BY last_visit_time DESC
+			LIMIT 1000
+		`;
+    const rows = db.prepare(query).all();
+    return rows.map((row) => ({
+      url: row.url,
+      title: row.title || row.url,
+      timestamp: new Date(row.last_visited).toISOString(),
+      visitCount: row.visit_count || 0,
+      lastVisitTime: row.last_visit_time
+    }));
+  } finally {
+    if (db) {
+      db.close();
+    }
+    if (tempPath && fs__namespace.existsSync(tempPath)) {
+      fs__namespace.unlinkSync(tempPath);
+    }
+  }
+}
+function addChromeEventListeners() {
+  require$$0.ipcMain.handle(CHROME_DETECT_HISTORY_PATH_CHANNEL, () => {
+    try {
+      const defaultPath = getChromeHistoryPath();
+      const profiles = detectChromeProfiles();
+      return {
+        success: true,
+        defaultPath,
+        profiles: profiles.length > 0 ? profiles : [defaultPath]
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        defaultPath: getChromeHistoryPath(),
+        profiles: []
+      };
+    }
+  });
+  require$$0.ipcMain.handle(CHROME_VERIFY_PATH_CHANNEL, (_event, filePath) => {
+    try {
+      const expandedPath = expandPath(filePath);
+      if (!fs__namespace.existsSync(expandedPath)) {
+        return { success: false, error: "File does not exist" };
+      }
+      const stats = fs__namespace.statSync(expandedPath);
+      if (!stats.isFile()) {
+        return { success: false, error: "Path is not a file" };
+      }
+      try {
+        const db = new Database(expandedPath, { readonly: true });
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='urls'").get();
+        db.close();
+        if (!tables) {
+          return { success: false, error: "File is not a valid Chrome history database" };
+        }
+        return { success: true };
+      } catch (error) {
+        if (error.code === "SQLITE_BUSY" || error.message?.includes("locked")) {
+          return { success: true, locked: true };
+        }
+        return { success: false, error: error.message };
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(CHROME_READ_HISTORY_CHANNEL, (_event, historyPath) => {
+    try {
+      const expandedPath = expandPath(historyPath);
+      if (!fs__namespace.existsSync(expandedPath)) {
+        return { success: false, error: `History file does not exist at: ${expandedPath}` };
+      }
+      const history = readChromeHistory(expandedPath);
+      return { success: true, data: history };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+}
 function registerListeners(mainWindow) {
   addWindowEventListeners(mainWindow);
   addThemeEventListeners();
+  addChromeEventListeners();
 }
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var dist$1 = {};
@@ -69,12 +278,12 @@ function requireUtils$1() {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.changePermissions = exports.downloadFile = exports.getPath = void 0;
     const electron_1 = require$$0;
-    const fs = require$$1$1;
-    const path = require$$1;
+    const fs$1 = fs;
+    const path$1 = path;
     const https = require$$3;
     const getPath = () => {
       const savePath = electron_1.app.getPath("userData");
-      return path.resolve(`${savePath}/extensions`);
+      return path$1.resolve(`${savePath}/extensions`);
     };
     exports.getPath = getPath;
     const request = electron_1.net ? electron_1.net.request : https.get;
@@ -85,7 +294,7 @@ function requireUtils$1() {
           if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             return (0, exports.downloadFile)(res.headers.location, to).then(resolve).catch(reject);
           }
-          res.pipe(fs.createWriteStream(to)).on("close", resolve);
+          res.pipe(fs$1.createWriteStream(to)).on("close", resolve);
           res.on("error", reject);
         });
         req.on("error", reject);
@@ -94,11 +303,11 @@ function requireUtils$1() {
     };
     exports.downloadFile = downloadFile;
     const changePermissions = (dir, mode) => {
-      const files = fs.readdirSync(dir);
+      const files = fs$1.readdirSync(dir);
       files.forEach((file) => {
-        const filePath = path.join(dir, file);
-        fs.chmodSync(filePath, parseInt(`${mode}`, 8));
-        if (fs.statSync(filePath).isDirectory()) {
+        const filePath = path$1.join(dir, file);
+        fs$1.chmodSync(filePath, parseInt(`${mode}`, 8));
+        if (fs$1.statSync(filePath).isDirectory()) {
           (0, exports.changePermissions)(filePath, mode);
         }
       });
@@ -365,7 +574,7 @@ function requireBufferList() {
       }
     }
     var Buffer2 = requireSafeBuffer().Buffer;
-    var util2 = require$$1$2;
+    var util2 = require$$1;
     function copyBuffer(src, target, offset) {
       src.copy(target, offset);
     }
@@ -507,7 +716,7 @@ var hasRequiredNode;
 function requireNode() {
   if (hasRequiredNode) return node;
   hasRequiredNode = 1;
-  node = require$$1$2.deprecate;
+  node = require$$1.deprecate;
   return node;
 }
 var _stream_writable;
@@ -1288,7 +1497,7 @@ function require_stream_readable() {
   }
   var util2 = Object.create(requireUtil());
   util2.inherits = requireInherits();
-  var debugUtil = require$$1$2;
+  var debugUtil = require$$1;
   var debug = void 0;
   if (debugUtil && debugUtil.debuglog) {
     debug = debugUtil.debuglog("stream");
@@ -2980,8 +3189,8 @@ function requireUtils() {
       var result = transform[inputType][outputType](input);
       return result;
     };
-    exports.resolve = function(path) {
-      var parts = path.split("/");
+    exports.resolve = function(path2) {
+      var parts = path2.split("/");
       var result = [];
       for (var index = 0; index < parts.length; index++) {
         var part = parts[index];
@@ -8831,18 +9040,18 @@ function requireObject() {
     var object2 = new ZipObject(name, zipObjectContent, o);
     this.files[name] = object2;
   };
-  var parentFolder = function(path) {
-    if (path.slice(-1) === "/") {
-      path = path.substring(0, path.length - 1);
+  var parentFolder = function(path2) {
+    if (path2.slice(-1) === "/") {
+      path2 = path2.substring(0, path2.length - 1);
     }
-    var lastSlash = path.lastIndexOf("/");
-    return lastSlash > 0 ? path.substring(0, lastSlash) : "";
+    var lastSlash = path2.lastIndexOf("/");
+    return lastSlash > 0 ? path2.substring(0, lastSlash) : "";
   };
-  var forceTrailingSlash = function(path) {
-    if (path.slice(-1) !== "/") {
-      path += "/";
+  var forceTrailingSlash = function(path2) {
+    if (path2.slice(-1) !== "/") {
+      path2 += "/";
     }
-    return path;
+    return path2;
   };
   var folderAdd = function(name, createFolders) {
     createFolders = typeof createFolders !== "undefined" ? createFolders : defaults2.createFolders;
@@ -9844,8 +10053,8 @@ var hasRequiredMkdirp;
 function requireMkdirp() {
   if (hasRequiredMkdirp) return mkdirp;
   hasRequiredMkdirp = 1;
-  var path = require$$1;
-  var fs = require$$1$1;
+  var path$1 = path;
+  var fs$1 = fs;
   var _0777 = parseInt("0777", 8);
   mkdirp = mkdirP.mkdirp = mkdirP.mkdirP = mkdirP;
   function mkdirP(p, opts, f, made) {
@@ -9856,7 +10065,7 @@ function requireMkdirp() {
       opts = { mode: opts };
     }
     var mode = opts.mode;
-    var xfs = opts.fs || fs;
+    var xfs = opts.fs || fs$1;
     if (mode === void 0) {
       mode = _0777;
     }
@@ -9864,7 +10073,7 @@ function requireMkdirp() {
     var cb = f || /* istanbul ignore next */
     function() {
     };
-    p = path.resolve(p);
+    p = path$1.resolve(p);
     xfs.mkdir(p, mode, function(er) {
       if (!er) {
         made = made || p;
@@ -9872,8 +10081,8 @@ function requireMkdirp() {
       }
       switch (er.code) {
         case "ENOENT":
-          if (path.dirname(p) === p) return cb(er);
-          mkdirP(path.dirname(p), opts, function(er2, made2) {
+          if (path$1.dirname(p) === p) return cb(er);
+          mkdirP(path$1.dirname(p), opts, function(er2, made2) {
             if (er2) cb(er2, made2);
             else mkdirP(p, opts, cb, made2);
           });
@@ -9895,19 +10104,19 @@ function requireMkdirp() {
       opts = { mode: opts };
     }
     var mode = opts.mode;
-    var xfs = opts.fs || fs;
+    var xfs = opts.fs || fs$1;
     if (mode === void 0) {
       mode = _0777;
     }
     if (!made) made = null;
-    p = path.resolve(p);
+    p = path$1.resolve(p);
     try {
       xfs.mkdirSync(p, mode);
       made = made || p;
     } catch (err0) {
       switch (err0.code) {
         case "ENOENT":
-          made = sync(path.dirname(p), opts, made);
+          made = sync(path$1.dirname(p), opts, made);
           sync(p, opts, made);
           break;
         // In the case of any other error, just see if there's a dir
@@ -10394,13 +10603,13 @@ var hasRequiredDist$1;
 function requireDist$1() {
   if (hasRequiredDist$1) return dist;
   hasRequiredDist$1 = 1;
-  var fs = require$$1$1;
-  var path = require$$1;
+  var fs$1 = fs;
+  var path$1 = path;
   var jszip = requireLib();
   var mkdirp2 = requireMkdirp();
   var promisify2 = requirePromisify();
-  var writeFile = promisify2(fs.writeFile);
-  var readFile = promisify2(fs.readFile);
+  var writeFile = promisify2(fs$1.writeFile);
+  var readFile = promisify2(fs$1.readFile);
   var mkdir = promisify2(mkdirp2);
   function crxToZip(buf) {
     function calcLength(a, b, c, d) {
@@ -10433,19 +10642,19 @@ function requireDist$1() {
     return buf.slice(zipStartOffset, buf.length);
   }
   function unzip(crxFilePath, destination) {
-    var filePath = path.resolve(crxFilePath);
-    var extname = path.extname(crxFilePath);
-    var basename = path.basename(crxFilePath, extname);
-    var dirname = path.dirname(crxFilePath);
-    destination = destination || path.resolve(dirname, basename);
+    var filePath = path$1.resolve(crxFilePath);
+    var extname = path$1.extname(crxFilePath);
+    var basename = path$1.basename(crxFilePath, extname);
+    var dirname = path$1.dirname(crxFilePath);
+    destination = destination || path$1.resolve(dirname, basename);
     return readFile(filePath).then(function(buf) {
       return jszip.loadAsync(crxToZip(buf));
     }).then(function(zip) {
       var zipFileKeys = Object.keys(zip.files);
       return Promise.all(zipFileKeys.map(function(filename) {
         var isFile = !zip.files[filename].dir;
-        var fullPath = path.join(destination, filename);
-        var directory = isFile && path.dirname(fullPath) || fullPath;
+        var fullPath = path$1.join(destination, filename);
+        var directory = isFile && path$1.dirname(fullPath) || fullPath;
         var content = zip.files[filename].async("nodebuffer");
         return mkdir(directory).then(function() {
           return isFile ? content : false;
@@ -10465,24 +10674,24 @@ function requireDownloadChromeExtension() {
   (function(exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.downloadChromeExtension = void 0;
-    const fs = require$$1$1;
-    const path = require$$1;
+    const fs$1 = fs;
+    const path$1 = path;
     const utils_1 = requireUtils$1();
     const unzip = requireDist$1();
     const downloadChromeExtension2 = async (chromeStoreID, { forceDownload = false, attempts = 5 } = {}) => {
       const extensionsStore = (0, utils_1.getPath)();
-      if (!fs.existsSync(extensionsStore)) {
-        await fs.promises.mkdir(extensionsStore, { recursive: true });
+      if (!fs$1.existsSync(extensionsStore)) {
+        await fs$1.promises.mkdir(extensionsStore, { recursive: true });
       }
-      const extensionFolder = path.resolve(`${extensionsStore}/${chromeStoreID}`);
-      if (!fs.existsSync(extensionFolder) || forceDownload) {
-        if (fs.existsSync(extensionFolder)) {
-          await fs.promises.rmdir(extensionFolder, {
+      const extensionFolder = path$1.resolve(`${extensionsStore}/${chromeStoreID}`);
+      if (!fs$1.existsSync(extensionFolder) || forceDownload) {
+        if (fs$1.existsSync(extensionFolder)) {
+          await fs$1.promises.rmdir(extensionFolder, {
             recursive: true
           });
         }
         const fileURL = `https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&x=id%3D${chromeStoreID}%26uc&prodversion=${process.versions.chrome}`;
-        const filePath = path.resolve(`${extensionFolder}.crx`);
+        const filePath = path$1.resolve(`${extensionFolder}.crx`);
         try {
           await (0, utils_1.downloadFile)(fileURL, filePath);
           try {
@@ -10490,7 +10699,7 @@ function requireDownloadChromeExtension() {
             (0, utils_1.changePermissions)(extensionFolder, 755);
             return extensionFolder;
           } catch (err) {
-            if (!fs.existsSync(path.resolve(extensionFolder, "manifest.json"))) {
+            if (!fs$1.existsSync(path$1.resolve(extensionFolder, "manifest.json"))) {
               throw err;
             }
           }
@@ -10593,7 +10802,7 @@ function requireDist() {
 var distExports = requireDist();
 const inDevelopment = process.env.NODE_ENV === "development";
 function createWindow() {
-  const preload = require$$1.join(__dirname, "preload.js");
+  const preload = path.join(__dirname, "preload.js");
   const mainWindow = new require$$0.BrowserWindow({
     width: 800,
     height: 600,
