@@ -5,6 +5,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { getRouteTitle } from "@/utils/route-titles";
+import { DetailSidebarProvider, useDetailSidebar } from "@/contexts/DetailSidebarContext";
+import { BrowserHistoryDetailSidebar } from "@/components/timeline/BrowserHistoryDetailSidebar";
+import { CastDetailSidebar } from "@/components/timeline/CastDetailSidebar";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -56,23 +59,51 @@ function TopbarTitle() {
   );
 }
 
+function LayoutContent({ children }: { children: React.ReactNode }) {
+	const { historySidebarOpen, setHistorySidebarOpen, selectedHistoryItem, castSidebarOpen, setCastSidebarOpen, selectedCast } = useDetailSidebar();
+	
+	return (
+		<SidebarProvider>
+			<div className="relative flex h-screen w-full">
+				<SidebarIcon />
+				<TopbarTitle />
+				<AppSidebar />
+				<SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
+					<DragWindowRegion />
+					<div className="h-[44px] flex-shrink-0" />
+					<main className="flex-1">{children}</main>
+				</SidebarInset>
+				{selectedHistoryItem && historySidebarOpen && (
+					<SidebarProvider open={true} onOpenChange={setHistorySidebarOpen} defaultOpen={false}>
+						<BrowserHistoryDetailSidebar
+							open={historySidebarOpen}
+							onOpenChange={setHistorySidebarOpen}
+							data={selectedHistoryItem}
+						/>
+					</SidebarProvider>
+				)}
+				{selectedCast && castSidebarOpen && (
+					<SidebarProvider open={true} onOpenChange={setCastSidebarOpen} defaultOpen={false}>
+						<CastDetailSidebar
+							open={castSidebarOpen}
+							onOpenChange={setCastSidebarOpen}
+							cast={selectedCast}
+						/>
+					</SidebarProvider>
+				)}
+			</div>
+		</SidebarProvider>
+	);
+}
+
 export default function BaseLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  return (
-    <SidebarProvider>
-      <div className="relative flex h-screen w-full">
-        <SidebarIcon />
-        <TopbarTitle />
-        <AppSidebar />
-        <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
-          <DragWindowRegion />
-          <div className="h-[44px] flex-shrink-0" />
-          <main className="flex-1">{children}</main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
-  );
+	return (
+		<DetailSidebarProvider>
+			<LayoutContent>{children}</LayoutContent>
+		</DetailSidebarProvider>
+	);
 }

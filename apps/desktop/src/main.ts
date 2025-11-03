@@ -12,9 +12,15 @@ const inDevelopment = process.env.NODE_ENV === "development";
 
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
+  
+  const iconPath = inDevelopment
+    ? path.join(process.cwd(), "images", "icon.png")
+    : path.join(process.resourcesPath, "images", "icon.png");
+  
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    icon: iconPath,
     webPreferences: {
       devTools: inDevelopment,
       contextIsolation: true,
@@ -47,7 +53,23 @@ async function installExtensions() {
   }
 }
 
-app.whenReady().then(createWindow).then(installExtensions);
+app.whenReady().then(() => {
+  if (process.platform === "darwin") {
+    const iconPath = inDevelopment
+      ? path.join(process.cwd(), "images", "icon.png")
+      : path.join(process.resourcesPath, "images", "icon.png");
+    
+    try {
+      if (app.dock) {
+        app.dock.setIcon(iconPath);
+      }
+    } catch (error) {
+      console.error("Failed to set dock icon:", error);
+    }
+  }
+  createWindow();
+  installExtensions();
+});
 
 //osX only
 app.on("window-all-closed", () => {

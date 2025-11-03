@@ -1,12 +1,12 @@
 import React from "react";
 import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+	Sidebar,
+	SidebarContent,
+	SidebarHeader,
+} from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./BrowserHistoryEntry";
 
 export function BrowserHistoryDetailSidebar({
@@ -22,17 +22,34 @@ export function BrowserHistoryDetailSidebar({
 
 	if ("entries" in data) {
 		const group = data as BrowserHistoryGroup;
-		return (
-			<Sheet open={open} onOpenChange={onOpenChange}>
-				<SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-					<SheetHeader>
-						<SheetTitle>Browser History Session</SheetTitle>
-						<SheetDescription>
-							{group.entries.length} pages visited around{" "}
-							{new Date(group.timestamp).toLocaleString()}
-						</SheetDescription>
-					</SheetHeader>
-					<div className="mt-6 space-y-4">
+	return (
+		<Sidebar
+			side="right"
+			variant="sidebar"
+			collapsible="offcanvas"
+			className="z-50"
+		>
+				<SidebarHeader className="p-4 border-b">
+					<div className="flex items-center justify-between">
+						<div>
+							<h2 className="text-lg font-semibold">Browser History Session</h2>
+							<p className="text-sm text-muted-foreground">
+								{group.entries.length} pages visited around{" "}
+								{new Date(group.timestamp).toLocaleString()}
+							</p>
+						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => onOpenChange(false)}
+							className="h-8 w-8"
+						>
+							<X className="h-4 w-4" />
+						</Button>
+					</div>
+				</SidebarHeader>
+				<SidebarContent className="p-4 overflow-y-auto">
+					<div className="space-y-4">
 						{group.entries.map((entry, idx) => (
 							<div key={idx} className="space-y-2">
 								<div className="flex items-start justify-between gap-2">
@@ -62,8 +79,8 @@ export function BrowserHistoryDetailSidebar({
 							</div>
 						))}
 					</div>
-				</SheetContent>
-			</Sheet>
+				</SidebarContent>
+			</Sidebar>
 		);
 	}
 
@@ -77,15 +94,32 @@ export function BrowserHistoryDetailSidebar({
 	}, [entry.url]);
 
 	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-				<SheetHeader>
-					<SheetTitle>Browser History</SheetTitle>
-					<SheetDescription>
-						Visited on {new Date(entry.timestamp).toLocaleString()}
-					</SheetDescription>
-				</SheetHeader>
-				<div className="mt-6 space-y-4">
+		<Sidebar
+			side="right"
+			variant="sidebar"
+			collapsible="offcanvas"
+			className="z-50"
+		>
+			<SidebarHeader className="p-4 border-b">
+				<div className="flex items-center justify-between">
+					<div>
+						<h2 className="text-lg font-semibold">Browser History</h2>
+						<p className="text-sm text-muted-foreground">
+							Visited on {new Date(entry.timestamp).toLocaleString()}
+						</p>
+					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => onOpenChange(false)}
+						className="h-8 w-8"
+					>
+						<X className="h-4 w-4" />
+					</Button>
+				</div>
+			</SidebarHeader>
+			<SidebarContent className="p-4 overflow-y-auto">
+				<div className="space-y-4">
 					<div className="space-y-2">
 						<div className="text-sm font-medium">Title</div>
 						<div className="text-sm text-muted-foreground">
@@ -124,7 +158,7 @@ export function BrowserHistoryDetailSidebar({
 						</div>
 					</div>
 				</div>
-			</SheetContent>
-		</Sheet>
+			</SidebarContent>
+		</Sidebar>
 	);
 }

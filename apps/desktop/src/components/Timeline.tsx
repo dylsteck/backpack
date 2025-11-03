@@ -2,13 +2,13 @@ import React from "react";
 import { TimelineEntry } from "./timeline/TimelineEntry";
 import { CastEntry } from "./timeline/CastEntry";
 import { BrowserHistoryEntry } from "./timeline/BrowserHistoryEntry";
-import { BrowserHistoryDetailSidebar } from "./timeline/BrowserHistoryDetailSidebar";
 import { TimelineDemo } from "./timeline/TimelineDemo";
 import { DateSeparator } from "./timeline/DateSeparator";
 import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
+import { useDetailSidebar } from "@/contexts/DetailSidebarContext";
 
 function formatTime(timestamp: Date): string {
 	const date = new Date(timestamp);
@@ -58,10 +58,7 @@ export function Timeline() {
 
 	const [chromeHistory, setChromeHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [braveHistory, setBraveHistory] = React.useState<BrowserHistoryEntryData[]>([]);
-	const [selectedHistoryItem, setSelectedHistoryItem] = React.useState<
-		BrowserHistoryEntryData | BrowserHistoryGroup | null
-	>(null);
-	const [sidebarOpen, setSidebarOpen] = React.useState(false);
+	const { setSelectedHistoryItem, setHistorySidebarOpen, setSelectedCast, setCastSidebarOpen } = useDetailSidebar();
 
 	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
 	const farcasterIconUrl = appsData?.servers?.find((app: any) => app.id === "farcaster")?.iconUrl;
@@ -323,7 +320,15 @@ export function Timeline() {
 										if (item.type === "cast") {
 											return (
 												<TimelineEntry key={item.id} time={time} date={date} showDot iconUrl={farcasterIconUrl}>
-													<CastEntry cast={item.data as FarcasterCastV2} />
+													<div
+														onClick={() => {
+															setSelectedCast(item.data as FarcasterCastV2);
+															setCastSidebarOpen(true);
+														}}
+														className="cursor-pointer"
+													>
+														<CastEntry cast={item.data as FarcasterCastV2} />
+													</div>
 												</TimelineEntry>
 											);
 										}
@@ -342,7 +347,7 @@ export function Timeline() {
 														entry={item.data}
 														onClick={() => {
 															setSelectedHistoryItem(item.data);
-															setSidebarOpen(true);
+															setHistorySidebarOpen(true);
 														}}
 													/>
 												</TimelineEntry>
@@ -368,11 +373,6 @@ export function Timeline() {
 					)}
 				</div>
 			</div>
-			<BrowserHistoryDetailSidebar
-				open={sidebarOpen}
-				onOpenChange={setSidebarOpen}
-				data={selectedHistoryItem}
-			/>
 		</div>
 	);
 }
