@@ -8,7 +8,8 @@ import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
-import { useDetailSidebar } from "@/contexts/DetailSidebarContext";
+import { CastExpandedView } from "./timeline/CastExpandedView";
+import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
 
 function formatTime(timestamp: Date): string {
 	const date = new Date(timestamp);
@@ -58,7 +59,7 @@ export function Timeline() {
 
 	const [chromeHistory, setChromeHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [braveHistory, setBraveHistory] = React.useState<BrowserHistoryEntryData[]>([]);
-	const { setSelectedHistoryItem, setHistorySidebarOpen, setSelectedCast, setCastSidebarOpen } = useDetailSidebar();
+	const [expandedItemId, setExpandedItemId] = React.useState<string | null>(null);
 
 	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
 	const farcasterIconUrl = appsData?.servers?.find((app: any) => app.id === "farcaster")?.iconUrl;
@@ -312,22 +313,38 @@ export function Timeline() {
 							});
 							return (
 								<React.Fragment key={dateKey}>
-									{dateItems.map((item: any) => {
+									{dateItems.map((item: any, index: number) => {
 										const time = formatTime(item.timestamp);
 										const date = formatDate(item.timestamp);
 										const showDot = true;
+										const isExpanded = expandedItemId === item.id;
+
+										const handleToggleExpand = () => {
+											setExpandedItemId(isExpanded ? null : item.id);
+										};
 
 										if (item.type === "cast") {
+											const cast = item.data as FarcasterCastV2;
 											return (
-												<TimelineEntry key={item.id} time={time} date={date} showDot iconUrl={farcasterIconUrl}>
+												<TimelineEntry 
+													key={item.id} 
+													time={time} 
+													date={date} 
+													showDot 
+													iconUrl={farcasterIconUrl}
+													isExpanded={isExpanded}
+													expandedContent={
+														<CastExpandedView 
+															cast={cast} 
+															onClose={() => setExpandedItemId(null)}
+														/>
+													}
+												>
 													<div
-														onClick={() => {
-															setSelectedCast(item.data as FarcasterCastV2);
-															setCastSidebarOpen(true);
-														}}
+														onClick={handleToggleExpand}
 														className="cursor-pointer"
 													>
-														<CastEntry cast={item.data as FarcasterCastV2} />
+														<CastEntry cast={cast} />
 													</div>
 												</TimelineEntry>
 											);
@@ -335,6 +352,7 @@ export function Timeline() {
 
 										if (item.type === "browser-history") {
 											const iconUrl = item.source === "brave" ? braveIconUrl : chromeIconUrl;
+											const historyEntry = item.data as BrowserHistoryEntryData | BrowserHistoryGroup;
 											return (
 												<TimelineEntry
 													key={item.id}
@@ -342,13 +360,17 @@ export function Timeline() {
 													date={date}
 													showDot
 													iconUrl={iconUrl}
+													isExpanded={isExpanded}
+													expandedContent={
+														<BrowserHistoryExpandedView 
+															entry={historyEntry}
+															onClose={() => setExpandedItemId(null)}
+														/>
+													}
 												>
 													<BrowserHistoryEntry
-														entry={item.data}
-														onClick={() => {
-															setSelectedHistoryItem(item.data);
-															setHistorySidebarOpen(true);
-														}}
+														entry={historyEntry}
+														onClick={handleToggleExpand}
 													/>
 												</TimelineEntry>
 											);

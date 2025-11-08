@@ -2,8 +2,7 @@ import { publicProcedure, router } from "../index";
 import { z } from "zod";
 import { db, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
-import { FarcasterService } from "../services/farcaster";
-import { decryptCredentials } from "../lib/credentials";
+import { farcasterRouter } from "./farcaster";
 
 export type TimelineItem = {
 	id: string;
@@ -40,13 +39,9 @@ export const timelineRouter = router({
 								continue;
 							}
 
-								if (!connection.encryptedCredentials) {
-									continue;
-							}
-							const apiKey = decryptCredentials(connection.encryptedCredentials);
-
-							const farcasterService = new FarcasterService(apiKey);
-							const response = await farcasterService.getUserCasts({
+							// Use the cached tRPC route instead of direct service call
+							const caller = farcasterRouter.createCaller({});
+							const response = await caller.getUserCasts({
 								fid: parseInt(fid),
 								limit: input.limit,
 								cursor: input.cursor,

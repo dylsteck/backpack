@@ -6,7 +6,9 @@ export function TimelineEntry({
 	children,
 	showDot,
 	iconUrl,
-	showLine = false,
+	showLine = true,
+	isExpanded = false,
+	expandedContent,
 }: {
 	time: string;
 	date?: string;
@@ -14,14 +16,17 @@ export function TimelineEntry({
 	showDot?: boolean;
 	iconUrl?: string;
 	showLine?: boolean;
+	isExpanded?: boolean;
+	expandedContent?: React.ReactNode;
 }) {
 	return (
 		<div className="relative flex gap-4">
-			<div className="flex flex-col items-center">
+			<div className="flex flex-col items-center w-[19px] relative">
+				<div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 bg-gray-300" style={{ height: 'calc(100% + 1.5rem)' }} />
 				{showDot && (
-					<>
+					<div className="relative z-10">
 						{iconUrl ? (
-							<div className="w-[19px] h-[19px] rounded-full bg-muted flex items-center justify-center mt-1 p-0.5">
+							<div className="w-[19px] h-[19px] rounded-full bg-muted flex items-center justify-center mt-1 p-0.5 shrink-0">
 								<img
 									src={iconUrl}
 									alt=""
@@ -29,13 +34,28 @@ export function TimelineEntry({
 								/>
 							</div>
 						) : (
-							<div className="w-3 h-3 rounded-full bg-gray-300 mt-1" />
+							<div className="w-3 h-3 rounded-full bg-gray-300 mt-1 shrink-0" />
 						)}
-						{showLine && <div className="w-0.5 h-full bg-gray-300 mt-1" />}
-					</>
+					</div>
 				)}
 			</div>
-			<div className="flex-1 min-w-0">{children}</div>
+			<div className="flex-1 min-w-0">
+				<div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'bg-muted/30 rounded-lg p-3 -m-3' : ''}`}>
+					{children}
+					{expandedContent && (
+						<div 
+							className={`overflow-hidden transition-all duration-300 ease-in-out ${
+								isExpanded ? 'max-h-[2000px] opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
+							}`}
+							style={{
+								transitionProperty: 'max-height, opacity, margin-top',
+							}}
+						>
+							{expandedContent}
+						</div>
+					)}
+				</div>
+			</div>
 			<div className="text-xs text-muted-foreground whitespace-nowrap">
 				<div>{time}</div>
 			</div>
