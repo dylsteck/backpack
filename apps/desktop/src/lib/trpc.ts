@@ -11,6 +11,21 @@ export const trpcClient = trpc.createClient({
 	links: [
 		httpBatchLink({
 			url: `${API_URL}/trpc`,
+			fetch: async (url, options) => {
+				try {
+					const response = await fetch(url, {
+						...options,
+						credentials: "include",
+					});
+					if (!response.ok) {
+						console.error(`[tRPC] Request failed: ${response.status} ${response.statusText}`);
+					}
+					return response;
+				} catch (error) {
+					console.error("[tRPC] Fetch error:", error);
+					throw error;
+				}
+			},
 		}),
 	],
 });

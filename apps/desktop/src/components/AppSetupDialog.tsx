@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/utils/tailwind";
+import { setupDeepLinkListener, type DeepLinkCallbackData } from "@/lib/deepLink";
 
 interface AppSetupDialogProps {
   app: {
@@ -35,6 +36,7 @@ interface AppSetupDialogProps {
       secretUri?: string | null;
       transportType: string;
       transportConfig: any;
+      connectionMetadata?: any;
     } | null;
   } | null;
   open: boolean;
@@ -90,6 +92,10 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const [detectingPath, setDetectingPath] = React.useState(false);
   const [bravePath, setBravePath] = React.useState("");
   const [detectingBravePath, setDetectingBravePath] = React.useState(false);
+  const [stripeSessionToken, setStripeSessionToken] = React.useState<string | null>(null);
+  const [stripePolling, setStripePolling] = React.useState(false);
+  const [stripePollingError, setStripePollingError] = React.useState<string | null>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation();
   const saveOAuthTokensMutation = (trpc as any).apps.saveOAuthTokens.useMutation();
@@ -99,6 +105,9 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     { connectionId: app?.connection?.id || "" },
     { enabled: false } // Don't auto-fetch, only fetch on demand
   );
+  // Stripe mutations - must be at component level, not inside handlers
+  const saveStripeAccountsMutation = (trpc as any).stripe.saveConnectedAccounts.useMutation();
+  const syncStripeTransactionsMutation = (trpc as any).stripe.syncAccountTransactions.useMutation();
 
   const connectionType = app?.connectionType || "mcp";
   const isMcp = connectionType === "mcp";
@@ -110,6 +119,95 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const isConnected = app?.connection?.status === "connected";
   const connection = app?.connection;
   const isFarcaster = app?.id === "farcaster" || app?.name.toLowerCase().includes("farcaster");
+  const isStripe = app?.id === "stripe" || app?.name.toLowerCase().includes("stripe");
+
+  // Handle Stripe completion (from deep link or polling) - memoized to avoid dependency issues
+  const handleStripeCompletion = React.useCallback(async (data: DeepLinkCallbackData) => {
+    if (!data.success || !data.accountIds || data.accountIds.length === 0) {
+      setError(data.error || "Failed to connect accounts");
+      setStripePolling(false);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Save connected accounts
+      await saveStripeAccountsMutation.mutateAsync({
+        accountIds: data.accountIds,
+        customerId: data.customerId || "",
+      });
+
+      // Sync transactions for each account
+      for (const accountId of data.accountIds) {
+        try {
+          await syncStripeTransactionsMutation.mutateAsync({ accountId });
+        } catch (syncError) {
+          console.error(`Failed to sync transactions for account ${accountId}:`, syncError);
+        }
+      }
+
+      setSuccess(true);
+      setError(null);
+      setStripePolling(false);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+
+      // Close dialog and refresh after a delay
+      setTimeout(() => {
+        onOpenChange(false);
+        window.location.reload();
+      }, 2000);
+    } catch (err: any) {
+      console.error("Error completing Stripe connection:", err);
+      setError(err?.message || "Failed to save connection");
+      setStripePolling(false);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+    }
+  }, [saveStripeAccountsMutation, syncStripeTransactionsMutation, onOpenChange]);
+
+  // Set up deep link listener
+  React.useEffect(() => {
+    if (!open || !isStripe || !stripeSessionToken) return;
+
+    const cleanup = setupDeepLinkListener((data: DeepLinkCallbackData) => {
+      if (data.sessionToken === stripeSessionToken) {
+        handleStripeCompletion(data);
+      }
+    });
+
+    return cleanup;
+  }, [open, isStripe, stripeSessionToken, handleStripeCompletion]);
+
+  // Cleanup polling on unmount or dialog close
+  React.useEffect(() => {
+    if (!open) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setStripeSessionToken(null);
+      setStripePolling(false);
+      setStripePollingError(null);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [open]);
 
   React.useEffect(() => {
     if (!open) {
@@ -124,6 +222,9 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       setDetectingPath(false);
       setBravePath("");
       setDetectingBravePath(false);
+      setStripeSessionToken(null);
+      setStripePolling(false);
+      setStripePollingError(null);
     }
   }, [open]);
 
@@ -314,6 +415,110 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     }
   };
 
+  // Generate session token for Stripe OAuth
+  const generateSessionToken = (): string => {
+    return `stripe_${Math.random().toString(36).substring(2)}_${Date.now().toString(36)}`;
+  };
+
+  // Poll for Stripe connection status
+  const pollStripeStatus = async (token: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const response = await fetch(`${apiUrl}/stripe/status/${token}`);
+      
+      if (!response.ok) {
+        throw new Error(`Status check failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.status === "completed") {
+        // Stop polling
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setStripePolling(false);
+        
+        // Handle completion
+        await handleStripeCompletion({
+          success: true,
+          sessionToken: token,
+          accountIds: data.accountIds || [],
+          customerId: data.customerId,
+          error: null,
+        });
+      } else if (data.status === "error") {
+        // Stop polling on error
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setStripePolling(false);
+        setError(data.error || "Connection failed");
+        setIsSubmitting(false);
+      }
+      // If pending, continue polling
+    } catch (err: any) {
+      console.error("Error polling Stripe status:", err);
+      setStripePollingError(err?.message || "Failed to check status");
+      // Continue polling on network errors
+    }
+  };
+
+  const handleStripeConnect = async () => {
+    if (!app) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    setStripePollingError(null);
+
+    try {
+      // Generate session token
+      const sessionToken = generateSessionToken();
+      setStripeSessionToken(sessionToken);
+
+      // Open browser with server URL
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const connectUrl = `${apiUrl}/stripe/connect?token=${sessionToken}`;
+      
+      // Use Electron IPC to open in default browser (Chrome, etc.)
+      if (typeof window !== "undefined" && (window as any).electronWindow?.openExternal) {
+        await (window as any).electronWindow.openExternal(connectUrl);
+      } else if (typeof window !== "undefined" && (window as any).require) {
+        // Fallback to direct require if IPC not available
+        const { shell } = (window as any).require("electron");
+        await shell.openExternal(connectUrl);
+      } else {
+        // Fallback to window.open if not in Electron
+        window.open(connectUrl, "_blank");
+      }
+
+      // Start polling
+      setStripePolling(true);
+      pollingIntervalRef.current = setInterval(() => {
+        pollStripeStatus(sessionToken);
+      }, 2000); // Poll every 2 seconds
+
+      // Timeout after 5 minutes (150 attempts)
+      setTimeout(() => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        if (stripePolling) {
+          setStripePolling(false);
+          setError("Connection timed out. Please try again.");
+          setIsSubmitting(false);
+        }
+      }, 5 * 60 * 1000);
+    } catch (err: any) {
+      console.error("Error initiating Stripe connection:", err);
+      setError(err?.message || "Failed to open browser");
+      setIsSubmitting(false);
+    }
+  };
+
   const handleOAuthConnect = async () => {
     if (!app) return;
 
@@ -321,47 +526,53 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     setError(null);
 
     try {
-      // Get the server URL from config
-      const serverUrl = app.config?.url;
-      if (!serverUrl) {
-        throw new Error("Server URL not found in app configuration");
-      }
-
-      // Create callback URL for OAuth
-      const callbackUrl = `${window.location.origin}/api/apps/auth/callback`;
-      const userId = "user"; // TODO: Get actual user ID from auth context
-
-      // Initiate OAuth flow
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/apps/auth/connect`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          serverUrl,
-          callbackUrl,
-          userId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to initiate OAuth flow");
-      }
-
-      const data = await response.json();
-
-      if (data.authUrl) {
-        // Open OAuth URL in browser
-        // In Electron, we might want to use shell.openExternal or a webview
-        window.open(data.authUrl, "_blank");
-
-        // Poll for OAuth completion
-        // TODO: Implement proper OAuth callback handling
-        // This is a simplified version - in production, use proper callback handling
-        setError("OAuth flow initiated. Please complete authentication in the browser and return here.");
+      // Stripe Financial Connections uses browser-based flow
+      if (isStripe) {
+        await handleStripeConnect();
+        return;
       } else {
-        throw new Error("OAuth not available for this server");
+        // Generic OAuth flow for other apps
+        const serverUrl = app.config?.url;
+        if (!serverUrl) {
+          throw new Error("Server URL not found in app configuration");
+        }
+
+        // Create callback URL for OAuth
+        const callbackUrl = `${window.location.origin}/api/apps/auth/callback`;
+        const userId = "user"; // TODO: Get actual user ID from auth context
+
+        // Initiate OAuth flow
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/apps/auth/connect`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            serverUrl,
+            callbackUrl,
+            userId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to initiate OAuth flow");
+        }
+
+        const data = await response.json();
+
+        if (data.authUrl) {
+          // Open OAuth URL in browser
+          // In Electron, we might want to use shell.openExternal or a webview
+          window.open(data.authUrl, "_blank");
+
+          // Poll for OAuth completion
+          // TODO: Implement proper OAuth callback handling
+          // This is a simplified version - in production, use proper callback handling
+          setError("OAuth flow initiated. Please complete authentication in the browser and return here.");
+        } else {
+          throw new Error("OAuth not available for this server");
+        }
       }
     } catch (err: any) {
       setError(err.message || "Failed to initiate OAuth flow");
@@ -452,8 +663,40 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
             </div>
           )}
 
-          {isApi ? (
-            // API Key Input
+              {isApi && requiresOAuth && isStripe ? (
+                // Stripe OAuth Flow (Browser-based)
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect your bank accounts using Stripe Financial Connections. Click the button below to open your browser and complete the connection.
+                  </p>
+                  {stripePolling && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                        <span>Waiting for browser connection...</span>
+                      </div>
+                      {stripePollingError && (
+                        <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                          {stripePollingError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleStripeConnect}
+                    disabled={isSubmitting || stripePolling}
+                    className="w-full"
+                  >
+                    {stripePolling ? "Waiting for connection..." : isSubmitting ? "Opening browser..." : "Connect Bank Accounts"}
+                  </Button>
+                  {stripePolling && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Complete the connection in your browser. This dialog will close automatically when done.
+                    </p>
+                  )}
+                </div>
+              ) : isApi ? (
+            // API Key Input (for non-OAuth API apps like Farcaster)
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium mb-2 block">
@@ -573,8 +816,8 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                 {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Brave"}
               </Button>
             </div>
-          ) : isMcp && requiresOAuth ? (
-            // OAuth Flow
+          ) : (isMcp || isApi) && requiresOAuth ? (
+            // OAuth Flow (for MCP or API apps that require OAuth)
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 This app requires OAuth authentication. Click the button below to connect your account.

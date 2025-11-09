@@ -59,19 +59,23 @@ function addThemeEventListeners() {
 const WIN_MINIMIZE_CHANNEL = "window:minimize";
 const WIN_MAXIMIZE_CHANNEL = "window:maximize";
 const WIN_CLOSE_CHANNEL = "window:close";
-function addWindowEventListeners(mainWindow) {
+const WIN_OPEN_EXTERNAL_CHANNEL = "window:open-external";
+function addWindowEventListeners(mainWindow2) {
   require$$0.ipcMain.handle(WIN_MINIMIZE_CHANNEL, () => {
-    mainWindow.minimize();
+    mainWindow2.minimize();
   });
   require$$0.ipcMain.handle(WIN_MAXIMIZE_CHANNEL, () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
+    if (mainWindow2.isMaximized()) {
+      mainWindow2.unmaximize();
     } else {
-      mainWindow.maximize();
+      mainWindow2.maximize();
     }
   });
   require$$0.ipcMain.handle(WIN_CLOSE_CHANNEL, () => {
-    mainWindow.close();
+    mainWindow2.close();
+  });
+  require$$0.ipcMain.handle(WIN_OPEN_EXTERNAL_CHANNEL, async (_event, url) => {
+    await require$$0.shell.openExternal(url);
   });
 }
 const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
@@ -448,8 +452,8 @@ function addBraveEventListeners() {
     }
   });
 }
-function registerListeners(mainWindow) {
-  addWindowEventListeners(mainWindow);
+function registerListeners(mainWindow2) {
+  addWindowEventListeners(mainWindow2);
   addThemeEventListeners();
   addChromeEventListeners();
   addBraveEventListeners();
@@ -10989,10 +10993,11 @@ function requireDist() {
 }
 var distExports = requireDist();
 const inDevelopment = process.env.NODE_ENV === "development";
+let mainWindow = null;
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
   const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
-  const mainWindow = new require$$0.BrowserWindow({
+  mainWindow = new require$$0.BrowserWindow({
     width: 800,
     height: 600,
     icon: iconPath,
@@ -11010,6 +11015,37 @@ function createWindow() {
   {
     mainWindow.loadURL("http://localhost:5173");
   }
+  return mainWindow;
+}
+function handleDeepLink(url) {
+  console.log("Deep link received:", url);
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "cortex:") {
+      return;
+    }
+    const params = new URLSearchParams(urlObj.search);
+    const success = params.get("success") === "true";
+    const sessionToken = params.get("sessionToken");
+    const accountIds = params.get("accountIds")?.split(",") || [];
+    const customerId = params.get("customerId");
+    const error = params.get("error");
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("deep-link-callback", {
+        success,
+        sessionToken,
+        accountIds,
+        customerId,
+        error
+      });
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+  } catch (error) {
+    console.error("Error parsing deep link:", error);
+  }
 }
 async function installExtensions() {
   try {
@@ -11019,20 +11055,54 @@ async function installExtensions() {
     console.error("Failed to install extensions");
   }
 }
-require$$0.app.whenReady().then(() => {
-  if (process.platform === "darwin") {
-    const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
-    try {
-      if (require$$0.app.dock) {
-        require$$0.app.dock.setIcon(iconPath);
-      }
-    } catch (error) {
-      console.error("Failed to set dock icon:", error);
+const gotTheLock = require$$0.app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  require$$0.app.quit();
+} else {
+  if (process.defaultApp) {
+    if (process.platform === "win32") {
+      require$$0.app.setAsDefaultProtocolClient("cortex", process.execPath, [path.resolve(process.argv[1])]);
+    } else {
+      require$$0.app.setAsDefaultProtocolClient("cortex");
     }
+  } else {
+    require$$0.app.setAsDefaultProtocolClient("cortex");
   }
-  createWindow();
-  installExtensions();
-});
+  require$$0.app.on("open-url", (event, url2) => {
+    event.preventDefault();
+    handleDeepLink(url2);
+  });
+  require$$0.app.on("second-instance", (event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+    const url2 = commandLine.find((arg) => arg.startsWith("cortex://"));
+    if (url2) {
+      handleDeepLink(url2);
+    }
+  });
+  const url = process.argv.find((arg) => arg.startsWith("cortex://"));
+  if (url) {
+    handleDeepLink(url);
+  }
+  require$$0.app.whenReady().then(() => {
+    if (process.platform === "darwin") {
+      const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
+      try {
+        if (require$$0.app.dock) {
+          require$$0.app.dock.setIcon(iconPath);
+        }
+      } catch (error) {
+        console.error("Failed to set dock icon:", error);
+      }
+    }
+    createWindow();
+    installExtensions();
+  });
+}
 require$$0.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     require$$0.app.quit();

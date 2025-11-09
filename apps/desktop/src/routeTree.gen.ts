@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SecondRouteImport } from './routes/second'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppsAppIdRouteImport } from './routes/apps.$appId'
 
 const SecondRoute = SecondRouteImport.update({
   id: '/second',
@@ -28,34 +29,42 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsAppIdRoute = AppsAppIdRouteImport.update({
+  id: '/$appId',
+  path: '/$appId',
+  getParentRoute: () => AppsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/apps': typeof AppsRoute
+  '/apps': typeof AppsRouteWithChildren
   '/second': typeof SecondRoute
+  '/apps/$appId': typeof AppsAppIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/apps': typeof AppsRoute
+  '/apps': typeof AppsRouteWithChildren
   '/second': typeof SecondRoute
+  '/apps/$appId': typeof AppsAppIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/apps': typeof AppsRoute
+  '/apps': typeof AppsRouteWithChildren
   '/second': typeof SecondRoute
+  '/apps/$appId': typeof AppsAppIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apps' | '/second'
+  fullPaths: '/' | '/apps' | '/second' | '/apps/$appId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apps' | '/second'
-  id: '__root__' | '/' | '/apps' | '/second'
+  to: '/' | '/apps' | '/second' | '/apps/$appId'
+  id: '__root__' | '/' | '/apps' | '/second' | '/apps/$appId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppsRoute: typeof AppsRoute
+  AppsRoute: typeof AppsRouteWithChildren
   SecondRoute: typeof SecondRoute
 }
 
@@ -82,12 +91,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/$appId': {
+      id: '/apps/$appId'
+      path: '/$appId'
+      fullPath: '/apps/$appId'
+      preLoaderRoute: typeof AppsAppIdRouteImport
+      parentRoute: typeof AppsRoute
+    }
   }
 }
 
+interface AppsRouteChildren {
+  AppsAppIdRoute: typeof AppsAppIdRoute
+}
+
+const AppsRouteChildren: AppsRouteChildren = {
+  AppsAppIdRoute: AppsAppIdRoute,
+}
+
+const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppsRoute: AppsRoute,
+  AppsRoute: AppsRouteWithChildren,
   SecondRoute: SecondRoute,
 }
 export const routeTree = rootRouteImport

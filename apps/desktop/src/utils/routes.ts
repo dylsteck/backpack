@@ -14,3 +14,8 @@ export const router = createRouter({
     initialEntries: ["/"],
   }),
 });
+
+// Expose router globally for debugging
+if (typeof window !== "undefined") {
+  (window as any).__tanstackRouter = router;
+}

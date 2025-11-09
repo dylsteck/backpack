@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, json, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, json, pgEnum, boolean, jsonb } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const transportTypeEnum = pgEnum("transport_type", ["stdio", "http", "https", "sse", "streamable-http"]);
 export const connectionStatusEnum = pgEnum("connection_status", ["connected", "disconnected", "error"]);
@@ -53,4 +54,25 @@ export const connections = pgTable("connections", {
 	createdAt: timestamp("created_at").notNull(),
 	updatedAt: timestamp("updated_at").notNull(),
 });
+
+export const items = pgTable("items", {
+	id: text("id").primaryKey(),
+	source: text("source").notNull().references(() => apps.id, { onDelete: "cascade" }),
+	type: text("type").notNull(),
+	timestamp: timestamp("timestamp").notNull(),
+	data: jsonb("data").notNull().$type<Record<string, any>>(),
+	createdAt: timestamp("created_at").notNull(),
+	updatedAt: timestamp("updated_at").notNull(),
+});
+
+export const appsRelations = relations(apps, ({ many }) => ({
+	items: many(items),
+}));
+
+export const itemsRelations = relations(items, ({ one }) => ({
+	app: one(apps, {
+		fields: [items.source],
+		references: [apps.id],
+	}),
+}));
 

@@ -2,14 +2,17 @@ import React from "react";
 import { TimelineEntry } from "./timeline/TimelineEntry";
 import { CastEntry } from "./timeline/CastEntry";
 import { BrowserHistoryEntry } from "./timeline/BrowserHistoryEntry";
+import { TransactionEntry } from "./timeline/TransactionEntry";
 import { TimelineDemo } from "./timeline/TimelineDemo";
 import { DateSeparator } from "./timeline/DateSeparator";
 import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
+import { groupTransactions, type TransactionEntryData, type TransactionGroup } from "./timeline/transactionUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
 import { CastExpandedView } from "./timeline/CastExpandedView";
 import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
+import { TransactionExpandedView } from "./timeline/TransactionExpandedView";
 
 function formatTime(timestamp: Date): string {
 	const date = new Date(timestamp);
@@ -67,6 +70,7 @@ export function Timeline() {
 	const chromeConnection = appsData?.servers?.find((app: any) => app.id === "chrome")?.connection;
 	const braveIconUrl = appsData?.servers?.find((app: any) => app.id === "brave")?.iconUrl;
 	const braveConnection = appsData?.servers?.find((app: any) => app.id === "brave")?.connection;
+	const stripeIconUrl = appsData?.servers?.find((app: any) => app.id === "stripe")?.iconUrl;
 
 	React.useEffect(() => {
 		console.log("Apps data loaded:", {
@@ -83,7 +87,14 @@ export function Timeline() {
 
 	const items = React.useMemo(() => {
 		if (!data?.pages) return [];
-		return data.pages.flatMap((page: any) => page.items || []);
+		const allItems = data.pages.flatMap((page: any) => page.items || []);
+		console.log(`[Timeline] Total items from API: ${allItems.length}`);
+		const stripeItems = allItems.filter((item: any) => item.source === "stripe");
+		console.log(`[Timeline] Stripe items from API: ${stripeItems.length}`);
+		if (stripeItems.length > 0) {
+			console.log(`[Timeline] Sample Stripe item:`, stripeItems[0]);
+		}
+		return allItems;
 	}, [data]);
 
 	React.useEffect(() => {
@@ -225,7 +236,48 @@ export function Timeline() {
 			timestamp: item.timestamp instanceof Date ? item.timestamp : new Date(item.timestamp),
 		}));
 
-		return [...serverItems, ...chromeHistoryItems, ...braveHistoryItems].sort((a, b) => {
+		// Process transaction items and group them
+		const transactionItems = serverItems.filter((item: any) => item.type === "transaction");
+		const otherServerItems = serverItems.filter((item: any) => item.type !== "transaction");
+
+		console.log(`[Timeline] Processing ${transactionItems.length} transaction items from server`);
+		if (transactionItems.length > 0) {
+			console.log(`[Timeline] Sample transaction item:`, transactionItems[0]);
+		}
+
+		// Convert transaction items to TransactionEntryData format
+		const transactionEntries: TransactionEntryData[] = transactionItems.map((item: any) => {
+			try {
+				return {
+					id: item.id,
+					account_id: item.data?.account_id || item.data?.account,
+					amount: item.data?.amount,
+					currency: item.data?.currency,
+					description: item.data?.description,
+					status: item.data?.status,
+					transacted_at: item.data?.transacted_at,
+					created: item.data?.created,
+					timestamp: item.timestamp,
+				};
+			} catch (error) {
+				console.error(`[Timeline] Error mapping transaction item:`, error, item);
+				return null;
+			}
+		}).filter((entry): entry is TransactionEntryData => entry !== null);
+
+		const groupedTransactions = groupTransactions(transactionEntries);
+		const transactionTimelineItems = groupedTransactions.map((entry) => {
+			const timestamp = "entries" in entry ? entry.timestamp : entry.timestamp;
+			return {
+				id: "entries" in entry ? entry.id : entry.id,
+				timestamp,
+				source: "stripe",
+				type: "transaction",
+				data: entry,
+			};
+		});
+
+		return [...otherServerItems, ...transactionTimelineItems, ...chromeHistoryItems, ...braveHistoryItems].sort((a, b) => {
 			const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
 			const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
 			return bTime - aTime;
@@ -370,6 +422,31 @@ export function Timeline() {
 												>
 													<BrowserHistoryEntry
 														entry={historyEntry}
+														onClick={handleToggleExpand}
+													/>
+												</TimelineEntry>
+											);
+										}
+
+										if (item.type === "transaction") {
+											const transactionEntry = item.data as TransactionEntryData | TransactionGroup;
+											return (
+												<TimelineEntry
+													key={item.id}
+													time={time}
+													date={date}
+													showDot
+													iconUrl={stripeIconUrl}
+													isExpanded={isExpanded}
+													expandedContent={
+														<TransactionExpandedView 
+															entry={transactionEntry}
+															onClose={() => setExpandedItemId(null)}
+														/>
+													}
+												>
+													<TransactionEntry
+														entry={transactionEntry}
 														onClick={handleToggleExpand}
 													/>
 												</TimelineEntry>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { farcasterRouter } from "./farcaster";
+import { ItemsService } from "../services/items/service";
 
 export type TimelineItem = {
 	id: string;
@@ -17,6 +18,7 @@ export const timelineRouter = router({
 		.input(
 			z.object({
 				sources: z.array(z.string()).optional(),
+				source: z.string().optional(), // Single source filter for app detail pages
 				cursor: z.string().optional(),
 				limit: z.number().optional().default(25),
 			})
@@ -27,8 +29,16 @@ export const timelineRouter = router({
 				const items: TimelineItem[] = [];
 				let nextCursor: string | undefined = undefined;
 
+				const itemsService = new ItemsService();
+				
+				console.log(`[Timeline] Processing ${allConnections.length} connections`);
+				console.log(`[Timeline] Connections:`, allConnections.map(c => ({ id: c.serverId, status: c.status })));
+
+				// Support both sources array and single source filter
+				const sourceFilter = input.source ? [input.source] : input.sources;
+
 				for (const connection of allConnections) {
-					if (input.sources && !input.sources.includes(connection.serverId)) {
+					if (sourceFilter && !sourceFilter.includes(connection.serverId)) {
 						continue;
 					}
 
@@ -64,9 +74,53 @@ export const timelineRouter = router({
 							console.error(`Error fetching Farcaster timeline for connection ${connection.id}:`, error);
 						}
 					}
+
+					if (connection.serverId === "stripe") {
+						console.log(`[Timeline] Checking Stripe connection: id=${connection.id}, status=${connection.status}`);
+						if (connection.status === "connected") {
+							try {
+								console.log(`[Timeline] Fetching Stripe transactions for connection ${connection.id}`);
+								// Fetch Stripe transaction items from items table
+								// Don't pass cursor if it's invalid - let it fetch from the beginning
+								const cursor = input.cursor && !isNaN(new Date(input.cursor).getTime()) ? input.cursor : undefined;
+								const stripeItems = await itemsService.getItems({
+									source: "stripe",
+									type: "transaction",
+									cursor: cursor,
+									limit: input.limit,
+								});
+
+								console.log(`[Timeline] Found ${stripeItems.items.length} Stripe transactions`);
+								if (stripeItems.items.length > 0) {
+									console.log(`[Timeline] Sample transaction:`, JSON.stringify(stripeItems.items[0], null, 2));
+								}
+
+							for (const item of stripeItems.items) {
+								items.push({
+									id: item.id,
+									timestamp: item.timestamp,
+									source: "stripe",
+									type: "transaction",
+									data: item.data,
+								});
+							}
+
+								if (stripeItems.nextCursor) {
+									nextCursor = stripeItems.nextCursor;
+								}
+							} catch (error) {
+								console.error(`Error fetching Stripe timeline for connection ${connection.id}:`, error);
+								console.error(`Error details:`, error);
+							}
+						} else {
+							console.log(`[Timeline] Stripe connection exists but status is ${connection.status}, skipping`);
+						}
+					}
 				}
 
 				items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+				console.log(`[Timeline] Returning ${items.length} total items (${items.filter(i => i.source === 'stripe').length} Stripe, ${items.filter(i => i.source === 'farcaster').length} Farcaster)`);
 
 				return {
 					items,

@@ -110,19 +110,21 @@ export function ViewToggle({
               <div
                 key={itemId}
                 onClick={() => {
-                  if (isConnected && onSetupClick) {
-                    onSetupClick(item);
+                  console.log("[ViewToggle] Card clicked:", { itemId, name, isConnected, hasOnSetupClick: !!onSetupClick });
+                  if (onSetupClick) {
+                    const fields = getFields(item);
+                    console.log("[ViewToggle] Calling onSetupClick with:", fields);
+                    onSetupClick(fields);
                   }
                 }}
                 className={cn(
                   "group relative flex flex-col rounded-lg border bg-card p-4 transition-all hover:shadow-lg",
-                  isConnected && onSetupClick ? "cursor-pointer hover:border-primary/50" : "hover:border-primary/50"
+                  onSetupClick ? "cursor-pointer hover:border-primary/50" : "hover:border-primary/50"
                 )}
               >
                 {!isConnected && onSetupClick && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={() => {
                       onSetupClick(item);
                     }}
                     className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent hover:border-primary/50 z-10"

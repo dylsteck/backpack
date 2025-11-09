@@ -16,25 +16,28 @@ export const appsRouter = router({
 	// Get all available servers from database
 	getAvailableServers: publicProcedure.query(async () => {
 		try {
+			console.log("[getAvailableServers] Fetching apps and connections from database");
 			const servers = await db.select().from(apps);
 			const connectionList = await db.select().from(connections);
+			
+			console.log(`[getAvailableServers] Found ${servers.length} apps and ${connectionList.length} connections`);
 			
 			// Create a map of serverId -> connection for quick lookup
 			const connectionMap = new Map(
 				connectionList.map((conn) => [conn.serverId, conn])
 			);
 			
-			return {
+			const result = {
 				servers: servers.map((server) => {
 					const connection = connectionMap.get(server.id);
 					return {
-					id: server.id,
-					name: server.name,
-					description: server.description,
-					transport: server.transport,
-					oauth: server.oauth,
-					iconUrl: server.iconUrl,
-					config: server.config,
+						id: server.id,
+						name: server.name,
+						description: server.description,
+						transport: server.transport,
+						oauth: server.oauth,
+						iconUrl: server.iconUrl,
+						config: server.config,
 						connectionType: server.connectionType,
 						connection: connection ? {
 							id: connection.id,
@@ -48,8 +51,13 @@ export const appsRouter = router({
 					};
 				}),
 			};
+			
+			console.log(`[getAvailableServers] Returning ${result.servers.length} servers`);
+			return result;
 		} catch (error) {
-			console.error("Error in getAvailableServers:", error);
+			console.error("[getAvailableServers] Error:", error);
+			console.error("[getAvailableServers] Error details:", error instanceof Error ? error.message : String(error));
+			// Return empty array instead of throwing to prevent UI crash
 			return { servers: [] };
 		}
 	}),

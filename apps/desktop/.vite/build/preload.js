@@ -17,12 +17,14 @@ function exposeThemeContext() {
 const WIN_MINIMIZE_CHANNEL = "window:minimize";
 const WIN_MAXIMIZE_CHANNEL = "window:maximize";
 const WIN_CLOSE_CHANNEL = "window:close";
+const WIN_OPEN_EXTERNAL_CHANNEL = "window:open-external";
 function exposeWindowContext() {
   const { contextBridge, ipcRenderer } = window.require("electron");
   contextBridge.exposeInMainWorld("electronWindow", {
     minimize: () => ipcRenderer.invoke(WIN_MINIMIZE_CHANNEL),
     maximize: () => ipcRenderer.invoke(WIN_MAXIMIZE_CHANNEL),
-    close: () => ipcRenderer.invoke(WIN_CLOSE_CHANNEL)
+    close: () => ipcRenderer.invoke(WIN_CLOSE_CHANNEL),
+    openExternal: (url) => ipcRenderer.invoke(WIN_OPEN_EXTERNAL_CHANNEL, url)
   });
 }
 const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
@@ -49,10 +51,28 @@ function exposeBraveContext() {
     readHistory: (path) => ipcRenderer.invoke(BRAVE_READ_HISTORY_CHANNEL, path)
   });
 }
+const DEEPLINK_CALLBACK_CHANNEL = "deep-link-callback";
+function exposeDeepLinkContext() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const { contextBridge: contextBridge2, ipcRenderer: ipcRenderer2 } = window.require("electron");
+  contextBridge2.exposeInMainWorld("electronDeepLink", {
+    onCallback: (callback) => {
+      ipcRenderer2.on(DEEPLINK_CALLBACK_CHANNEL, (_event, data) => {
+        callback(data);
+      });
+    },
+    removeCallback: () => {
+      ipcRenderer2.removeAllListeners(DEEPLINK_CALLBACK_CHANNEL);
+    }
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
   exposeChromeContext();
   exposeBraveContext();
+  exposeDeepLinkContext();
 }
 exposeContexts();

@@ -6,6 +6,7 @@ import { appRouter } from "@cortex/api/routers/index";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { mcpRoutes } from "./routes/mcp";
 import { chatRoutes } from "./routes/chat";
+import { stripeRoutes } from "./routes/stripe";
 
 const port = process.env.PORT ?? 3000;
 
@@ -26,6 +27,7 @@ const app = new Elysia()
 	)
 	.use(mcpRoutes)
 	.use(chatRoutes)
+	.use(stripeRoutes)
 	.all("/trpc/*", async (context) => {
 		const res = await fetchRequestHandler({
 			endpoint: "/trpc",
