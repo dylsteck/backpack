@@ -20,11 +20,10 @@ export function TimelineEntry({
 	expandedContent?: React.ReactNode;
 }) {
 	return (
-		<div className="relative flex gap-4">
+		<div className="relative flex gap-4 z-10">
 			<div className="flex flex-col items-center w-[19px] relative">
-				<div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 bg-gray-300" style={{ height: 'calc(100% + 1.5rem)' }} />
 				{showDot && (
-					<div className="relative z-10">
+					<div className="relative">
 						{iconUrl ? (
 							<div className="w-[19px] h-[19px] rounded-full bg-muted flex items-center justify-center mt-1 p-0.5 shrink-0">
 								<img

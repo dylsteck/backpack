@@ -44,25 +44,25 @@ export function AppDetailTabs({ app, isConnected }: AppDetailTabsProps) {
 
 	return (
 		<Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-			<TabsList className="grid w-full max-w-md grid-cols-2">
+			<TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
 				<TabsTrigger value="home">Home</TabsTrigger>
 				<TabsTrigger value="settings">Settings</TabsTrigger>
 			</TabsList>
 			
-			<TabsContent value="home" className="flex-1 mt-4 min-h-[400px]">
+			<TabsContent value="home" className="flex-1 mt-0 min-h-[400px]">
 				{isConnected ? (
 					<AppTimeline appId={app.id} iconUrl={app.iconUrl} />
 				) : (
-					<div className="flex flex-col items-center justify-center py-12 min-h-[400px]">
-						<div className="text-center space-y-2">
-							<p className="text-muted-foreground">Connect {app.name} to see timeline activity</p>
-							<p className="text-sm text-muted-foreground">Go to Settings to connect</p>
+					<div className="flex flex-col items-center justify-center py-16 min-h-[400px] rounded-lg border border-dashed bg-muted/20">
+						<div className="text-center space-y-3 max-w-md">
+							<p className="text-base font-medium text-foreground">Connect {app.name} to see timeline activity</p>
+							<p className="text-sm text-muted-foreground">Go to Settings to connect and start viewing activity from this app.</p>
 						</div>
 					</div>
 				)}
 			</TabsContent>
 			
-			<TabsContent value="settings" className="mt-4">
+			<TabsContent value="settings" className="mt-0">
 				<AppSettings app={app} isConnected={isConnected} />
 			</TabsContent>
 		</Tabs>

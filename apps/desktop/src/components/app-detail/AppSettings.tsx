@@ -93,12 +93,6 @@ export function AppSettings({ app, isConnected }: AppSettingsProps) {
 			for (const accountId of accountIds) {
 				const result = await syncTransactionsMutation.mutateAsync({ accountId });
 				totalSynced += result.transactions_synced || 0;
-				console.log(`[AppSettings] Synced ${result.transactions_synced} transactions for account ${accountId}`);
-				
-				// If result has a message (e.g., "no transactions"), log it but don't treat as error
-				if (result.message) {
-					console.log(`[AppSettings] ${result.message} for account ${accountId}`);
-				}
 			}
 			
 			if (totalSynced > 0) {

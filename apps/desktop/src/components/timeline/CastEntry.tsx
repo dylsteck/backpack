@@ -128,9 +128,6 @@ export function CastEntry({ cast }: { cast: FarcasterCastV2 }) {
 		// Only render LinkPreview if there's an image
 		if (!imageUrl) return null;
 		
-		// Console log the image URL for debugging
-		console.log("Embed image URL:", imageUrl, "for embed:", embed.url);
-		
 		return (
 			<LinkPreview
 				image={imageUrl}

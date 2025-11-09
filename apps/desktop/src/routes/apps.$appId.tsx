@@ -9,14 +9,8 @@ function AppDetailPage() {
   const navigate = useNavigate();
   const { data: appsData, isLoading: appsLoading } = (trpc as any).apps.getAvailableServers.useQuery();
   
-  console.log("[AppDetailPage] Rendering with appId:", appId);
-  console.log("[AppDetailPage] Apps data:", appsData);
-  
   const app = appsData?.servers?.find((s: any) => s.id === appId);
   const isConnected = app?.connection?.status === "connected";
-  
-  console.log("[AppDetailPage] Found app:", app);
-  console.log("[AppDetailPage] Is connected:", isConnected);
 
   if (appsLoading) {
     return (
@@ -55,35 +49,43 @@ function AppDetailPage() {
   }
 
   return (
-    <div className="flex flex-col w-full p-4 h-full">
-      <div className="flex items-center gap-4 mb-6 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate({ to: "/apps" })}
-          className="shrink-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex items-center gap-3">
-          {app.iconUrl && (
-            <img
-              src={app.iconUrl}
-              alt={app.name}
-              className="h-8 w-8 rounded-lg object-contain shrink-0"
-            />
-          )}
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-semibold">{app.name}</h1>
-            {app.description && (
-              <p className="text-sm text-muted-foreground">{app.description}</p>
-            )}
+    <div className="flex flex-col w-full h-full">
+      <div className="border-b bg-background/95 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate({ to: "/apps" })}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-4">
+              {app.iconUrl && (
+                <div className="h-12 w-12 rounded-xl bg-muted/50 p-2 flex items-center justify-center shrink-0 border border-border/50">
+                  <img
+                    src={app.iconUrl}
+                    alt={app.name}
+                    className="h-full w-full rounded-lg object-contain"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <h1 className="text-3xl font-semibold tracking-tight">{app.name}</h1>
+                {app.description && (
+                  <p className="text-sm text-muted-foreground max-w-2xl">{app.description}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 min-h-0">
-        <AppDetailTabs app={app} isConnected={isConnected} />
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <AppDetailTabs app={app} isConnected={isConnected} />
+        </div>
       </div>
     </div>
   );

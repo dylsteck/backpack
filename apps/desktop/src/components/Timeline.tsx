@@ -13,42 +13,9 @@ import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/Br
 import { CastExpandedView } from "./timeline/CastExpandedView";
 import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
 import { TransactionExpandedView } from "./timeline/TransactionExpandedView";
-
-function formatTime(timestamp: Date): string {
-	const date = new Date(timestamp);
-	return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function formatDate(timestamp: Date): string {
-	const date = new Date(timestamp);
-	const today = new Date();
-	const yesterday = new Date(today);
-	yesterday.setDate(yesterday.getDate() - 1);
-
-	if (date.toDateString() === today.toDateString()) {
-		return "";
-	}
-	if (date.toDateString() === yesterday.toDateString()) {
-		return "";
-	}
-	return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function groupItemsByDate(items: Array<{ timestamp: Date }>) {
-	const groups: Map<string, typeof items> = new Map();
-
-	for (const item of items) {
-		const dateKey = new Date(item.timestamp).toDateString();
-		if (!groups.has(dateKey)) {
-			groups.set(dateKey, []);
-		}
-		groups.get(dateKey)!.push(item);
-	}
-
-	return Array.from(groups.entries()).sort((a, b) => {
-		return new Date(b[0]).getTime() - new Date(a[0]).getTime();
-	});
-}
+import { SourceFilterDropdown, type SourceType } from "./filters/SourceFilterDropdown";
+import { formatTime, formatDate, groupItemsByDate, formatFullDate } from "@/helpers/timeline-formatting";
+import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
 
 export function Timeline() {
 	const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = (trpc as any).timeline.getTimeline.useInfiniteQuery(
@@ -63,38 +30,38 @@ export function Timeline() {
 	const [chromeHistory, setChromeHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [braveHistory, setBraveHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [expandedItemId, setExpandedItemId] = React.useState<string | null>(null);
+	const [selectedSources, setSelectedSources] = React.useState<SourceType[]>(["all"]);
+	const { setFilterComponent } = useTopbarFilter();
 
 	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
-	const farcasterIconUrl = appsData?.servers?.find((app: any) => app.id === "farcaster")?.iconUrl;
-	const chromeIconUrl = appsData?.servers?.find((app: any) => app.id === "chrome")?.iconUrl;
-	const chromeConnection = appsData?.servers?.find((app: any) => app.id === "chrome")?.connection;
-	const braveIconUrl = appsData?.servers?.find((app: any) => app.id === "brave")?.iconUrl;
-	const braveConnection = appsData?.servers?.find((app: any) => app.id === "brave")?.connection;
-	const stripeIconUrl = appsData?.servers?.find((app: any) => app.id === "stripe")?.iconUrl;
+	
+	// Memoize icon URLs and connections to prevent unnecessary re-renders
+	const iconUrls = React.useMemo(() => {
+		if (!appsData?.servers) return {};
+		const servers = appsData.servers;
+		return {
+			farcaster: servers.find((app: any) => app.id === "farcaster")?.iconUrl,
+			chrome: servers.find((app: any) => app.id === "chrome")?.iconUrl,
+			brave: servers.find((app: any) => app.id === "brave")?.iconUrl,
+			stripe: servers.find((app: any) => app.id === "stripe")?.iconUrl,
+		};
+	}, [appsData]);
 
-	React.useEffect(() => {
-		console.log("Apps data loaded:", {
-			appsData: !!appsData,
-			servers: appsData?.servers?.length,
-			chromeApp: appsData?.servers?.find((app: any) => app.id === "chrome"),
-			chromeConnection,
-			status: chromeConnection?.status,
-			localPath: chromeConnection?.connectionMetadata?.localPath,
-			hasChromeHistoryContext: !!window.chromeHistory,
-			hasReadHistory: typeof window.chromeHistory?.readHistory === "function",
-		});
-	}, [appsData, chromeConnection]);
+	const connections = React.useMemo(() => {
+		if (!appsData?.servers) return {};
+		const servers = appsData.servers;
+		return {
+			chrome: servers.find((app: any) => app.id === "chrome")?.connection,
+			brave: servers.find((app: any) => app.id === "brave")?.connection,
+		};
+	}, [appsData]);
+
+	const chromeConnection = connections.chrome;
+	const braveConnection = connections.brave;
 
 	const items = React.useMemo(() => {
 		if (!data?.pages) return [];
-		const allItems = data.pages.flatMap((page: any) => page.items || []);
-		console.log(`[Timeline] Total items from API: ${allItems.length}`);
-		const stripeItems = allItems.filter((item: any) => item.source === "stripe");
-		console.log(`[Timeline] Stripe items from API: ${stripeItems.length}`);
-		if (stripeItems.length > 0) {
-			console.log(`[Timeline] Sample Stripe item:`, stripeItems[0]);
-		}
-		return allItems;
+		return data.pages.flatMap((page: any) => page.items || []);
 	}, [data]);
 
 	React.useEffect(() => {
@@ -102,35 +69,27 @@ export function Timeline() {
 			const localPath = chromeConnection.connectionMetadata?.localPath;
 			if (localPath) {
 				if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
-					console.log("Reading Chrome history from:", localPath);
 					window.chromeHistory
 						.readHistory(localPath)
 						.then((result: any) => {
-							console.log("Chrome history result:", result);
 							if (result.success && result.data) {
-								console.log(`Loaded ${result.data.length} Chrome history entries`);
 								setChromeHistory(result.data);
-							} else {
-								console.error("Failed to read Chrome history:", result.error);
 							}
 						})
 						.catch((err: any) => {
 							console.error("Error reading Chrome history:", err);
 						});
 				} else {
-					console.log("Chrome history context not available yet, polling...");
 					let attemptCount = 0;
 					const maxAttempts = 30;
 					const checkInterval = setInterval(() => {
 						attemptCount++;
 						if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
-							console.log("Chrome history context available, reading history...");
 							clearInterval(checkInterval);
 							window.chromeHistory
 								.readHistory(localPath)
 								.then((result: any) => {
 									if (result.success && result.data) {
-										console.log(`Loaded ${result.data.length} Chrome history entries`);
 										setChromeHistory(result.data);
 									}
 								})
@@ -138,15 +97,12 @@ export function Timeline() {
 									console.error("Error reading Chrome history:", err);
 								});
 						} else if (attemptCount >= maxAttempts) {
-							console.warn("Chrome history context not available after 30 seconds");
 							clearInterval(checkInterval);
 						}
 					}, 1000);
 
 					return () => clearInterval(checkInterval);
 				}
-			} else {
-				console.warn("Chrome connection missing localPath");
 			}
 		}
 	}, [chromeConnection]);
@@ -156,35 +112,27 @@ export function Timeline() {
 			const localPath = braveConnection.connectionMetadata?.localPath;
 			if (localPath) {
 				if (window.braveHistory && typeof window.braveHistory.readHistory === "function") {
-					console.log("Reading Brave history from:", localPath);
 					window.braveHistory
 						.readHistory(localPath)
 						.then((result: any) => {
-							console.log("Brave history result:", result);
 							if (result.success && result.data) {
-								console.log(`Loaded ${result.data.length} Brave history entries`);
 								setBraveHistory(result.data);
-							} else {
-								console.error("Failed to read Brave history:", result.error);
 							}
 						})
 						.catch((err: any) => {
 							console.error("Error reading Brave history:", err);
 						});
 				} else {
-					console.log("Brave history context not available yet, polling...");
 					let attemptCount = 0;
 					const maxAttempts = 30;
 					const checkInterval = setInterval(() => {
 						attemptCount++;
 						if (window.braveHistory && typeof window.braveHistory.readHistory === "function") {
-							console.log("Brave history context available, reading history...");
 							clearInterval(checkInterval);
 							window.braveHistory
 								.readHistory(localPath)
 								.then((result: any) => {
 									if (result.success && result.data) {
-										console.log(`Loaded ${result.data.length} Brave history entries`);
 										setBraveHistory(result.data);
 									}
 								})
@@ -192,15 +140,12 @@ export function Timeline() {
 									console.error("Error reading Brave history:", err);
 								});
 						} else if (attemptCount >= maxAttempts) {
-							console.warn("Brave history context not available after 30 seconds");
 							clearInterval(checkInterval);
 						}
 					}, 1000);
 
 					return () => clearInterval(checkInterval);
 				}
-			} else {
-				console.warn("Brave connection missing localPath");
 			}
 		}
 	}, [braveConnection]);
@@ -240,11 +185,6 @@ export function Timeline() {
 		const transactionItems = serverItems.filter((item: any) => item.type === "transaction");
 		const otherServerItems = serverItems.filter((item: any) => item.type !== "transaction");
 
-		console.log(`[Timeline] Processing ${transactionItems.length} transaction items from server`);
-		if (transactionItems.length > 0) {
-			console.log(`[Timeline] Sample transaction item:`, transactionItems[0]);
-		}
-
 		// Convert transaction items to TransactionEntryData format
 		const transactionEntries: TransactionEntryData[] = transactionItems.map((item: any) => {
 			try {
@@ -263,10 +203,10 @@ export function Timeline() {
 				console.error(`[Timeline] Error mapping transaction item:`, error, item);
 				return null;
 			}
-		}).filter((entry): entry is TransactionEntryData => entry !== null);
+		}).filter((entry: TransactionEntryData | null): entry is TransactionEntryData => entry !== null);
 
 		const groupedTransactions = groupTransactions(transactionEntries);
-		const transactionTimelineItems = groupedTransactions.map((entry) => {
+		const transactionTimelineItems = groupedTransactions.map((entry: TransactionEntryData | TransactionGroup) => {
 			const timestamp = "entries" in entry ? entry.timestamp : entry.timestamp;
 			return {
 				id: "entries" in entry ? entry.id : entry.id,
@@ -283,6 +223,41 @@ export function Timeline() {
 			return bTime - aTime;
 		});
 	}, [items, chromeHistory, braveHistory]);
+
+	// Filter items based on selected sources
+	const filteredItems = React.useMemo(() => {
+		if (selectedSources.includes("all")) {
+			return allItems;
+		}
+		return allItems.filter((item: any) => {
+			const source = item.source as SourceType;
+			return selectedSources.includes(source);
+		});
+	}, [allItems, selectedSources]);
+
+	// Calculate source counts for filter display
+	const sourceCounts = React.useMemo(() => {
+		const counts: Record<SourceType, number> = {
+			all: allItems.length,
+			farcaster: allItems.filter((item: any) => item.source === "farcaster").length,
+			stripe: allItems.filter((item: any) => item.source === "stripe").length,
+			chrome: allItems.filter((item: any) => item.source === "chrome").length,
+			brave: allItems.filter((item: any) => item.source === "brave").length,
+		};
+		return counts;
+	}, [allItems]);
+
+	// Set filter component in topbar
+	React.useEffect(() => {
+		setFilterComponent(
+			<SourceFilterDropdown
+				selectedSources={selectedSources}
+				onSourceChange={setSelectedSources}
+				sourceCounts={sourceCounts}
+			/>
+		);
+		return () => setFilterComponent(null);
+	}, [selectedSources, sourceCounts, setFilterComponent]);
 
 	// Set up infinite scroll with IntersectionObserver
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -347,22 +322,25 @@ export function Timeline() {
 		);
 	}
 
-	const groupedItems = groupItemsByDate(allItems);
+	const groupedItems = groupItemsByDate(filteredItems);
 
 	return (
 		<div className="flex-1 flex flex-col">
 			<div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-				<div className="max-w-3xl mx-auto py-3 px-3 space-y-6">
-					{allItems.length === 0 ? (
+				<div className="max-w-3xl mx-auto py-3 px-3 space-y-6 relative">
+					{/* Continuous vertical line spanning entire timeline */}
+					{filteredItems.length > 0 && allItems.length > 0 && (
+						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.75rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
+					)}
+					{filteredItems.length === 0 ? (
+						<div className="flex flex-col items-center justify-center py-12">
+							<p className="text-muted-foreground">No items match the selected filters.</p>
+						</div>
+					) : allItems.length === 0 ? (
 						<TimelineDemo />
 					) : (
 						groupedItems.map(([dateKey, dateItems]) => {
-							const dateStr = new Date(dateKey).toLocaleDateString("en-US", {
-								weekday: "long",
-								year: "numeric",
-								month: "long",
-								day: "numeric",
-							});
+							const dateStr = formatFullDate(new Date(dateKey));
 							return (
 								<React.Fragment key={dateKey}>
 									{dateItems.map((item: any, index: number) => {
@@ -383,7 +361,7 @@ export function Timeline() {
 													time={time} 
 													date={date} 
 													showDot 
-													iconUrl={farcasterIconUrl}
+													iconUrl={iconUrls.farcaster}
 													isExpanded={isExpanded}
 													expandedContent={
 														<CastExpandedView 
@@ -403,7 +381,7 @@ export function Timeline() {
 										}
 
 										if (item.type === "browser-history") {
-											const iconUrl = item.source === "brave" ? braveIconUrl : chromeIconUrl;
+											const iconUrl = item.source === "brave" ? iconUrls.brave : iconUrls.chrome;
 											const historyEntry = item.data as BrowserHistoryEntryData | BrowserHistoryGroup;
 											return (
 												<TimelineEntry
@@ -436,7 +414,7 @@ export function Timeline() {
 													time={time}
 													date={date}
 													showDot
-													iconUrl={stripeIconUrl}
+													iconUrl={iconUrls.stripe}
 													isExpanded={isExpanded}
 													expandedContent={
 														<TransactionExpandedView 

@@ -10,6 +10,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: false,
       refetchOnWindowFocus: false,
+      staleTime: 30 * 1000, // 30 seconds default stale time
+      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection time
+      refetchOnMount: false, // Don't refetch on mount if data is fresh
     },
   },
 });

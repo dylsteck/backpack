@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, useRouter, Outlet, useMatches } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { ViewToggle } from "@/components/ViewToggle";
 import { AppSetupDialog } from "@/components/AppSetupDialog";
+import { ConnectionFilterDropdown, type ConnectionType, type ConnectionStatus } from "@/components/filters/ConnectionFilterDropdown";
+import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
 
 function AppsPage() {
   const navigate = useNavigate();
@@ -10,32 +12,63 @@ function AppsPage() {
   const matches = useMatches();
   const { data, isLoading, error, refetch } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    onError: (error) => {
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    onError: (error: Error) => {
       console.error("[AppsPage] Error fetching apps:", error);
     },
   });
   const [setupApp, setSetupApp] = useState<any>(null);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<ConnectionType[]>(["all"]);
+  const [selectedStatus, setSelectedStatus] = useState<ConnectionStatus>("all");
+  const { setFilterComponent } = useTopbarFilter();
 
   // Check if we're on a child route by checking the pathname
   const currentPath = router.state.location.pathname;
   const isOnChildRoute = currentPath.startsWith("/apps/") && currentPath !== "/apps";
-  
-  console.log("[AppsPage] Current pathname:", currentPath);
-  console.log("[AppsPage] Current matches:", matches.map(m => m.routeId));
-  console.log("[AppsPage] Is on child route:", isOnChildRoute);
+
+  // Filter servers based on selected connection type and status
+  const filteredServers = useMemo(() => {
+    if (!data?.servers) return [];
+    
+    return data.servers.filter((server: any) => {
+      // Filter by connection type
+      const connectionType = (server.connectionType || "mcp").toLowerCase() as ConnectionType;
+      const typeMatch = selectedTypes.includes("all") || selectedTypes.includes(connectionType);
+      
+      // Filter by connection status
+      const connectionStatus = server.connection?.status || "disconnected";
+      const statusMatch = 
+        selectedStatus === "all" || 
+        (selectedStatus === "connected" && connectionStatus === "connected") ||
+        (selectedStatus === "disconnected" && connectionStatus !== "connected");
+      
+      return typeMatch && statusMatch;
+    });
+  }, [data?.servers, selectedTypes, selectedStatus]);
+
+  // Set filter component in topbar
+  useEffect(() => {
+    if (!isOnChildRoute) {
+      setFilterComponent(
+        <ConnectionFilterDropdown
+          selectedTypes={selectedTypes}
+          selectedStatus={selectedStatus}
+          onTypeChange={setSelectedTypes}
+          onStatusChange={setSelectedStatus}
+        />
+      );
+    } else {
+      setFilterComponent(null);
+    }
+    return () => {
+      setFilterComponent(null);
+    };
+  }, [selectedTypes, selectedStatus, isOnChildRoute, setFilterComponent]);
 
   const handleSetupClick = (app: any) => {
-    console.log("[AppsPage] handleSetupClick called:", { appId: app.id, app, connection: app.connection });
-    
     // If app is connected, navigate to detail page
     if (app.connection && app.connection.status === "connected") {
-      const targetPath = `/apps/${app.id}`;
-      console.log("[AppsPage] Navigating to:", targetPath);
-      console.log("[AppsPage] Current location before nav:", router.state.location.pathname);
-      
-      // Use navigate hook - simpler and more reliable
       navigate({ 
         to: "/apps/$appId",
         params: { appId: app.id }
@@ -43,7 +76,6 @@ function AppsPage() {
       return;
     }
     // Otherwise open setup dialog
-    console.log("[AppsPage] Opening setup dialog for:", app.id);
     setSetupApp(app);
     setIsSetupOpen(true);
   };
@@ -59,32 +91,32 @@ function AppsPage() {
 
   // If we're on a child route, only render the outlet
   if (isOnChildRoute) {
-    console.log("[AppsPage] Rendering child route (outlet only)");
     return <Outlet />;
   }
 
   // Otherwise render the apps list
-  console.log("[AppsPage] Rendering apps list");
   return (
-    <div className="flex flex-col w-full p-4">
-      <ViewToggle
-        data={data?.servers || []}
-        isLoading={isLoading}
-        error={error}
-        getIconUrl={(server) => server.iconUrl}
-        getName={(server) => server.name}
-        getFields={(server) => {
-          // Return the full server object so handleSetupClick gets all data
-          return server;
-        }}
-        emptyMessage="No apps available"
-        onSetupClick={handleSetupClick}
-      />
-      <AppSetupDialog
-        app={setupApp}
-        open={isSetupOpen}
-        onOpenChange={handleCloseSetup}
-      />
+    <div className="flex flex-col w-full">
+      <div className="flex flex-col w-full p-4">
+        <ViewToggle
+          data={filteredServers}
+          isLoading={isLoading}
+          error={error}
+          getIconUrl={(server) => server.iconUrl}
+          getName={(server) => server.name}
+          getFields={(server) => {
+            // Return the full server object so handleSetupClick gets all data
+            return server;
+          }}
+          emptyMessage="No apps match the selected filters"
+          onSetupClick={handleSetupClick}
+        />
+        <AppSetupDialog
+          app={setupApp}
+          open={isSetupOpen}
+          onOpenChange={handleCloseSetup}
+        />
+      </div>
     </div>
   );
 }

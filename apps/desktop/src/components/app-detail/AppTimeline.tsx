@@ -12,13 +12,12 @@ import { BrowserHistoryExpandedView } from "../timeline/BrowserHistoryExpandedVi
 import { TransactionExpandedView } from "../timeline/TransactionExpandedView";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "../timeline/BrowserHistoryEntry";
+import { formatTime, groupItemsByDate } from "@/helpers/timeline-formatting";
 
-function formatTime(timestamp: Date): string {
-	const date = new Date(timestamp);
-	return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function formatDate(timestamp: Date): string {
+/**
+ * Formats a date for display in AppTimeline (returns "Today", "Yesterday", or full date)
+ */
+function formatDateLabel(timestamp: Date): string {
 	const date = new Date(timestamp);
 	const today = new Date();
 	const yesterday = new Date(today);
@@ -31,22 +30,6 @@ function formatDate(timestamp: Date): string {
 	} else {
 		return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 	}
-}
-
-function groupItemsByDate(items: Array<{ timestamp: Date }>) {
-	const grouped = new Map<string, Array<{ timestamp: Date }>>();
-	
-	for (const item of items) {
-		const dateKey = formatDate(item.timestamp);
-		if (!grouped.has(dateKey)) {
-			grouped.set(dateKey, []);
-		}
-		grouped.get(dateKey)!.push(item);
-	}
-
-	return Array.from(grouped.entries()).sort(
-		(a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()
-	);
 }
 
 interface AppTimelineProps {
@@ -265,9 +248,15 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 
 	return (
 		<div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-			<div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-				{groupedByDate.map(([dateLabel, dateItems]) => (
-					<div key={dateLabel}>
+			<div className="max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
+				{/* Continuous vertical line spanning entire timeline */}
+				{allItems.length > 0 && (
+					<div className="absolute left-[calc(1rem+9.5px)] top-[calc(1.5rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
+				)}
+				{groupedByDate.map(([dateKey, dateItems]) => {
+					const dateLabel = formatDateLabel(new Date(dateKey));
+					return (
+					<div key={dateKey}>
 						<DateSeparator date={dateLabel} />
 						<div className="space-y-6 mt-4">
 							{dateItems.map((item: any) => {
@@ -346,7 +335,8 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 							})}
 						</div>
 					</div>
-				))}
+					);
+				})}
 				{hasNextPage && (
 					<div ref={loadMoreRef} className="flex justify-center py-4">
 						{isFetchingNextPage && <div className="text-muted-foreground">Loading more...</div>}

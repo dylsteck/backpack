@@ -110,10 +110,8 @@ export function ViewToggle({
               <div
                 key={itemId}
                 onClick={() => {
-                  console.log("[ViewToggle] Card clicked:", { itemId, name, isConnected, hasOnSetupClick: !!onSetupClick });
                   if (onSetupClick) {
                     const fields = getFields(item);
-                    console.log("[ViewToggle] Calling onSetupClick with:", fields);
                     onSetupClick(fields);
                   }
                 }}
