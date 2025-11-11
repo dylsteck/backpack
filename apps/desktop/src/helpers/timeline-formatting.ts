@@ -33,15 +33,33 @@ export function formatDate(timestamp: Date): string {
 }
 
 /**
- * Formats a timestamp to a full date string for date separators
+ * Formats a timestamp to a relative date string for date separators
  * @param timestamp - The timestamp to format
- * @returns Formatted date string (e.g., "Tuesday, November 4, 2025")
+ * @returns Formatted date string: "Today", "Yesterday", or "Mon Nov 10, 2025"
  */
 export function formatFullDate(timestamp: Date): string {
-	return new Date(timestamp).toLocaleDateString("en-US", {
-		weekday: "long",
+	const date = new Date(timestamp);
+	const today = new Date();
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
+
+	// Reset time to compare dates only
+	today.setHours(0, 0, 0, 0);
+	yesterday.setHours(0, 0, 0, 0);
+	date.setHours(0, 0, 0, 0);
+
+	if (date.getTime() === today.getTime()) {
+		return "Today";
+	}
+	if (date.getTime() === yesterday.getTime()) {
+		return "Yesterday";
+	}
+	
+	// For older dates, use format: "Mon Nov 10, 2025"
+	return date.toLocaleDateString("en-US", {
+		weekday: "short",
 		year: "numeric",
-		month: "long",
+		month: "short",
 		day: "numeric",
 	});
 }

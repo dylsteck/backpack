@@ -12,25 +12,7 @@ import { BrowserHistoryExpandedView } from "../timeline/BrowserHistoryExpandedVi
 import { TransactionExpandedView } from "../timeline/TransactionExpandedView";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "../timeline/BrowserHistoryEntry";
-import { formatTime, groupItemsByDate } from "@/helpers/timeline-formatting";
-
-/**
- * Formats a date for display in AppTimeline (returns "Today", "Yesterday", or full date)
- */
-function formatDateLabel(timestamp: Date): string {
-	const date = new Date(timestamp);
-	const today = new Date();
-	const yesterday = new Date(today);
-	yesterday.setDate(yesterday.getDate() - 1);
-
-	if (date.toDateString() === today.toDateString()) {
-		return "Today";
-	} else if (date.toDateString() === yesterday.toDateString()) {
-		return "Yesterday";
-	} else {
-		return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-	}
-}
+import { formatTime, groupItemsByDate, formatFullDate } from "@/helpers/timeline-formatting";
 
 interface AppTimelineProps {
 	appId: string;
@@ -254,7 +236,7 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 					<div className="absolute left-[calc(1rem+9.5px)] top-[calc(1.5rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
 				)}
 				{groupedByDate.map(([dateKey, dateItems]) => {
-					const dateLabel = formatDateLabel(new Date(dateKey));
+					const dateLabel = formatFullDate(new Date(dateKey));
 					return (
 					<div key={dateKey}>
 						<DateSeparator date={dateLabel} />

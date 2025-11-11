@@ -327,10 +327,10 @@ export function Timeline() {
 	return (
 		<div className="flex-1 flex flex-col">
 			<div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-				<div className="max-w-3xl mx-auto py-3 px-3 space-y-6 relative">
+				<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative">
 					{/* Continuous vertical line spanning entire timeline */}
 					{filteredItems.length > 0 && allItems.length > 0 && (
-						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.75rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
+						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
 					)}
 					{filteredItems.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-12">
@@ -342,103 +342,105 @@ export function Timeline() {
 						groupedItems.map(([dateKey, dateItems]) => {
 							const dateStr = formatFullDate(new Date(dateKey));
 							return (
-								<React.Fragment key={dateKey}>
-									{dateItems.map((item: any, index: number) => {
-										const time = formatTime(item.timestamp);
-										const date = formatDate(item.timestamp);
-										const showDot = true;
-										const isExpanded = expandedItemId === item.id;
+								<div key={dateKey}>
+									<DateSeparator date={dateStr} />
+									<div className="space-y-6 mt-4">
+										{dateItems.map((item: any, index: number) => {
+											const time = formatTime(item.timestamp);
+											const date = formatDate(item.timestamp);
+											const showDot = true;
+											const isExpanded = expandedItemId === item.id;
 
-										const handleToggleExpand = () => {
-											setExpandedItemId(isExpanded ? null : item.id);
-										};
+											const handleToggleExpand = () => {
+												setExpandedItemId(isExpanded ? null : item.id);
+											};
 
-										if (item.type === "cast") {
-											const cast = item.data as FarcasterCastV2;
-											return (
-												<TimelineEntry 
-													key={item.id} 
-													time={time} 
-													date={date} 
-													showDot 
-													iconUrl={iconUrls.farcaster}
-													isExpanded={isExpanded}
-													expandedContent={
-														<CastExpandedView 
-															cast={cast} 
-															onClose={() => setExpandedItemId(null)}
-														/>
-													}
-												>
-													<div
-														onClick={handleToggleExpand}
-														className="cursor-pointer"
+											if (item.type === "cast") {
+												const cast = item.data as FarcasterCastV2;
+												return (
+													<TimelineEntry 
+														key={item.id} 
+														time={time} 
+														date={date} 
+														showDot 
+														iconUrl={iconUrls.farcaster}
+														isExpanded={isExpanded}
+														expandedContent={
+															<CastExpandedView 
+																cast={cast} 
+																onClose={() => setExpandedItemId(null)}
+															/>
+														}
 													>
-														<CastEntry cast={cast} />
-													</div>
-												</TimelineEntry>
-											);
-										}
+														<div
+															onClick={handleToggleExpand}
+															className="cursor-pointer"
+														>
+															<CastEntry cast={cast} />
+														</div>
+													</TimelineEntry>
+												);
+											}
 
-										if (item.type === "browser-history") {
-											const iconUrl = item.source === "brave" ? iconUrls.brave : iconUrls.chrome;
-											const historyEntry = item.data as BrowserHistoryEntryData | BrowserHistoryGroup;
-											return (
-												<TimelineEntry
-													key={item.id}
-													time={time}
-													date={date}
-													showDot
-													iconUrl={iconUrl}
-													isExpanded={isExpanded}
-													expandedContent={
-														<BrowserHistoryExpandedView 
+											if (item.type === "browser-history") {
+												const iconUrl = item.source === "brave" ? iconUrls.brave : iconUrls.chrome;
+												const historyEntry = item.data as BrowserHistoryEntryData | BrowserHistoryGroup;
+												return (
+													<TimelineEntry
+														key={item.id}
+														time={time}
+														date={date}
+														showDot
+														iconUrl={iconUrl}
+														isExpanded={isExpanded}
+														expandedContent={
+															<BrowserHistoryExpandedView 
+																entry={historyEntry}
+																onClose={() => setExpandedItemId(null)}
+															/>
+														}
+													>
+														<BrowserHistoryEntry
 															entry={historyEntry}
-															onClose={() => setExpandedItemId(null)}
+															onClick={handleToggleExpand}
 														/>
-													}
-												>
-													<BrowserHistoryEntry
-														entry={historyEntry}
-														onClick={handleToggleExpand}
-													/>
-												</TimelineEntry>
-											);
-										}
+													</TimelineEntry>
+												);
+											}
 
-										if (item.type === "transaction") {
-											const transactionEntry = item.data as TransactionEntryData | TransactionGroup;
-											return (
-												<TimelineEntry
-													key={item.id}
-													time={time}
-													date={date}
-													showDot
-													iconUrl={iconUrls.stripe}
-													isExpanded={isExpanded}
-													expandedContent={
-														<TransactionExpandedView 
+											if (item.type === "transaction") {
+												const transactionEntry = item.data as TransactionEntryData | TransactionGroup;
+												return (
+													<TimelineEntry
+														key={item.id}
+														time={time}
+														date={date}
+														showDot
+														iconUrl={iconUrls.stripe}
+														isExpanded={isExpanded}
+														expandedContent={
+															<TransactionExpandedView 
+																entry={transactionEntry}
+																onClose={() => setExpandedItemId(null)}
+															/>
+														}
+													>
+														<TransactionEntry
 															entry={transactionEntry}
-															onClose={() => setExpandedItemId(null)}
+															onClick={handleToggleExpand}
 														/>
-													}
-												>
-													<TransactionEntry
-														entry={transactionEntry}
-														onClick={handleToggleExpand}
-													/>
+													</TimelineEntry>
+												);
+											}
+
+											return (
+												<TimelineEntry key={item.id} time={time} date={date} showDot>
+													<div className="text-sm">{JSON.stringify(item.data)}</div>
 												</TimelineEntry>
 											);
-										}
-
-										return (
-											<TimelineEntry key={item.id} time={time} date={date} showDot>
-												<div className="text-sm">{JSON.stringify(item.data)}</div>
-											</TimelineEntry>
-										);
-									})}
-									{groupedItems.length > 1 && <DateSeparator date={dateStr} />}
-								</React.Fragment>
+										})}
+									</div>
+								</div>
 							);
 						})
 					)}
