@@ -33,7 +33,7 @@ export function NavSecondary({
                     <span>{item.title}</span>
                   </a>
                 ) : (
-                  <Link to={item.url}>
+                  <Link to={item.url} preload={false}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

@@ -52,7 +52,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
+              <Link to="/" preload={false}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                   <img src={iconImage} alt="App icon" className="size-8 rounded-lg" />
                 </div>

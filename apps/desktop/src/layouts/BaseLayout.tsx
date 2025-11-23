@@ -17,14 +17,14 @@ function SidebarIcon() {
   const { state } = useSidebar();
   // Keep icon on the right side of sidebar area, ensuring it's visible (after traffic lights)
   // Traffic lights area is 76px, collapsed sidebar is 48px (3rem), expanded is 256px (16rem)
-  const leftPosition = state === "collapsed" 
+  const leftPosition = state === "collapsed"
     ? "calc(76px + 3rem - 1.5rem)" // Traffic lights + collapsed sidebar - less padding
     : "calc(16rem - 2.5rem)"; // Right side of expanded sidebar
 
   return (
-    <div 
+    <div
       className="fixed top-0 h-[44px] z-50 flex items-center transition-[left] duration-200 ease-linear"
-      style={{ left: leftPosition }}
+      style={{ left: leftPosition, WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
       <SidebarTrigger className="hover:bg-sidebar-accent" />
     </div>
@@ -36,7 +36,7 @@ function TopbarTitle() {
   const location = useLocation();
   const pageTitle = getRouteTitle(location.pathname);
   const { filterComponent } = useTopbarFilter();
-  
+
   // Calculate position to be right of sidebar icon
   // Sidebar icon is ~32px wide (h-8 w-8), positioned at leftPosition
   // We add the icon width + padding to position title to the right
@@ -47,11 +47,11 @@ function TopbarTitle() {
   return (
     <>
       {/* Full-width background bar to prevent bleed-through */}
-      <div 
+      <div
         className="fixed top-0 left-0 right-0 h-[44px] z-40 bg-background/95 backdrop-blur-sm border-b"
       />
       {/* Title text positioned correctly */}
-      <div 
+      <div
         className="fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none pointer-events-none"
         style={{ left: leftPosition }}
       >
@@ -68,52 +68,52 @@ function TopbarTitle() {
 }
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-	const { historySidebarOpen, setHistorySidebarOpen, selectedHistoryItem, castSidebarOpen, setCastSidebarOpen, selectedCast } = useDetailSidebar();
-	
-	return (
-		<SidebarProvider>
-			<div className="relative flex h-screen w-full">
-				<SidebarIcon />
-				<TopbarTitle />
-				<AppSidebar />
-				<SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
-					<DragWindowRegion />
-					<div className="h-[44px] flex-shrink-0" />
-					<main className="flex-1">{children}</main>
-				</SidebarInset>
-				{selectedHistoryItem && historySidebarOpen && (
-					<SidebarProvider open={true} onOpenChange={setHistorySidebarOpen} defaultOpen={false}>
-						<BrowserHistoryDetailSidebar
-							open={historySidebarOpen}
-							onOpenChange={setHistorySidebarOpen}
-							data={selectedHistoryItem}
-						/>
-					</SidebarProvider>
-				)}
-				{selectedCast && castSidebarOpen && (
-					<SidebarProvider open={true} onOpenChange={setCastSidebarOpen} defaultOpen={false}>
-						<CastDetailSidebar
-							open={castSidebarOpen}
-							onOpenChange={setCastSidebarOpen}
-							cast={selectedCast}
-						/>
-					</SidebarProvider>
-				)}
-			</div>
-		</SidebarProvider>
-	);
+  const { historySidebarOpen, setHistorySidebarOpen, selectedHistoryItem, castSidebarOpen, setCastSidebarOpen, selectedCast } = useDetailSidebar();
+
+  return (
+    <SidebarProvider>
+      <div className="relative flex h-screen w-full">
+        <SidebarIcon />
+        <TopbarTitle />
+        <AppSidebar />
+        <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
+          <DragWindowRegion />
+          <div className="h-[44px] flex-shrink-0" />
+          <main className="flex-1">{children}</main>
+        </SidebarInset>
+        {selectedHistoryItem && historySidebarOpen && (
+          <SidebarProvider open={true} onOpenChange={setHistorySidebarOpen} defaultOpen={false}>
+            <BrowserHistoryDetailSidebar
+              open={historySidebarOpen}
+              onOpenChange={setHistorySidebarOpen}
+              data={selectedHistoryItem}
+            />
+          </SidebarProvider>
+        )}
+        {selectedCast && castSidebarOpen && (
+          <SidebarProvider open={true} onOpenChange={setCastSidebarOpen} defaultOpen={false}>
+            <CastDetailSidebar
+              open={castSidebarOpen}
+              onOpenChange={setCastSidebarOpen}
+              cast={selectedCast}
+            />
+          </SidebarProvider>
+        )}
+      </div>
+    </SidebarProvider>
+  );
 }
 
 export default function BaseLayout({
-	children,
+  children,
 }: {
-	children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-	return (
-		<TopbarFilterProvider>
-			<DetailSidebarProvider>
-				<LayoutContent>{children}</LayoutContent>
-			</DetailSidebarProvider>
-		</TopbarFilterProvider>
-	);
+  return (
+    <TopbarFilterProvider>
+      <DetailSidebarProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </DetailSidebarProvider>
+    </TopbarFilterProvider>
+  );
 }

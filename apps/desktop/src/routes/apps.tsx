@@ -1,15 +1,21 @@
-import { createFileRoute, useNavigate, useRouter, Outlet, useMatches } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { createFileRoute, useNavigate, useRouter, Outlet } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { ViewToggle } from "@/components/ViewToggle";
 import { AppSetupDialog } from "@/components/AppSetupDialog";
-import { ConnectionFilterDropdown, type ConnectionType, type ConnectionStatus } from "@/components/filters/ConnectionFilterDropdown";
+import { ConnectionFilterDropdown } from "@/components/filters/ConnectionFilterDropdown";
 import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
+import { useAppsFilter } from "@/hooks/useAppsFilter";
 
+/**
+ * AppsPage Component
+ * 
+ * Displays a grid of available apps/servers with filtering capabilities.
+ * Uses `useAppsFilter` to handle connection type and status filtering.
+ */
 function AppsPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const matches = useMatches();
   const { data, isLoading, error, refetch } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
     retry: 3,
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -19,33 +25,20 @@ function AppsPage() {
   });
   const [setupApp, setSetupApp] = useState<any>(null);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<ConnectionType[]>(["all"]);
-  const [selectedStatus, setSelectedStatus] = useState<ConnectionStatus>("all");
   const { setFilterComponent } = useTopbarFilter();
+
+  // Use custom hook for filtering logic
+  const {
+    filteredServers,
+    selectedTypes,
+    selectedStatus,
+    setSelectedTypes,
+    setSelectedStatus
+  } = useAppsFilter({ servers: data?.servers });
 
   // Check if we're on a child route by checking the pathname
   const currentPath = router.state.location.pathname;
   const isOnChildRoute = currentPath.startsWith("/apps/") && currentPath !== "/apps";
-
-  // Filter servers based on selected connection type and status
-  const filteredServers = useMemo(() => {
-    if (!data?.servers) return [];
-    
-    return data.servers.filter((server: any) => {
-      // Filter by connection type
-      const connectionType = (server.connectionType || "mcp").toLowerCase() as ConnectionType;
-      const typeMatch = selectedTypes.includes("all") || selectedTypes.includes(connectionType);
-      
-      // Filter by connection status
-      const connectionStatus = server.connection?.status || "disconnected";
-      const statusMatch = 
-        selectedStatus === "all" || 
-        (selectedStatus === "connected" && connectionStatus === "connected") ||
-        (selectedStatus === "disconnected" && connectionStatus !== "connected");
-      
-      return typeMatch && statusMatch;
-    });
-  }, [data?.servers, selectedTypes, selectedStatus]);
 
   // Set filter component in topbar
   useEffect(() => {
@@ -64,12 +57,12 @@ function AppsPage() {
     return () => {
       setFilterComponent(null);
     };
-  }, [selectedTypes, selectedStatus, isOnChildRoute, setFilterComponent]);
+  }, [selectedTypes, selectedStatus, isOnChildRoute, setFilterComponent, setSelectedTypes, setSelectedStatus]);
 
   const handleSetupClick = (app: any) => {
     // If app is connected, navigate to detail page
     if (app.connection && app.connection.status === "connected") {
-      navigate({ 
+      navigate({
         to: "/apps/$appId",
         params: { appId: app.id }
       });
