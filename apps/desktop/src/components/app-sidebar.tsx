@@ -54,7 +54,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <Link to="/" preload={false}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <img src={iconImage} alt="App icon" className="size-8 rounded-lg" />
+                  <img src={iconImage} alt="App icon" className="size-8 rounded-lg" loading="lazy" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Cortex</span>
