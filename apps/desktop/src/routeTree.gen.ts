@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SecondRouteImport } from './routes/second'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppsAppIdRouteImport } from './routes/apps.$appId'
@@ -17,6 +18,11 @@ import { Route as AppsAppIdRouteImport } from './routes/apps.$appId'
 const SecondRoute = SecondRouteImport.update({
   id: '/second',
   path: '/second',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppsRoute = AppsRouteImport.update({
@@ -38,12 +44,14 @@ const AppsAppIdRoute = AppsAppIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/apps': typeof AppsRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/second': typeof SecondRoute
   '/apps/$appId': typeof AppsAppIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apps': typeof AppsRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/second': typeof SecondRoute
   '/apps/$appId': typeof AppsAppIdRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/apps': typeof AppsRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/second': typeof SecondRoute
   '/apps/$appId': typeof AppsAppIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apps' | '/second' | '/apps/$appId'
+  fullPaths: '/' | '/apps' | '/onboarding' | '/second' | '/apps/$appId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apps' | '/second' | '/apps/$appId'
-  id: '__root__' | '/' | '/apps' | '/second' | '/apps/$appId'
+  to: '/' | '/apps' | '/onboarding' | '/second' | '/apps/$appId'
+  id: '__root__' | '/' | '/apps' | '/onboarding' | '/second' | '/apps/$appId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppsRoute: typeof AppsRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
   SecondRoute: typeof SecondRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       path: '/second'
       fullPath: '/second'
       preLoaderRoute: typeof SecondRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/apps': {
@@ -114,6 +131,7 @@ const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppsRoute: AppsRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
   SecondRoute: SecondRoute,
 }
 export const routeTree = rootRouteImport

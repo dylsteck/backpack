@@ -122,6 +122,13 @@ function TopbarTitle() {
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { historySidebarOpen, setHistorySidebarOpen, selectedHistoryItem, castSidebarOpen, setCastSidebarOpen, selectedCast } = useDetailSidebar();
+  const location = useLocation();
+  const isOnboarding = location.pathname === "/onboarding";
+
+  // If on onboarding route, render without sidebar/topbar
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
 
   return (
     <SidebarProvider>

@@ -35,13 +35,6 @@ interface AppDetailTabsProps {
 export function AppDetailTabs({ app, isConnected }: AppDetailTabsProps) {
 	const [activeTab, setActiveTab] = React.useState("home");
 
-	// For Stripe, default to settings if not connected or no data
-	React.useEffect(() => {
-		if (app.id === "stripe" && isConnected && !app.connection?.connectionMetadata?.accountIds) {
-			setActiveTab("settings");
-		}
-	}, [app.id, isConnected, app.connection]);
-
 	return (
 		<Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
 			<TabsList className="grid w-full max-w-md grid-cols-2 mb-6">

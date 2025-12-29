@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FilterBar, type FilterOption } from "./FilterBar";
 import { cn } from "@/utils/tailwind";
 
-export type SourceType = "farcaster" | "stripe" | "chrome" | "brave" | "all";
+export type SourceType = "farcaster" | "chrome" | "brave" | "all";
 
 export interface SourceFilterProps {
 	selectedSources: SourceType[];
@@ -15,7 +15,6 @@ export interface SourceFilterProps {
 const SOURCE_OPTIONS: FilterOption<SourceType>[] = [
 	{ value: "all", label: "All" },
 	{ value: "farcaster", label: "Farcaster" },
-	{ value: "stripe", label: "Stripe" },
 	{ value: "chrome", label: "Chrome" },
 	{ value: "brave", label: "Brave" },
 ];

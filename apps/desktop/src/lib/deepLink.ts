@@ -1,5 +1,5 @@
 /**
- * Deep link handling utilities for Stripe OAuth flow
+ * Deep link handling utilities
  */
 
 export interface DeepLinkCallbackData {

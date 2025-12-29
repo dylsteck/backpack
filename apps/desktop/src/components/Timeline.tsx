@@ -2,21 +2,19 @@ import React from "react";
 import { TimelineEntry } from "./timeline/TimelineEntry";
 import { CastEntry } from "./timeline/CastEntry";
 import { BrowserHistoryEntry } from "./timeline/BrowserHistoryEntry";
-import { TransactionEntry } from "./timeline/TransactionEntry";
 import { TimelineDemo } from "./timeline/TimelineDemo";
 import { DateSeparator } from "./timeline/DateSeparator";
 import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
-import { groupTransactions, type TransactionEntryData, type TransactionGroup } from "./timeline/transactionUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
 import { CastExpandedView } from "./timeline/CastExpandedView";
 import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
-import { TransactionExpandedView } from "./timeline/TransactionExpandedView";
 import type { SourceType } from "./filters/SourceFilterDropdown";
 import { formatTime, formatDate, groupItemsByDate, formatFullDate } from "@/helpers/timeline-formatting";
 import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
 import type { AppServer } from "@/hooks/useAppsFilter";
+import { Inbox } from "lucide-react";
 
 // Types for timeline API responses
 type TimelineItem = {
@@ -105,7 +103,6 @@ export function Timeline() {
 			farcaster: servers.find((app: AppServer) => app.id === "farcaster")?.iconUrl,
 			chrome: servers.find((app: AppServer) => app.id === "chrome")?.iconUrl,
 			brave: servers.find((app: AppServer) => app.id === "brave")?.iconUrl,
-			stripe: servers.find((app: AppServer) => app.id === "stripe")?.iconUrl,
 		};
 	}, [appsData]);
 
@@ -291,64 +288,9 @@ export function Timeline() {
 		}));
 	}, [items]);
 
-	// Memoize transaction processing separately
-	const transactionItems = React.useMemo(() => {
-		return serverItems.filter((item: NormalizedTimelineItem) => item.type === "transaction");
-	}, [serverItems]);
-
 	const otherServerItems = React.useMemo(() => {
-		return serverItems.filter((item: NormalizedTimelineItem) => item.type !== "transaction");
+		return serverItems;
 	}, [serverItems]);
-
-	// Memoize transaction entries conversion
-	const transactionEntries = React.useMemo((): TransactionEntryData[] => {
-		return transactionItems.map((item: NormalizedTimelineItem) => {
-			try {
-				const data = item.data as Record<string, unknown>;
-				return {
-					id: item.id,
-					account_id: (data?.account_id as string) || (data?.account as string) || "",
-					amount: data?.amount as number,
-					currency: data?.currency as string,
-					description: data?.description as string,
-					status: data?.status as string,
-					transacted_at: data?.transacted_at as number,
-					created: data?.created as number,
-					timestamp: item.timestamp,
-				};
-			} catch (error) {
-				console.error(`[Timeline] Error mapping transaction item:`, error, item);
-				return null;
-			}
-		}).filter((entry: TransactionEntryData | null): entry is TransactionEntryData => entry !== null);
-	}, [transactionItems]);
-
-	// Memoize transaction grouping
-	const groupedTransactions = React.useMemo(() => {
-		return groupTransactions(transactionEntries);
-	}, [transactionEntries]);
-
-	// Memoize transaction timeline items conversion
-	type TransactionTimelineItem = {
-		id: string;
-		timestamp: Date;
-		source: SourceType;
-		type: string;
-		data: TransactionEntryData | TransactionGroup;
-	};
-
-	const transactionTimelineItems = React.useMemo((): TransactionTimelineItem[] => {
-		return groupedTransactions.map((entry: TransactionEntryData | TransactionGroup) => {
-			const timestamp = "entries" in entry ? entry.timestamp : entry.timestamp;
-			return {
-				id: "entries" in entry ? entry.id : entry.id,
-				timestamp,
-				source: "stripe" as SourceType,
-				type: "transaction",
-				data: entry,
-			};
-		});
-	}, [groupedTransactions]);
 
 	// Unified timeline item type
 	type UnifiedTimelineItem = {
@@ -369,14 +311,13 @@ export function Timeline() {
 				type: item.type,
 				data: item.data,
 			})),
-			...transactionTimelineItems,
 			...chromeHistoryItems,
 			...braveHistoryItems,
 		];
 		return combined.sort((a, b) => {
 			return b.timestamp.getTime() - a.timestamp.getTime();
 		});
-	}, [otherServerItems, transactionTimelineItems, chromeHistoryItems, braveHistoryItems]);
+	}, [otherServerItems, chromeHistoryItems, braveHistoryItems]);
 
 	// Filter items based on selected sources
 	const filteredItems = React.useMemo(() => {
@@ -393,7 +334,6 @@ export function Timeline() {
 		const counts: Record<SourceType, number> = {
 			all: allItems.length,
 			farcaster: allItems.filter((item) => item.source === "farcaster").length,
-			stripe: allItems.filter((item) => item.source === "stripe").length,
 			chrome: allItems.filter((item) => item.source === "chrome").length,
 			brave: allItems.filter((item) => item.source === "brave").length,
 		};
@@ -494,18 +434,22 @@ export function Timeline() {
 
 	return (
 		<div className="flex-1 flex flex-col">
-			<div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-				<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative">
+			<div className={`flex-1 overflow-y-auto ${allItems.length === 0 ? 'flex items-center justify-center' : ''}`} ref={scrollContainerRef}>
+				<div className={`max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full ${allItems.length === 0 ? 'flex items-center justify-center min-h-full' : ''}`}>
 					{/* Continuous vertical line spanning entire timeline */}
 					{filteredItems.length > 0 && allItems.length > 0 && (
 						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 z-0" />
 					)}
-					{filteredItems.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-12">
-							<p className="text-muted-foreground">No items match the selected filters.</p>
+					{filteredItems.length === 0 && allItems.length > 0 ? (
+						<div className="flex flex-col items-center justify-center py-12 min-h-[60vh]">
+							<Inbox className="h-16 w-16 text-muted-foreground/40 mb-4" />
+							<p className="text-muted-foreground text-lg">No items match the selected filters.</p>
 						</div>
 					) : allItems.length === 0 ? (
-						<TimelineDemo />
+						<div className="flex flex-col items-center justify-center w-full h-full min-h-[60vh]">
+							<Inbox className="h-16 w-16 text-muted-foreground/40 mb-4" />
+							<p className="text-muted-foreground text-lg">No content available</p>
+						</div>
 					) : (
 						groupedItems.map(([dateKey, dateItems]) => {
 							const dateStr = formatFullDate(new Date(dateKey));
@@ -566,31 +510,6 @@ export function Timeline() {
 													>
 														<BrowserHistoryEntry
 															entry={historyEntry}
-															onClick={handleToggleExpand}
-														/>
-													</TimelineEntry>
-												);
-											}
-
-											if (item.type === "transaction") {
-												const transactionEntry = item.data as TransactionEntryData | TransactionGroup;
-												return (
-													<TimelineEntry
-														key={item.id}
-														time={time}
-														date={date}
-														showDot
-														iconUrl={iconUrls.stripe}
-														isExpanded={isExpanded}
-														expandedContent={
-															<TransactionExpandedView 
-																entry={transactionEntry}
-																onClose={handleCloseExpanded}
-															/>
-														}
-													>
-														<TransactionEntry
-															entry={transactionEntry}
 															onClick={handleToggleExpand}
 														/>
 													</TimelineEntry>
