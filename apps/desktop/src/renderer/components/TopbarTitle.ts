@@ -7,13 +7,14 @@ import { Component } from './Component';
 import { store } from '../store';
 import { createElement } from '../utils/dom';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'chat';
 
 const routeTitles: Record<RouteView, string> = {
   timeline: 'Home',
   apps: 'Apps',
   'app-detail': 'App Details',
   onboarding: 'Welcome',
+  chat: 'Chat',
 };
 
 export class TopbarTitle extends Component {

@@ -1,19 +1,17 @@
 /**
  * Apps Grid Component
- * Displays available apps/servers with filtering
+ * Displays available apps/servers
  */
 
 import { Component } from './Component';
-import { store, actions } from '../store';
+import { store } from '../store';
 import { router } from '../router';
 import { fetchAppsWithCache } from '../api';
-import { createElement, clearChildren, escapeHtml } from '../utils/dom';
-import type { AppServer, ConnectionType, ConnectionStatus } from '../types';
+import { createElement, clearChildren } from '../utils/dom';
+import type { AppServer } from '../types';
 
 export class AppsGrid extends Component {
   private gridContainer: HTMLElement | null = null;
-  private selectedTypes: ConnectionType[] = [];
-  private selectedStatus: ConnectionStatus = 'all';
   
   async init(): Promise<void> {
     this.render();
@@ -35,13 +33,9 @@ export class AppsGrid extends Component {
       className: 'flex flex-col w-full p-6',
     });
     
-    // Filter bar
-    const filterBar = this.createFilterBar();
-    wrapper.appendChild(filterBar);
-    
     // Grid container
     this.gridContainer = createElement('div', {
-      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6',
+      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
     });
     wrapper.appendChild(this.gridContainer);
     
@@ -49,132 +43,6 @@ export class AppsGrid extends Component {
     
     // Initial render
     this.renderGrid();
-  }
-  
-  private createFilterBar(): HTMLElement {
-    const bar = createElement('div', {
-      className: 'flex items-center gap-4',
-    });
-    
-    // Connection type filter
-    const typeFilter = this.createTypeFilter();
-    bar.appendChild(typeFilter);
-    
-    // Status filter
-    const statusFilter = this.createStatusFilter();
-    bar.appendChild(statusFilter);
-    
-    return bar;
-  }
-  
-  private createTypeFilter(): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'flex items-center gap-2',
-    });
-    
-    const label = createElement('span', {
-      className: 'text-sm text-muted-foreground',
-      textContent: 'Type:',
-    });
-    wrapper.appendChild(label);
-    
-    const types: { value: ConnectionType; label: string }[] = [
-      { value: 'oauth', label: 'OAuth' },
-      { value: 'local', label: 'Local' },
-      { value: 'api', label: 'API' },
-    ];
-    
-    for (const type of types) {
-      const button = createElement('button', {
-        className: `px-3 py-1 text-sm rounded-md transition-colors ${
-          this.selectedTypes.includes(type.value)
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-        }`,
-        textContent: type.label,
-      });
-      
-      this.addListener(button, 'click', () => {
-        if (this.selectedTypes.includes(type.value)) {
-          this.selectedTypes = this.selectedTypes.filter(t => t !== type.value);
-        } else {
-          this.selectedTypes.push(type.value);
-        }
-        this.renderGrid();
-        this.updateFilterButtons();
-      });
-      
-      button.dataset.filterType = type.value;
-      wrapper.appendChild(button);
-    }
-    
-    return wrapper;
-  }
-  
-  private createStatusFilter(): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'flex items-center gap-2',
-    });
-    
-    const label = createElement('span', {
-      className: 'text-sm text-muted-foreground',
-      textContent: 'Status:',
-    });
-    wrapper.appendChild(label);
-    
-    const statuses: { value: ConnectionStatus; label: string }[] = [
-      { value: 'all', label: 'All' },
-      { value: 'connected', label: 'Connected' },
-      { value: 'disconnected', label: 'Disconnected' },
-    ];
-    
-    for (const status of statuses) {
-      const button = createElement('button', {
-        className: `px-3 py-1 text-sm rounded-md transition-colors ${
-          this.selectedStatus === status.value
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-        }`,
-        textContent: status.label,
-      });
-      
-      this.addListener(button, 'click', () => {
-        this.selectedStatus = status.value;
-        this.renderGrid();
-        this.updateFilterButtons();
-      });
-      
-      button.dataset.filterStatus = status.value;
-      wrapper.appendChild(button);
-    }
-    
-    return wrapper;
-  }
-  
-  private updateFilterButtons(): void {
-    // Update type filter buttons
-    const typeButtons = this.container.querySelectorAll('[data-filter-type]');
-    typeButtons.forEach(btn => {
-      const type = (btn as HTMLElement).dataset.filterType as ConnectionType;
-      const isActive = this.selectedTypes.includes(type);
-      btn.className = `px-3 py-1 text-sm rounded-md transition-colors ${
-        isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-      }`;
-    });
-    
-    // Update status filter buttons
-    const statusButtons = this.container.querySelectorAll('[data-filter-status]');
-    statusButtons.forEach(btn => {
-      const status = (btn as HTMLElement).dataset.filterStatus as ConnectionStatus;
-      const isActive = this.selectedStatus === status;
-      btn.className = `px-3 py-1 text-sm rounded-md transition-colors ${
-        isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-      }`;
-    });
   }
   
   private async loadApps(): Promise<void> {
@@ -201,41 +69,22 @@ export class AppsGrid extends Component {
     if (!this.gridContainer) return;
     
     const apps = store.apps.get();
-    const filteredApps = this.filterApps(apps);
     
     clearChildren(this.gridContainer);
     
-    if (filteredApps.length === 0) {
+    if (apps.length === 0) {
       this.gridContainer.innerHTML = `
         <div class="col-span-full text-center py-12 text-muted-foreground">
-          No apps match the selected filters
+          No apps available
         </div>
       `;
       return;
     }
     
-    for (const app of filteredApps) {
+    for (const app of apps) {
       const card = this.createAppCard(app);
       this.gridContainer.appendChild(card);
     }
-  }
-  
-  private filterApps(apps: AppServer[]): AppServer[] {
-    return apps.filter(app => {
-      // Type filter
-      if (this.selectedTypes.length > 0 && !this.selectedTypes.includes(app.connectionType)) {
-        return false;
-      }
-      
-      // Status filter
-      if (this.selectedStatus !== 'all') {
-        const isConnected = app.connection?.status === 'connected';
-        if (this.selectedStatus === 'connected' && !isConnected) return false;
-        if (this.selectedStatus === 'disconnected' && isConnected) return false;
-      }
-      
-      return true;
-    });
   }
   
   private createAppCard(app: AppServer): HTMLElement {

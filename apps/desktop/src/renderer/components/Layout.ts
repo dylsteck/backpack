@@ -12,9 +12,10 @@ import { Timeline } from './Timeline';
 import { AppsGrid } from './AppsGrid';
 import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
+import { Chat } from './Chat';
 import { TopbarTitle } from './TopbarTitle';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'chat';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -166,6 +167,9 @@ export class Layout extends Component {
         break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);
+        break;
+      case 'chat':
+        this.currentView = new Chat(this.contentContainer);
         break;
     }
     
