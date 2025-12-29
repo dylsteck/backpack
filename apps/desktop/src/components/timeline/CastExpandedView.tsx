@@ -91,20 +91,23 @@ export function CastExpandedView({
 	return (
 		<div className="mt-3 pt-3 border-t border-border/50 space-y-3">
 			<div className="flex items-center justify-between">
+				<div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+					Cast Details
+				</div>
 				<Button
 					variant="ghost"
 					size="icon"
 					onClick={onClose}
-					className="h-6 w-6 -ml-2"
+					className="h-6 w-6 rounded-full"
 				>
 					<X className="h-3 w-3" />
 				</Button>
 			</div>
 			
 			{cast.text && cast.text.trim() && (
-				<div className="space-y-1.5">
-					<div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Complete Text</div>
-					<div className="text-sm whitespace-pre-wrap break-words leading-relaxed text-muted-foreground">
+				<div className="space-y-1">
+					<div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Complete Text</div>
+					<div className="text-xs whitespace-pre-wrap break-words leading-relaxed text-muted-foreground">
 						{cast.text}
 					</div>
 				</div>
@@ -112,7 +115,7 @@ export function CastExpandedView({
 
 			{cast.embeds.length > 0 && (
 				<div className="space-y-2">
-					<div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Links</div>
+					<div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Links</div>
 					<div className="space-y-2">
 						{cast.embeds.map((embed: FarcasterCastV2["embeds"][0], idx: number) => {
 							const rendered = renderEmbed(embed);
@@ -122,17 +125,17 @@ export function CastExpandedView({
 				</div>
 			)}
 
-			<div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1">
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground pt-1 opacity-80">
 				{cast.channel && (
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-1">
 						{cast.channel.image_url && (
 							<img
 								src={cast.channel.image_url}
 								alt={cast.channel.name}
-								className="w-3.5 h-3.5 rounded-full"
+								className="w-3 h-3 rounded-full"
 							/>
 						)}
-						<span>{cast.channel.name}</span>
+						<span className="font-medium">{cast.channel.name}</span>
 					</div>
 				)}
 				{(cast.channel || cast.reactions.likes_count > 0 || cast.reactions.recasts_count > 0 || cast.replies.count > 0) && (
@@ -142,7 +145,7 @@ export function CastExpandedView({
 				{cast.reactions.recasts_count > 0 && <span>{cast.reactions.recasts_count} recasts</span>}
 				{cast.replies.count > 0 && <span>{cast.replies.count} replies</span>}
 				<span>•</span>
-				<span>{new Date(cast.timestamp).toLocaleString()}</span>
+				<span>{new Date(cast.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
 			</div>
 		</div>
 	);

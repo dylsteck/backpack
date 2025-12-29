@@ -39,11 +39,11 @@ export const TimelineEntry = React.memo(function TimelineEntry({
 				)}
 			</div>
 			<div className="flex-1 min-w-0">
-				<div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'bg-muted/30 rounded-lg p-3 -m-3' : ''}`}>
+				<div className={`transition-all duration-200 ease-in-out ${isExpanded ? 'bg-muted/30 rounded-xl p-4 border border-border/50 shadow-sm' : ''}`}>
 					{children}
 					{isExpanded && expandedContent && (
 						<div 
-							className="mt-3"
+							className="mt-0"
 						>
 							{expandedContent}
 						</div>
