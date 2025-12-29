@@ -1,5 +1,7 @@
 "use strict";
 const require$$0 = require("electron");
+const child_process = require("child_process");
+const net = require("net");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -25,6 +27,7 @@ function _interopNamespaceDefault(e) {
   n.default = e;
   return Object.freeze(n);
 }
+const net__namespace = /* @__PURE__ */ _interopNamespaceDefault(net);
 const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
 const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
 const os__namespace = /* @__PURE__ */ _interopNamespaceDefault(os);
@@ -10994,6 +10997,114 @@ function requireDist() {
 var distExports = requireDist();
 const inDevelopment = process.env.NODE_ENV === "development";
 let mainWindow = null;
+let serverProcess = null;
+let serverPort = 3e3;
+async function findAvailablePort(startPort = 3e3) {
+  return new Promise((resolve, reject) => {
+    const server = net__namespace.createServer();
+    server.listen(startPort, "127.0.0.1", () => {
+      const address = server.address();
+      const port = address.port;
+      server.close(() => resolve(port));
+    });
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        resolve(findAvailablePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+async function waitForServer(port, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/`);
+      if (response.ok) return true;
+    } catch {
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+async function startServer() {
+  const port = await findAvailablePort(3e3);
+  let serverPath;
+  let args = [];
+  let command;
+  if (require$$0.app.isPackaged) {
+    const binaryName = process.platform === "win32" ? "server.exe" : "server";
+    serverPath = path.join(process.resourcesPath, binaryName);
+    command = serverPath;
+  } else {
+    serverPath = path.resolve(__dirname, "../../server/src/index.ts");
+    command = "bun";
+    args = ["run", serverPath];
+  }
+  console.log(`Starting server on port ${port}...`);
+  console.log(`Server path: ${serverPath}`);
+  return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      PORT: port.toString(),
+      NODE_ENV: inDevelopment ? "development" : "production"
+    };
+    if (require$$0.app.isPackaged) {
+      serverProcess = child_process.spawn(command, [], {
+        env,
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+    } else {
+      serverProcess = child_process.spawn(command, args, {
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: true
+      });
+    }
+    if (serverProcess.stdout) {
+      serverProcess.stdout.on("data", (data) => {
+        console.log(`[Server] ${data.toString().trim()}`);
+      });
+    }
+    if (serverProcess.stderr) {
+      serverProcess.stderr.on("data", (data) => {
+        console.error(`[Server Error] ${data.toString().trim()}`);
+      });
+    }
+    serverProcess.on("error", (error) => {
+      console.error("Failed to start server:", error);
+      reject(error);
+    });
+    serverProcess.on("exit", (code) => {
+      console.log(`Server process exited with code ${code}`);
+      serverProcess = null;
+    });
+    waitForServer(port).then((ready) => {
+      if (ready) {
+        console.log(`Server ready on port ${port}`);
+        resolve(port);
+      } else {
+        reject(new Error("Server failed to start in time"));
+      }
+    }).catch(reject);
+  });
+}
+function stopServer() {
+  if (serverProcess) {
+    console.log("Stopping server...");
+    serverProcess.kill("SIGTERM");
+    setTimeout(() => {
+      if (serverProcess && !serverProcess.killed) {
+        console.log("Force killing server...");
+        serverProcess.kill("SIGKILL");
+      }
+    }, 5e3);
+    serverProcess = null;
+  }
+}
+require$$0.ipcMain.handle("get-server-port", () => {
+  return serverPort;
+});
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
   const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
@@ -11095,7 +11206,7 @@ if (!gotTheLock) {
   if (url) {
     handleDeepLink(url);
   }
-  require$$0.app.whenReady().then(() => {
+  require$$0.app.whenReady().then(async () => {
     if (process.platform === "darwin") {
       const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
       try {
@@ -11106,10 +11217,24 @@ if (!gotTheLock) {
         console.error("Failed to set dock icon:", error);
       }
     }
+    try {
+      serverPort = await startServer();
+      console.log(`API server running on http://127.0.0.1:${serverPort}`);
+    } catch (error) {
+      console.error("Failed to start API server:", error);
+    }
     createWindow();
+    if (mainWindow) {
+      mainWindow.webContents.on("did-finish-load", () => {
+        mainWindow?.webContents.send("server-port", serverPort);
+      });
+    }
     installExtensions();
   });
 }
+require$$0.app.on("before-quit", () => {
+  stopServer();
+});
 require$$0.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     require$$0.app.quit();

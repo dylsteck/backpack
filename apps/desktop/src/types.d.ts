@@ -83,9 +83,15 @@ interface BraveHistoryContext {
   }>;
 }
 
+interface ServerApiContext {
+  getPort: () => Promise<number>;
+  onPortChange: (callback: (port: number) => void) => () => void;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   chromeHistory: ChromeHistoryContext;
   braveHistory: BraveHistoryContext;
+  serverApi: ServerApiContext;
 }

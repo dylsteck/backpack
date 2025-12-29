@@ -1,4 +1,6 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
+import { spawn, ChildProcess } from "child_process";
+import * as net from "net";
 import registerListeners from "./helpers/ipc/listeners-register";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
@@ -12,6 +14,159 @@ const inDevelopment = process.env.NODE_ENV === "development";
 
 // Store reference to main window for deep link handling
 let mainWindow: BrowserWindow | null = null;
+
+// Server process management
+let serverProcess: ChildProcess | null = null;
+let serverPort: number = 3000;
+
+/**
+ * Find an available port starting from the given port
+ */
+async function findAvailablePort(startPort: number = 3000): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    
+    server.listen(startPort, "127.0.0.1", () => {
+      const address = server.address() as net.AddressInfo;
+      const port = address.port;
+      server.close(() => resolve(port));
+    });
+    
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        // Port in use, try next one
+        resolve(findAvailablePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * Wait for server to be ready
+ */
+async function waitForServer(port: number, maxAttempts: number = 30): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/`);
+      if (response.ok) return true;
+    } catch {
+      // Server not ready yet
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+/**
+ * Start the API server
+ */
+async function startServer(): Promise<number> {
+  const port = await findAvailablePort(3000);
+  
+  // Determine server path based on packaged state
+  let serverPath: string;
+  let args: string[] = [];
+  let command: string;
+  
+  if (app.isPackaged) {
+    // Production: use compiled binary
+    const binaryName = process.platform === "win32" ? "server.exe" : "server";
+    serverPath = path.join(process.resourcesPath, binaryName);
+    command = serverPath;
+  } else {
+    // Development: run with bun
+    serverPath = path.resolve(__dirname, "../../server/src/index.ts");
+    command = "bun";
+    args = ["run", serverPath];
+  }
+  
+  console.log(`Starting server on port ${port}...`);
+  console.log(`Server path: ${serverPath}`);
+  
+  return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      PORT: port.toString(),
+      NODE_ENV: inDevelopment ? "development" : "production",
+    };
+    
+    if (app.isPackaged) {
+      serverProcess = spawn(command, [], { 
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } else {
+      serverProcess = spawn(command, args, { 
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: true,
+      });
+    }
+    
+    if (serverProcess.stdout) {
+      serverProcess.stdout.on("data", (data) => {
+        console.log(`[Server] ${data.toString().trim()}`);
+      });
+    }
+    
+    if (serverProcess.stderr) {
+      serverProcess.stderr.on("data", (data) => {
+        console.error(`[Server Error] ${data.toString().trim()}`);
+      });
+    }
+    
+    serverProcess.on("error", (error) => {
+      console.error("Failed to start server:", error);
+      reject(error);
+    });
+    
+    serverProcess.on("exit", (code) => {
+      console.log(`Server process exited with code ${code}`);
+      serverProcess = null;
+    });
+    
+    // Wait for server to be ready
+    waitForServer(port)
+      .then((ready) => {
+        if (ready) {
+          console.log(`Server ready on port ${port}`);
+          resolve(port);
+        } else {
+          reject(new Error("Server failed to start in time"));
+        }
+      })
+      .catch(reject);
+  });
+}
+
+/**
+ * Stop the server process
+ */
+function stopServer(): void {
+  if (serverProcess) {
+    console.log("Stopping server...");
+    
+    // Try graceful shutdown first
+    serverProcess.kill("SIGTERM");
+    
+    // Force kill after 5 seconds if still running
+    setTimeout(() => {
+      if (serverProcess && !serverProcess.killed) {
+        console.log("Force killing server...");
+        serverProcess.kill("SIGKILL");
+      }
+    }, 5000);
+    
+    serverProcess = null;
+  }
+}
+
+// IPC handler to get server port
+ipcMain.handle("get-server-port", () => {
+  return serverPort;
+});
 
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
@@ -151,7 +306,7 @@ if (!gotTheLock) {
     handleDeepLink(url);
   }
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     if (process.platform === "darwin") {
       const iconPath = inDevelopment
         ? path.join(process.cwd(), "images", "icon.png")
@@ -165,10 +320,33 @@ if (!gotTheLock) {
         console.error("Failed to set dock icon:", error);
       }
     }
+    
+    // Start server before creating window
+    try {
+      serverPort = await startServer();
+      console.log(`API server running on http://127.0.0.1:${serverPort}`);
+    } catch (error) {
+      console.error("Failed to start API server:", error);
+      // Continue anyway - might be running separately in development
+    }
+    
     createWindow();
+    
+    // Send server port to renderer once loaded
+    if (mainWindow) {
+      mainWindow.webContents.on("did-finish-load", () => {
+        mainWindow?.webContents.send("server-port", serverPort);
+      });
+    }
+    
     installExtensions();
   });
 }
+
+// Clean up server on quit
+app.on("before-quit", () => {
+  stopServer();
+});
 
 //osX only
 app.on("window-all-closed", () => {

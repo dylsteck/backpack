@@ -1,4 +1,5 @@
 "use strict";
+const electron = require("electron");
 const THEME_MODE_CURRENT_CHANNEL = "theme-mode:current";
 const THEME_MODE_TOGGLE_CHANNEL = "theme-mode:toggle";
 const THEME_MODE_DARK_CHANNEL = "theme-mode:dark";
@@ -31,8 +32,8 @@ const CHROME_DETECT_HISTORY_PATH_CHANNEL = "chrome:detect-history-path";
 const CHROME_READ_HISTORY_CHANNEL = "chrome:read-history";
 const CHROME_VERIFY_PATH_CHANNEL = "chrome:verify-path";
 function exposeChromeContext() {
-  const electron = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
-  const { contextBridge, ipcRenderer } = electron;
+  const electron2 = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron2;
   contextBridge.exposeInMainWorld("chromeHistory", {
     detectHistoryPath: () => ipcRenderer.invoke(CHROME_DETECT_HISTORY_PATH_CHANNEL),
     verifyPath: (path) => ipcRenderer.invoke(CHROME_VERIFY_PATH_CHANNEL, path),
@@ -43,8 +44,8 @@ const BRAVE_DETECT_HISTORY_PATH_CHANNEL = "brave:detect-history-path";
 const BRAVE_READ_HISTORY_CHANNEL = "brave:read-history";
 const BRAVE_VERIFY_PATH_CHANNEL = "brave:verify-path";
 function exposeBraveContext() {
-  const electron = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
-  const { contextBridge, ipcRenderer } = electron;
+  const electron2 = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron2;
   contextBridge.exposeInMainWorld("braveHistory", {
     detectHistoryPath: () => ipcRenderer.invoke(BRAVE_DETECT_HISTORY_PATH_CHANNEL),
     verifyPath: (path) => ipcRenderer.invoke(BRAVE_VERIFY_PATH_CHANNEL, path),
@@ -68,11 +69,27 @@ function exposeDeepLinkContext() {
     }
   });
 }
+function exposeServerContext() {
+  const serverContext = {
+    getPort: () => electron.ipcRenderer.invoke("get-server-port"),
+    onPortChange: (callback) => {
+      const handler = (_event, port) => {
+        callback(port);
+      };
+      electron.ipcRenderer.on("server-port", handler);
+      return () => {
+        electron.ipcRenderer.removeListener("server-port", handler);
+      };
+    }
+  };
+  electron.contextBridge.exposeInMainWorld("serverApi", serverContext);
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
   exposeChromeContext();
   exposeBraveContext();
   exposeDeepLinkContext();
+  exposeServerContext();
 }
 exposeContexts();

@@ -12,6 +12,13 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: "./images/icon",
+    // Include compiled server binary for production
+    extraResource: [
+      // Server binary (built with `bun build --compile`)
+      ...(process.platform === "win32" 
+        ? ["../server/server.exe"]
+        : ["../server/server"]),
+    ],
   },
   rebuildConfig: {
     onlyModules: ["better-sqlite3"],

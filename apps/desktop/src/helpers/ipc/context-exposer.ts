@@ -3,6 +3,7 @@ import { exposeWindowContext } from "./window/window-context";
 import { exposeChromeContext } from "./chrome/chrome-context";
 import { exposeBraveContext } from "./brave/brave-context";
 import { exposeDeepLinkContext } from "./deeplink/deeplink-context";
+import { exposeServerContext } from "./server/server-context";
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -10,4 +11,5 @@ export default function exposeContexts() {
   exposeChromeContext();
   exposeBraveContext();
   exposeDeepLinkContext();
+  exposeServerContext();
 }
