@@ -37,20 +37,30 @@ function ImageWithFallback({
   );
 }
 
+export interface ViewToggleItem {
+  id?: string | number;
+  iconUrl?: string;
+  name?: string;
+  title?: string;
+  connection?: {
+    status?: string;
+  };
+  [key: string]: unknown;
+}
+
 interface ViewToggleProps {
-  data: any[];
-  renderGalleryCard?: (item: any) => React.ReactNode;
-  getIconUrl?: (item: any) => string | undefined;
-  getName?: (item: any) => string;
-  getFields?: (item: any) => Record<string, any>;
+  data: ViewToggleItem[];
+  renderGalleryCard?: (item: ViewToggleItem) => React.ReactNode;
+  getIconUrl?: (item: ViewToggleItem) => string | undefined;
+  getName?: (item: ViewToggleItem) => string;
+  getFields?: (item: ViewToggleItem) => ViewToggleItem;
   isLoading?: boolean;
   error?: Error | null;
   emptyMessage?: string;
-  title?: string;
-  onSetupClick?: (item: any) => void;
+  onSetupClick?: (item: ViewToggleItem) => void;
 }
 
-export function ViewToggle({
+function ViewToggleComponent({
   data,
   renderGalleryCard,
   getIconUrl = (item) => item.iconUrl,
@@ -59,7 +69,6 @@ export function ViewToggle({
   isLoading = false,
   error = null,
   emptyMessage = "No items available",
-  title,
   onSetupClick,
 }: ViewToggleProps) {
 
@@ -160,4 +169,6 @@ export function ViewToggle({
     </div>
   );
 }
+
+export const ViewToggle = React.memo(ViewToggleComponent);
 

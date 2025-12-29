@@ -1,17 +1,17 @@
 import React from "react";
-import { useLocation } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
 import DragWindowRegion from "@/components/DragWindowRegion";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import { getRouteTitle } from "@/utils/route-titles";
 import { DetailSidebarProvider, useDetailSidebar } from "@/contexts/DetailSidebarContext";
 import { BrowserHistoryDetailSidebar } from "@/components/timeline/BrowserHistoryDetailSidebar";
 import { CastDetailSidebar } from "@/components/timeline/CastDetailSidebar";
 import { TopbarFilterProvider, useTopbarFilter } from "@/contexts/TopbarFilterContext";
-
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_ICON = "3rem";
+import { SourceFilterDropdown } from "@/components/filters/SourceFilterDropdown";
+import { ConnectionFilterDropdown } from "@/components/filters/ConnectionFilterDropdown";
+import { trpc } from "@/lib/trpc";
+import type { AppServer } from "@/hooks/useAppsFilter";
 
 function SidebarIcon() {
   const { state } = useSidebar();
@@ -34,8 +34,33 @@ function SidebarIcon() {
 function TopbarTitle() {
   const { state } = useSidebar();
   const location = useLocation();
-  const pageTitle = getRouteTitle(location.pathname);
-  const { filterComponent } = useTopbarFilter();
+  const params = useParams({ strict: false });
+  const { filterConfig } = useTopbarFilter();
+
+  // Fetch app name for app detail pages
+  const appId = params?.appId as string | undefined;
+  const { data: appsData } = (trpc as unknown as {
+    apps: {
+      getAvailableServers: {
+        useQuery: (input: undefined, options?: { staleTime?: number; gcTime?: number }) => {
+          data?: { servers: AppServer[] };
+        };
+      };
+    };
+  }).apps.getAvailableServers.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const appName = React.useMemo(() => {
+    if (appId && appsData?.servers) {
+      const app = appsData.servers.find((s: AppServer) => s.id === appId);
+      return app?.name;
+    }
+    return undefined;
+  }, [appId, appsData]);
+
+  const pageTitle = getRouteTitle(location.pathname, appName);
 
   // Calculate position to be right of sidebar icon
   // Sidebar icon is ~32px wide (h-8 w-8), positioned at leftPosition
@@ -43,6 +68,34 @@ function TopbarTitle() {
   const leftPosition = state === "collapsed"
     ? "calc(76px + 3rem + 2rem)" // Traffic lights + collapsed sidebar + padding
     : "calc(16rem + 0.5rem)"; // Expanded sidebar + padding
+
+  // Memoize filter component rendering to prevent unnecessary re-renders
+  const filterComponent = React.useMemo(() => {
+    if (!filterConfig) return null;
+    
+    if (filterConfig.type === "source") {
+      return (
+        <SourceFilterDropdown
+          selectedSources={filterConfig.props.selectedSources}
+          onSourceChange={filterConfig.props.onSourceChange}
+          sourceCounts={filterConfig.props.sourceCounts}
+        />
+      );
+    }
+    
+    if (filterConfig.type === "connection") {
+      return (
+        <ConnectionFilterDropdown
+          selectedTypes={filterConfig.props.selectedTypes}
+          selectedStatus={filterConfig.props.selectedStatus}
+          onTypeChange={filterConfig.props.onTypeChange}
+          onStatusChange={filterConfig.props.onStatusChange}
+        />
+      );
+    }
+    
+    return null;
+  }, [filterConfig]);
 
   return (
     <>
@@ -78,7 +131,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
           <DragWindowRegion />
-          <div className="h-[44px] flex-shrink-0" />
+          <div className="h-[44px] shrink-0" />
           <main className="flex-1">{children}</main>
         </SidebarInset>
         {selectedHistoryItem && historySidebarOpen && (

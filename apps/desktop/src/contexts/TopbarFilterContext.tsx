@@ -1,17 +1,29 @@
 import React from "react";
+import type { SourceType } from "@/components/filters/SourceFilterDropdown";
+import type { ConnectionType, ConnectionStatus } from "@/components/filters/ConnectionFilterDropdown";
+
+export type FilterConfig = 
+	| { type: "source"; props: { selectedSources: SourceType[]; onSourceChange: (sources: SourceType[]) => void; sourceCounts?: Record<SourceType, number> } }
+	| { type: "connection"; props: { selectedTypes: ConnectionType[]; selectedStatus: ConnectionStatus; onTypeChange: (types: ConnectionType[]) => void; onStatusChange: (status: ConnectionStatus) => void } }
+	| null;
 
 interface TopbarFilterContextValue {
-	filterComponent: React.ReactNode | null;
-	setFilterComponent: (component: React.ReactNode | null) => void;
+	filterConfig: FilterConfig;
+	setFilterConfig: (config: FilterConfig) => void;
 }
 
 const TopbarFilterContext = React.createContext<TopbarFilterContextValue | null>(null);
 
 export function TopbarFilterProvider({ children }: { children: React.ReactNode }) {
-	const [filterComponent, setFilterComponent] = React.useState<React.ReactNode | null>(null);
+	const [filterConfig, setFilterConfig] = React.useState<FilterConfig>(null);
+
+	const value = React.useMemo(
+		() => ({ filterConfig, setFilterConfig }),
+		[filterConfig]
+	);
 
 	return (
-		<TopbarFilterContext.Provider value={{ filterComponent, setFilterComponent }}>
+		<TopbarFilterContext.Provider value={value}>
 			{children}
 		</TopbarFilterContext.Provider>
 	);

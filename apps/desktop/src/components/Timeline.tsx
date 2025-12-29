@@ -13,15 +13,63 @@ import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/Br
 import { CastExpandedView } from "./timeline/CastExpandedView";
 import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
 import { TransactionExpandedView } from "./timeline/TransactionExpandedView";
-import { SourceFilterDropdown, type SourceType } from "./filters/SourceFilterDropdown";
+import type { SourceType } from "./filters/SourceFilterDropdown";
 import { formatTime, formatDate, groupItemsByDate, formatFullDate } from "@/helpers/timeline-formatting";
 import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
+import type { AppServer } from "@/hooks/useAppsFilter";
+
+// Types for timeline API responses
+type TimelineItem = {
+	id: string;
+	timestamp: Date | string;
+	source: string;
+	type: string;
+	data: Record<string, unknown>;
+};
+
+type TimelinePage = {
+	items: TimelineItem[];
+	nextCursor?: string;
+};
+
+type TimelineResponse = {
+	pages: TimelinePage[];
+};
+
+type ServerResponse = {
+	servers: AppServer[];
+};
+
+type BrowserHistoryResult = {
+	success: boolean;
+	data?: BrowserHistoryEntryData[];
+};
 
 export function Timeline() {
-	const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = (trpc as any).timeline.getTimeline.useInfiniteQuery(
+	const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = (trpc as unknown as {
+		timeline: {
+			getTimeline: {
+				useInfiniteQuery: (
+					input: { limit: number },
+					options: {
+						getNextPageParam: (lastPage: TimelinePage) => string | undefined;
+						staleTime: number;
+						gcTime: number;
+					}
+				) => {
+					data?: TimelineResponse;
+					isLoading: boolean;
+					error: Error | null;
+					fetchNextPage: () => void;
+					hasNextPage: boolean;
+					isFetchingNextPage: boolean;
+				};
+			};
+		};
+	}).timeline.getTimeline.useInfiniteQuery(
 		{ limit: 25 },
 		{
-			getNextPageParam: (lastPage: any) => lastPage?.nextCursor ?? undefined,
+			getNextPageParam: (lastPage: TimelinePage) => lastPage?.nextCursor ?? undefined,
 			staleTime: 5 * 60 * 1000,
 			gcTime: 10 * 60 * 1000,
 		}
@@ -31,28 +79,49 @@ export function Timeline() {
 	const [braveHistory, setBraveHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [expandedItemId, setExpandedItemId] = React.useState<string | null>(null);
 	const [selectedSources, setSelectedSources] = React.useState<SourceType[]>(["all"]);
-	const { setFilterComponent } = useTopbarFilter();
+	const { setFilterConfig } = useTopbarFilter();
 
-	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
+	const { data: appsData } = (trpc as unknown as {
+		apps: {
+			getAvailableServers: {
+				useQuery: (
+					input: undefined,
+					options: { staleTime: number; gcTime: number }
+				) => {
+					data?: ServerResponse;
+				};
+			};
+		};
+	}).apps.getAvailableServers.useQuery(undefined, {
+		staleTime: 5 * 60 * 1000, // 5 minutes - apps list doesn't change frequently
+		gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+	});
 	
 	// Memoize icon URLs and connections to prevent unnecessary re-renders
 	const iconUrls = React.useMemo(() => {
 		if (!appsData?.servers) return {};
 		const servers = appsData.servers;
 		return {
-			farcaster: servers.find((app: any) => app.id === "farcaster")?.iconUrl,
-			chrome: servers.find((app: any) => app.id === "chrome")?.iconUrl,
-			brave: servers.find((app: any) => app.id === "brave")?.iconUrl,
-			stripe: servers.find((app: any) => app.id === "stripe")?.iconUrl,
+			farcaster: servers.find((app: AppServer) => app.id === "farcaster")?.iconUrl,
+			chrome: servers.find((app: AppServer) => app.id === "chrome")?.iconUrl,
+			brave: servers.find((app: AppServer) => app.id === "brave")?.iconUrl,
+			stripe: servers.find((app: AppServer) => app.id === "stripe")?.iconUrl,
 		};
 	}, [appsData]);
+
+	type ConnectionWithMetadata = {
+		status: string;
+		connectionMetadata?: {
+			localPath?: string;
+		};
+	};
 
 	const connections = React.useMemo(() => {
 		if (!appsData?.servers) return {};
 		const servers = appsData.servers;
 		return {
-			chrome: servers.find((app: any) => app.id === "chrome")?.connection,
-			brave: servers.find((app: any) => app.id === "brave")?.connection,
+			chrome: servers.find((app: AppServer) => app.id === "chrome")?.connection as ConnectionWithMetadata | undefined,
+			brave: servers.find((app: AppServer) => app.id === "brave")?.connection as ConnectionWithMetadata | undefined,
 		};
 	}, [appsData]);
 
@@ -61,47 +130,55 @@ export function Timeline() {
 
 	const items = React.useMemo(() => {
 		if (!data?.pages) return [];
-		return data.pages.flatMap((page: any) => page.items || []);
+		return data.pages.flatMap((page: TimelinePage) => page.items || []);
 	}, [data]);
 
 	React.useEffect(() => {
 		if (chromeConnection?.status === "connected") {
 			const localPath = chromeConnection.connectionMetadata?.localPath;
 			if (localPath) {
+				// Check immediately if API is available
 				if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
 					window.chromeHistory
 						.readHistory(localPath)
-						.then((result: any) => {
+						.then((result: BrowserHistoryResult) => {
 							if (result.success && result.data) {
 								setChromeHistory(result.data);
 							}
 						})
-						.catch((err: any) => {
+						.catch((err: Error) => {
 							console.error("Error reading Chrome history:", err);
 						});
 				} else {
+					// Poll less frequently (every 2 seconds instead of 1 second)
+					// Reduced max attempts since we're checking less frequently
 					let attemptCount = 0;
-					const maxAttempts = 30;
+					const maxAttempts = 15; // Reduced from 30 since we check every 2s instead of 1s
+					const POLL_INTERVAL = 2000; // 2 seconds instead of 1 second
+					
 					const checkInterval = setInterval(() => {
 						attemptCount++;
 						if (window.chromeHistory && typeof window.chromeHistory.readHistory === "function") {
 							clearInterval(checkInterval);
 							window.chromeHistory
 								.readHistory(localPath)
-								.then((result: any) => {
+								.then((result: BrowserHistoryResult) => {
 									if (result.success && result.data) {
 										setChromeHistory(result.data);
 									}
 								})
-								.catch((err: any) => {
+								.catch((err: Error) => {
 									console.error("Error reading Chrome history:", err);
 								});
 						} else if (attemptCount >= maxAttempts) {
 							clearInterval(checkInterval);
+							console.warn("[Timeline] Chrome history API not available after maximum attempts");
 						}
-					}, 1000);
+					}, POLL_INTERVAL);
 
-					return () => clearInterval(checkInterval);
+					return () => {
+						clearInterval(checkInterval);
+					};
 				}
 			}
 		}
@@ -111,92 +188,132 @@ export function Timeline() {
 		if (braveConnection?.status === "connected") {
 			const localPath = braveConnection.connectionMetadata?.localPath;
 			if (localPath) {
+				// Check immediately if API is available
 				if (window.braveHistory && typeof window.braveHistory.readHistory === "function") {
 					window.braveHistory
 						.readHistory(localPath)
-						.then((result: any) => {
+						.then((result: BrowserHistoryResult) => {
 							if (result.success && result.data) {
 								setBraveHistory(result.data);
 							}
 						})
-						.catch((err: any) => {
+						.catch((err: Error) => {
 							console.error("Error reading Brave history:", err);
 						});
 				} else {
+					// Poll less frequently (every 2 seconds instead of 1 second)
+					// Reduced max attempts since we're checking less frequently
 					let attemptCount = 0;
-					const maxAttempts = 30;
+					const maxAttempts = 15; // Reduced from 30 since we check every 2s instead of 1s
+					const POLL_INTERVAL = 2000; // 2 seconds instead of 1 second
+					
 					const checkInterval = setInterval(() => {
 						attemptCount++;
 						if (window.braveHistory && typeof window.braveHistory.readHistory === "function") {
 							clearInterval(checkInterval);
 							window.braveHistory
 								.readHistory(localPath)
-								.then((result: any) => {
+								.then((result: BrowserHistoryResult) => {
 									if (result.success && result.data) {
 										setBraveHistory(result.data);
 									}
 								})
-								.catch((err: any) => {
+								.catch((err: Error) => {
 									console.error("Error reading Brave history:", err);
 								});
 						} else if (attemptCount >= maxAttempts) {
 							clearInterval(checkInterval);
+							console.warn("[Timeline] Brave history API not available after maximum attempts");
 						}
-					}, 1000);
+					}, POLL_INTERVAL);
 
-					return () => clearInterval(checkInterval);
+					return () => {
+						clearInterval(checkInterval);
+					};
 				}
 			}
 		}
 	}, [braveConnection]);
 
-	const allItems = React.useMemo(() => {
-		const groupedChromeHistory = groupBrowserHistory(chromeHistory);
-		const groupedBraveHistory = groupBrowserHistory(braveHistory);
+	// Memoize browser history grouping separately
+	const groupedChromeHistory = React.useMemo(() => {
+		return groupBrowserHistory(chromeHistory);
+	}, [chromeHistory]);
 
-		const chromeHistoryItems = groupedChromeHistory.map((entry) => {
+	const groupedBraveHistory = React.useMemo(() => {
+		return groupBrowserHistory(braveHistory);
+	}, [braveHistory]);
+
+	// Memoize browser history items conversion
+	type BrowserHistoryTimelineItem = {
+		id: string;
+		timestamp: Date;
+		source: SourceType;
+		type: string;
+		data: BrowserHistoryEntryData | BrowserHistoryGroup;
+	};
+
+	const chromeHistoryItems = React.useMemo((): BrowserHistoryTimelineItem[] => {
+		return groupedChromeHistory.map((entry) => {
 			const timestamp = "entries" in entry ? entry.timestamp : new Date(entry.timestamp);
 			return {
 				id: "entries" in entry ? entry.id : `chrome-${entry.url}-${entry.timestamp}`,
 				timestamp,
-				source: "chrome",
+				source: "chrome" as SourceType,
 				type: "browser-history",
 				data: entry,
 			};
 		});
+	}, [groupedChromeHistory]);
 
-		const braveHistoryItems = groupedBraveHistory.map((entry) => {
+	const braveHistoryItems = React.useMemo((): BrowserHistoryTimelineItem[] => {
+		return groupedBraveHistory.map((entry) => {
 			const timestamp = "entries" in entry ? entry.timestamp : new Date(entry.timestamp);
 			return {
 				id: "entries" in entry ? entry.id : `brave-${entry.url}-${entry.timestamp}`,
 				timestamp,
-				source: "brave",
+				source: "brave" as SourceType,
 				type: "browser-history",
 				data: entry,
 			};
 		});
+	}, [groupedBraveHistory]);
 
-		const serverItems = items.map((item: any) => ({
+	// Memoize server items normalization
+	type NormalizedTimelineItem = TimelineItem & {
+		timestamp: Date;
+	};
+
+	const serverItems = React.useMemo(() => {
+		return items.map((item: TimelineItem): NormalizedTimelineItem => ({
 			...item,
 			timestamp: item.timestamp instanceof Date ? item.timestamp : new Date(item.timestamp),
 		}));
+	}, [items]);
 
-		// Process transaction items and group them
-		const transactionItems = serverItems.filter((item: any) => item.type === "transaction");
-		const otherServerItems = serverItems.filter((item: any) => item.type !== "transaction");
+	// Memoize transaction processing separately
+	const transactionItems = React.useMemo(() => {
+		return serverItems.filter((item: NormalizedTimelineItem) => item.type === "transaction");
+	}, [serverItems]);
 
-		// Convert transaction items to TransactionEntryData format
-		const transactionEntries: TransactionEntryData[] = transactionItems.map((item: any) => {
+	const otherServerItems = React.useMemo(() => {
+		return serverItems.filter((item: NormalizedTimelineItem) => item.type !== "transaction");
+	}, [serverItems]);
+
+	// Memoize transaction entries conversion
+	const transactionEntries = React.useMemo((): TransactionEntryData[] => {
+		return transactionItems.map((item: NormalizedTimelineItem) => {
 			try {
+				const data = item.data as Record<string, unknown>;
 				return {
 					id: item.id,
-					account_id: item.data?.account_id || item.data?.account,
-					amount: item.data?.amount,
-					currency: item.data?.currency,
-					description: item.data?.description,
-					status: item.data?.status,
-					transacted_at: item.data?.transacted_at,
-					created: item.data?.created,
+					account_id: (data?.account_id as string) || (data?.account as string) || "",
+					amount: data?.amount as number,
+					currency: data?.currency as string,
+					description: data?.description as string,
+					status: data?.status as string,
+					transacted_at: data?.transacted_at as number,
+					created: data?.created as number,
 					timestamp: item.timestamp,
 				};
 			} catch (error) {
@@ -204,34 +321,70 @@ export function Timeline() {
 				return null;
 			}
 		}).filter((entry: TransactionEntryData | null): entry is TransactionEntryData => entry !== null);
+	}, [transactionItems]);
 
-		const groupedTransactions = groupTransactions(transactionEntries);
-		const transactionTimelineItems = groupedTransactions.map((entry: TransactionEntryData | TransactionGroup) => {
+	// Memoize transaction grouping
+	const groupedTransactions = React.useMemo(() => {
+		return groupTransactions(transactionEntries);
+	}, [transactionEntries]);
+
+	// Memoize transaction timeline items conversion
+	type TransactionTimelineItem = {
+		id: string;
+		timestamp: Date;
+		source: SourceType;
+		type: string;
+		data: TransactionEntryData | TransactionGroup;
+	};
+
+	const transactionTimelineItems = React.useMemo((): TransactionTimelineItem[] => {
+		return groupedTransactions.map((entry: TransactionEntryData | TransactionGroup) => {
 			const timestamp = "entries" in entry ? entry.timestamp : entry.timestamp;
 			return {
 				id: "entries" in entry ? entry.id : entry.id,
 				timestamp,
-				source: "stripe",
+				source: "stripe" as SourceType,
 				type: "transaction",
 				data: entry,
 			};
 		});
+	}, [groupedTransactions]);
 
-		return [...otherServerItems, ...transactionTimelineItems, ...chromeHistoryItems, ...braveHistoryItems].sort((a, b) => {
-			const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
-			const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
-			return bTime - aTime;
+	// Unified timeline item type
+	type UnifiedTimelineItem = {
+		id: string;
+		timestamp: Date;
+		source: SourceType;
+		type: string;
+		data: unknown;
+	};
+
+	// Final combination and sorting - memoized
+	const allItems = React.useMemo((): UnifiedTimelineItem[] => {
+		const combined: UnifiedTimelineItem[] = [
+			...otherServerItems.map(item => ({
+				id: item.id,
+				timestamp: item.timestamp,
+				source: item.source as SourceType,
+				type: item.type,
+				data: item.data,
+			})),
+			...transactionTimelineItems,
+			...chromeHistoryItems,
+			...braveHistoryItems,
+		];
+		return combined.sort((a, b) => {
+			return b.timestamp.getTime() - a.timestamp.getTime();
 		});
-	}, [items, chromeHistory, braveHistory]);
+	}, [otherServerItems, transactionTimelineItems, chromeHistoryItems, braveHistoryItems]);
 
 	// Filter items based on selected sources
 	const filteredItems = React.useMemo(() => {
 		if (selectedSources.includes("all")) {
 			return allItems;
 		}
-		return allItems.filter((item: any) => {
-			const source = item.source as SourceType;
-			return selectedSources.includes(source);
+		return allItems.filter((item) => {
+			return selectedSources.includes(item.source);
 		});
 	}, [allItems, selectedSources]);
 
@@ -239,25 +392,26 @@ export function Timeline() {
 	const sourceCounts = React.useMemo(() => {
 		const counts: Record<SourceType, number> = {
 			all: allItems.length,
-			farcaster: allItems.filter((item: any) => item.source === "farcaster").length,
-			stripe: allItems.filter((item: any) => item.source === "stripe").length,
-			chrome: allItems.filter((item: any) => item.source === "chrome").length,
-			brave: allItems.filter((item: any) => item.source === "brave").length,
+			farcaster: allItems.filter((item) => item.source === "farcaster").length,
+			stripe: allItems.filter((item) => item.source === "stripe").length,
+			chrome: allItems.filter((item) => item.source === "chrome").length,
+			brave: allItems.filter((item) => item.source === "brave").length,
 		};
 		return counts;
 	}, [allItems]);
 
 	// Set filter component in topbar
 	React.useEffect(() => {
-		setFilterComponent(
-			<SourceFilterDropdown
-				selectedSources={selectedSources}
-				onSourceChange={setSelectedSources}
-				sourceCounts={sourceCounts}
-			/>
-		);
-		return () => setFilterComponent(null);
-	}, [selectedSources, sourceCounts, setFilterComponent]);
+		setFilterConfig({
+			type: "source",
+			props: {
+				selectedSources,
+				onSourceChange: setSelectedSources,
+				sourceCounts,
+			},
+		});
+		return () => setFilterConfig(null);
+	}, [selectedSources, sourceCounts, setFilterConfig]);
 
 	// Set up infinite scroll with IntersectionObserver
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -288,6 +442,20 @@ export function Timeline() {
 			}
 		};
 	}, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+	// Memoize toggle handler factory to prevent creating new functions on every render
+	// MUST be called before any conditional returns to follow Rules of Hooks
+	const createToggleHandler = React.useCallback((itemId: string) => {
+		return () => {
+			setExpandedItemId((currentId) => currentId === itemId ? null : itemId);
+		};
+	}, []);
+
+	// Memoize close handler
+	// MUST be called before any conditional returns to follow Rules of Hooks
+	const handleCloseExpanded = React.useCallback(() => {
+		setExpandedItemId(null);
+	}, []);
 
 	if (isLoading) {
 		return (
@@ -330,7 +498,7 @@ export function Timeline() {
 				<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative">
 					{/* Continuous vertical line spanning entire timeline */}
 					{filteredItems.length > 0 && allItems.length > 0 && (
-						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 -z-0" />
+						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 z-0" />
 					)}
 					{filteredItems.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-12">
@@ -345,15 +513,11 @@ export function Timeline() {
 								<div key={dateKey}>
 									<DateSeparator date={dateStr} />
 									<div className="space-y-6 mt-4">
-										{dateItems.map((item: any, index: number) => {
+										{dateItems.map((item: UnifiedTimelineItem) => {
 											const time = formatTime(item.timestamp);
 											const date = formatDate(item.timestamp);
-											const showDot = true;
 											const isExpanded = expandedItemId === item.id;
-
-											const handleToggleExpand = () => {
-												setExpandedItemId(isExpanded ? null : item.id);
-											};
+											const handleToggleExpand = createToggleHandler(item.id);
 
 											if (item.type === "cast") {
 												const cast = item.data as FarcasterCastV2;
@@ -368,7 +532,7 @@ export function Timeline() {
 														expandedContent={
 															<CastExpandedView 
 																cast={cast} 
-																onClose={() => setExpandedItemId(null)}
+																onClose={handleCloseExpanded}
 															/>
 														}
 													>
@@ -396,7 +560,7 @@ export function Timeline() {
 														expandedContent={
 															<BrowserHistoryExpandedView 
 																entry={historyEntry}
-																onClose={() => setExpandedItemId(null)}
+																onClose={handleCloseExpanded}
 															/>
 														}
 													>
@@ -421,7 +585,7 @@ export function Timeline() {
 														expandedContent={
 															<TransactionExpandedView 
 																entry={transactionEntry}
-																onClose={() => setExpandedItemId(null)}
+																onClose={handleCloseExpanded}
 															/>
 														}
 													>

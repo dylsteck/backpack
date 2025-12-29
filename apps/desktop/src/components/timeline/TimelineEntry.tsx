@@ -1,6 +1,6 @@
-import type React from "react";
+import React from "react";
 
-export function TimelineEntry({
+export const TimelineEntry = React.memo(function TimelineEntry({
 	time,
 	date,
 	children,
@@ -60,5 +60,5 @@ export function TimelineEntry({
 			</div>
 		</div>
 	);
-}
+});
 

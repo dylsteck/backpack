@@ -38,7 +38,10 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 	const [braveHistory, setBraveHistory] = React.useState<BrowserHistoryEntryData[]>([]);
 	const [expandedItemId, setExpandedItemId] = React.useState<string | null>(null);
 
-	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery();
+	const { data: appsData } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
+		staleTime: 5 * 60 * 1000, // 5 minutes - apps list doesn't change frequently
+		gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+	});
 	const chromeIconUrl = appsData?.servers?.find((app: any) => app.id === "chrome")?.iconUrl;
 	const chromeConnection = appsData?.servers?.find((app: any) => app.id === "chrome")?.connection;
 	const braveIconUrl = appsData?.servers?.find((app: any) => app.id === "brave")?.iconUrl;
@@ -228,6 +231,13 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 	const groupedByDate = groupItemsByDate(allItems);
 	const appIconUrl = iconUrl;
 
+	// Memoize toggle handler factory to prevent creating new functions on every render
+	const createToggleHandler = React.useCallback((itemId: string) => {
+		return () => {
+			setExpandedItemId((currentId) => currentId === itemId ? null : itemId);
+		};
+	}, []);
+
 	return (
 		<div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
 			<div className="max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
@@ -244,6 +254,7 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 							{dateItems.map((item: any) => {
 								const time = formatTime(item.timestamp);
 								const isExpanded = expandedItemId === item.id;
+								const handleToggleExpand = createToggleHandler(item.id);
 
 								if (item.type === "cast") {
 									const cast = item.data as FarcasterCastV2;
@@ -260,7 +271,7 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 										>
 											<CastEntry
 												cast={cast}
-												onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
+												onClick={handleToggleExpand}
 											/>
 										</TimelineEntry>
 									);
@@ -281,7 +292,7 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 										>
 											<BrowserHistoryEntry
 												data={historyData}
-												onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
+												onClick={handleToggleExpand}
 											/>
 										</TimelineEntry>
 									);
@@ -307,7 +318,7 @@ export function AppTimeline({ appId, iconUrl }: AppTimelineProps) {
 										>
 											<TransactionEntry
 												entry={transactionData}
-												onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
+												onClick={handleToggleExpand}
 											/>
 										</TimelineEntry>
 									);

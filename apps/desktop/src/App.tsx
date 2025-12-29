@@ -15,6 +15,8 @@ const queryClient = new QueryClient({
       refetchOnMount: false, // Don't refetch on mount if data is fresh
     },
   },
+  // Enable query deduplication explicitly
+  queryCache: undefined, // Use default cache which handles deduplication
 });
 
 function AppContent() {
