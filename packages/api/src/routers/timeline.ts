@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { farcasterRouter } from "./farcaster";
+import { tellerRouter } from "./teller";
 import { ItemsService } from "../services/items/service";
 
 export type TimelineItem = {
@@ -72,6 +73,29 @@ export const timelineRouter = router({
 							}
 						} catch (error) {
 							console.error(`Error fetching Farcaster timeline for connection ${connection.id}:`, error);
+						}
+					}
+
+					// Handle Teller transactions
+					if (connection.serverId === "teller" && connection.status === "connected") {
+						try {
+							// Use the teller router to get transactions
+							const caller = tellerRouter.createCaller({});
+							const response = await caller.getTransactions({
+								count: input.limit,
+							});
+
+							for (const transaction of response.transactions) {
+								items.push({
+									id: transaction.id,
+									timestamp: new Date(transaction.date),
+									source: "teller",
+									type: "transaction",
+									data: transaction,
+								});
+							}
+						} catch (error) {
+							console.error(`Error fetching Teller timeline for connection ${connection.id}:`, error);
 						}
 					}
 

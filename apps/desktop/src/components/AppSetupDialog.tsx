@@ -94,6 +94,7 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
 
   const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation();
   const saveOAuthTokensMutation = (trpc as any).apps.saveOAuthTokens.useMutation();
+  const saveTellerTokenMutation = (trpc as any).apps.saveTellerToken.useMutation();
   const connectChromeMutation = (trpc as any).apps.connectChrome.useMutation();
   const connectBraveMutation = (trpc as any).apps.connectBrave.useMutation();
   const getCredentialsQuery = (trpc as any).apps.getCredentials.useQuery(
@@ -107,6 +108,7 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const isFile = connectionType === "file";
   const isChrome = app?.id === "chrome" || app?.name.toLowerCase().includes("chrome");
   const isBrave = app?.id === "brave" || app?.name.toLowerCase().includes("brave");
+  const isTeller = app?.id === "teller" || app?.name.toLowerCase().includes("teller");
   const requiresOAuth = app?.oauth === true;
   const isConnected = app?.connection?.status === "connected";
   const connection = app?.connection;
@@ -372,6 +374,76 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     }
   };
 
+  const handleTellerConnect = async () => {
+    if (!app) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Load Teller Connect SDK if not already loaded
+      if (!(window as any).TellerConnect) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdn.teller.io/connect/connect.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      const TellerConnect = (window as any).TellerConnect;
+      
+      // Get application ID from environment
+      const applicationId = import.meta.env.VITE_TELLER_APPLICATION_ID;
+      if (!applicationId) {
+        throw new Error("Teller Application ID not configured");
+      }
+
+      // Setup Teller Connect
+      const tellerConnect = TellerConnect.setup({
+        applicationId,
+        environment: "sandbox", // Change to "production" for live data
+        products: ["transactions", "balance", "identity", "verify"],
+        onSuccess: async (enrollment: any) => {
+          try {
+            console.log("Teller enrollment successful:", enrollment);
+            
+            // Save the access token to the backend
+            await saveTellerTokenMutation.mutateAsync({
+              appId: app.id,
+              accessToken: enrollment.accessToken,
+              enrollmentId: enrollment.enrollment?.id,
+              institutionName: enrollment.enrollment?.institution?.name,
+            });
+
+            setSuccess(true);
+            setTimeout(() => {
+              onOpenChange(false);
+            }, 1500);
+          } catch (err: any) {
+            console.error("Error saving Teller token:", err);
+            setError(err?.data?.message || err?.message || "Failed to save Teller connection");
+          }
+        },
+        onExit: () => {
+          console.log("Teller Connect closed");
+          setIsSubmitting(false);
+        },
+        onInit: () => {
+          console.log("Teller Connect initialized");
+        },
+      });
+
+      // Open Teller Connect
+      tellerConnect.open();
+    } catch (err: any) {
+      console.error("Error initializing Teller Connect:", err);
+      setError(err.message || "Failed to initialize Teller Connect");
+      setIsSubmitting(false);
+    }
+  };
+
   if (!app) return null;
 
   return (
@@ -573,6 +645,20 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                 className="w-full"
               >
                 {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Brave"}
+              </Button>
+            </div>
+          ) : isTeller ? (
+            // Teller Connect OAuth Flow
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Connect your bank accounts securely through Teller. You'll be guided through selecting your bank and authenticating.
+              </p>
+              <Button
+                onClick={handleTellerConnect}
+                disabled={isSubmitting || success}
+                className="w-full"
+              >
+                {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Bank Account"}
               </Button>
             </div>
           ) : (isMcp || isApi) && requiresOAuth ? (

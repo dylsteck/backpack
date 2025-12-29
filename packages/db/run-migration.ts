@@ -19,7 +19,7 @@ async function runMigration() {
 		console.log("Connected to database");
 
 		// Read the migration file
-		const migrationPath = join(__dirname, "src/migrations/0011_add_stripe_app.sql");
+		const migrationPath = join(__dirname, "src/migrations/0012_add_teller_app.sql");
 		const sql = readFileSync(migrationPath, "utf-8");
 
 		// Execute the migration
@@ -28,8 +28,8 @@ async function runMigration() {
 		console.log("Migration completed successfully!");
 
 		// Verify the update
-		const result = await client.query('SELECT id, name, oauth, connection_type FROM apps WHERE id = $1', ['stripe']);
-		console.log("Stripe app after migration:", result.rows[0]);
+		const result = await client.query('SELECT id, name, oauth, connection_type FROM apps WHERE id = $1', ['teller']);
+		console.log("Teller app after migration:", result.rows[0]);
 	} catch (error) {
 		console.error("Migration failed:", error);
 		process.exit(1);

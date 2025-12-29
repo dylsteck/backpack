@@ -264,6 +264,74 @@ export const appsRouter = router({
 			}
 		}),
 
+	// Save Teller access token
+	saveTellerToken: publicProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				accessToken: z.string(),
+				enrollmentId: z.string().optional(),
+				institutionName: z.string().optional(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
+				const appName = app[0]?.name || input.appId;
+
+				const existingConnection = await db
+					.select()
+					.from(connections)
+					.where(eq(connections.serverId, input.appId))
+					.limit(1);
+
+				const now = new Date();
+				const connectionMetadata = {
+					enrollmentId: input.enrollmentId,
+					institution: input.institutionName ? { name: input.institutionName } : undefined,
+				};
+
+				const connectionData = {
+					serverId: input.appId,
+					serverName: appName,
+					transportType: "https" as const,
+					transportConfig: {} as any,
+					status: "connected" as const,
+					secretUri: null,
+					credentialStorage: "database" as const,
+					encryptedCredentials: encryptCredentials(input.accessToken),
+					connectionMetadata: connectionMetadata as any,
+					updatedAt: now,
+				};
+
+				if (existingConnection.length > 0) {
+					const [updated] = await db
+						.update(connections)
+						.set({
+							...connectionData,
+							updatedAt: now,
+						})
+						.where(eq(connections.serverId, input.appId))
+						.returning();
+					return { success: true, connection: updated };
+				} else {
+					const id = crypto.randomUUID();
+					const [created] = await db
+						.insert(connections)
+						.values({
+							id,
+							...connectionData,
+							createdAt: now,
+						})
+						.returning();
+					return { success: true, connection: created };
+				}
+			} catch (error: any) {
+				console.error("Error in saveTellerToken mutation:", error);
+				throw new Error(error?.message || "Failed to save Teller token");
+			}
+		}),
+
 	// Get credentials for a connection (decrypted)
 	getCredentials: publicProcedure
 		.input(z.object({ connectionId: z.string() }))

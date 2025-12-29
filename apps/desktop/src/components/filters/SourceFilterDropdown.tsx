@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FilterDropdown } from "./FilterDropdown";
 
-export type SourceType = "farcaster" | "chrome" | "brave" | "all";
+export type SourceType = "farcaster" | "chrome" | "brave" | "teller" | "all";
 
 export interface SourceFilterDropdownProps {
 	selectedSources: SourceType[];
@@ -20,6 +20,7 @@ const SOURCE_OPTIONS: Array<{ value: SourceType; label: string }> = [
 	{ value: "farcaster", label: "Farcaster" },
 	{ value: "chrome", label: "Chrome" },
 	{ value: "brave", label: "Brave" },
+	{ value: "teller", label: "Teller" },
 ];
 
 /**

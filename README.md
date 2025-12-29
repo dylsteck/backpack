@@ -37,6 +37,44 @@ This project uses PostgreSQL with Drizzle ORM.
 pnpm db:push
 ```
 
+## Environment Configuration
+
+### Server Environment Variables (`apps/server/.env`)
+
+Create a `.env` file in `apps/server/` with the following variables:
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/cortex
+
+# Teller API (for bank account integration)
+TELLER_APPLICATION_ID=app_xxxxxxxxxxxxxx
+TELLER_ENVIRONMENT=sandbox  # or "production"
+TELLER_SIGNING_SECRET=your_signing_secret  # Optional, for webhooks
+```
+
+### Desktop App Environment Variables (`apps/desktop/.env`)
+
+Create a `.env` file in `apps/desktop/` with:
+
+```bash
+VITE_API_URL=http://localhost:3000
+VITE_TELLER_APPLICATION_ID=app_xxxxxxxxxxxxxx
+```
+
+### Teller Setup
+
+To enable bank account connections via Teller:
+
+1. Sign up at [https://teller.io](https://teller.io)
+2. Create an application in the Teller Dashboard
+3. Get your Application ID (starts with `app_`)
+4. Add the Application ID to both server and desktop `.env` files
+5. Use `sandbox` environment for testing (no real bank connections required)
+6. Apply for production access when ready to use real bank data
+
+**Note**: The Teller Application ID is public and safe to use in frontend code.
+
 
 Then, run the development server:
 

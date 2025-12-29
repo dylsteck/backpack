@@ -2,14 +2,16 @@ import React from "react";
 import { TimelineEntry } from "./timeline/TimelineEntry";
 import { CastEntry } from "./timeline/CastEntry";
 import { BrowserHistoryEntry } from "./timeline/BrowserHistoryEntry";
-import { TimelineDemo } from "./timeline/TimelineDemo";
+import { TellerTransactionEntry } from "./timeline/TellerTransactionEntry";
 import { DateSeparator } from "./timeline/DateSeparator";
 import { groupBrowserHistory } from "./timeline/browserHistoryUtils";
 import { trpc } from "@/lib/trpc";
 import type { FarcasterCastV2 } from "@cortex/api/services/farcaster/types";
 import type { BrowserHistoryEntryData, BrowserHistoryGroup } from "./timeline/BrowserHistoryEntry";
+import type { TellerTransaction } from "@cortex/api/services/teller/types";
 import { CastExpandedView } from "./timeline/CastExpandedView";
 import { BrowserHistoryExpandedView } from "./timeline/BrowserHistoryExpandedView";
+import { TellerTransactionExpandedView } from "./timeline/TellerTransactionExpandedView";
 import type { SourceType } from "./filters/SourceFilterDropdown";
 import { formatTime, formatDate, groupItemsByDate, formatFullDate } from "@/helpers/timeline-formatting";
 import { useTopbarFilter } from "@/contexts/TopbarFilterContext";
@@ -103,6 +105,7 @@ export function Timeline() {
 			farcaster: servers.find((app: AppServer) => app.id === "farcaster")?.iconUrl,
 			chrome: servers.find((app: AppServer) => app.id === "chrome")?.iconUrl,
 			brave: servers.find((app: AppServer) => app.id === "brave")?.iconUrl,
+			teller: servers.find((app: AppServer) => app.id === "teller")?.iconUrl,
 		};
 	}, [appsData]);
 
@@ -336,6 +339,7 @@ export function Timeline() {
 			farcaster: allItems.filter((item) => item.source === "farcaster").length,
 			chrome: allItems.filter((item) => item.source === "chrome").length,
 			brave: allItems.filter((item) => item.source === "brave").length,
+			teller: allItems.filter((item) => item.source === "teller").length,
 		};
 		return counts;
 	}, [allItems]);
@@ -510,6 +514,31 @@ export function Timeline() {
 													>
 														<BrowserHistoryEntry
 															entry={historyEntry}
+															onClick={handleToggleExpand}
+														/>
+													</TimelineEntry>
+												);
+											}
+
+											if (item.type === "transaction") {
+												const transaction = item.data as TellerTransaction;
+												return (
+													<TimelineEntry
+														key={item.id}
+														time={time}
+														date={date}
+														showDot
+														iconUrl={iconUrls.teller}
+														isExpanded={isExpanded}
+														expandedContent={
+															<TellerTransactionExpandedView
+																transaction={transaction}
+																onClose={handleCloseExpanded}
+															/>
+														}
+													>
+														<TellerTransactionEntry
+															transaction={transaction}
 															onClick={handleToggleExpand}
 														/>
 													</TimelineEntry>

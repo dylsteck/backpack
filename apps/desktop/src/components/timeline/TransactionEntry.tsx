@@ -7,7 +7,7 @@ function formatCurrency(amount: number, currency: string): string {
 		currency: currency.toUpperCase(),
 		minimumFractionDigits: 2,
 	});
-	// Stripe amounts are in cents, so divide by 100
+	// Amounts are in cents, so divide by 100
 	return formatter.format(amount / 100);
 }
 
