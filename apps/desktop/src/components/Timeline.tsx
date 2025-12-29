@@ -358,7 +358,6 @@ export function Timeline() {
 	}, [selectedSources, sourceCounts, setFilterConfig]);
 
 	// Set up infinite scroll with IntersectionObserver
-	const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 	const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
 	React.useEffect(() => {
@@ -370,7 +369,7 @@ export function Timeline() {
 				}
 			},
 			{
-				root: scrollContainerRef.current,
+				root: null, // Use viewport as root
 				rootMargin: "200px",
 			}
 		);
@@ -403,33 +402,16 @@ export function Timeline() {
 
 	if (isLoading) {
 		return (
-			<div className="flex-1 flex flex-col">
-				<div className="flex items-center justify-center bg-background/95 backdrop-blur-sm py-1 sticky top-0 z-30">
-					<div className="max-w-3xl mx-auto w-full flex items-center justify-center px-6">
-						<div className="flex items-center gap-3">
-							<span className="text-sm font-medium text-foreground">Loading...</span>
-						</div>
-					</div>
-				</div>
-				<div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-					<div className="max-w-3xl mx-auto py-3 px-3 space-y-6">
-						<div className="text-sm text-muted-foreground">Loading timeline...</div>
-					</div>
-				</div>
+			<div className="max-w-3xl mx-auto py-3 px-3 space-y-6">
+				<div className="text-sm text-muted-foreground">Loading timeline...</div>
 			</div>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="flex-1 flex flex-col">
-				<div className="flex items-center justify-center bg-background/95 backdrop-blur-sm py-1 sticky top-0 z-30">
-					<div className="max-w-3xl mx-auto w-full flex items-center justify-center px-6">
-					</div>
-				</div>
-				<div className="flex-1 overflow-y-auto flex items-center justify-center">
-					<div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
-				</div>
+			<div className="flex items-center justify-center py-12">
+				<div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
 			</div>
 		);
 	}
@@ -437,12 +419,7 @@ export function Timeline() {
 	const groupedItems = groupItemsByDate(filteredItems);
 
 	return (
-		<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-			<div 
-				className="flex-1 overflow-y-auto scrollbar-hide min-h-0" 
-				ref={scrollContainerRef}
-			>
-				<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full">
+		<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full">
 					{/* Continuous vertical line spanning entire timeline */}
 					{filteredItems.length > 0 && allItems.length > 0 && (
 						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 z-0" />
@@ -566,7 +543,5 @@ export function Timeline() {
 						<div ref={loadMoreRef} className="h-4" />
 					)}
 				</div>
-			</div>
-		</div>
 	);
 }

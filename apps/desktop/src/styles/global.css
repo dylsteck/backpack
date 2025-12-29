@@ -181,6 +181,9 @@
 }
 
 @layer base {
+  html, body, #app {
+    @apply h-full;
+  }
   body {
     @apply overflow-hidden;
   }

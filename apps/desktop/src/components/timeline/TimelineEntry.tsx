@@ -41,14 +41,9 @@ export const TimelineEntry = React.memo(function TimelineEntry({
 			<div className="flex-1 min-w-0">
 				<div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'bg-muted/30 rounded-lg p-3 -m-3' : ''}`}>
 					{children}
-					{expandedContent && (
+					{isExpanded && expandedContent && (
 						<div 
-							className={`overflow-hidden transition-all duration-300 ease-in-out ${
-								isExpanded ? 'max-h-[2000px] opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
-							}`}
-							style={{
-								transitionProperty: 'max-height, opacity, margin-top',
-							}}
+							className="mt-3"
 						>
 							{expandedContent}
 						</div>

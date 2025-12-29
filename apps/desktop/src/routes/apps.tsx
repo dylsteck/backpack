@@ -68,7 +68,6 @@ function AppsPage() {
   const handleSetupClick = useCallback((app: AppServer) => {
     // Always navigate to detail page when clicking an app
     if (app.id) {
-      console.log("[AppsPage] Navigating to app detail:", app.id);
       navigate({
         to: "/apps/$appId",
         params: { appId: String(app.id) }
@@ -96,26 +95,24 @@ function AppsPage() {
 
   // Otherwise render the apps list
   return (
-    <div className="flex flex-col w-full h-full overflow-y-auto scrollbar-hide">
-      <div className="flex flex-col w-full p-6">
-        <ViewToggle
-          data={filteredServers}
-          isLoading={isLoading}
-          error={error instanceof Error ? error : null}
-          getIconUrl={(server) => server.iconUrl || ""}
-          getName={(server) => server.name || ""}
-          getFields={(server) => server}
-          emptyMessage="No apps match the selected filters"
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSetupClick={handleSetupClick as any}
-        />
-        <AppSetupDialog
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          app={setupApp as any}
-          open={isSetupOpen}
-          onOpenChange={handleCloseSetup}
-        />
-      </div>
+    <div className="flex flex-col w-full p-6">
+      <ViewToggle
+        data={filteredServers}
+        isLoading={isLoading}
+        error={error instanceof Error ? error : null}
+        getIconUrl={(server) => server.iconUrl || ""}
+        getName={(server) => server.name || ""}
+        getFields={(server) => server}
+        emptyMessage="No apps match the selected filters"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onSetupClick={handleSetupClick as any}
+      />
+      <AppSetupDialog
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        app={setupApp as any}
+        open={isSetupOpen}
+        onOpenChange={handleCloseSetup}
+      />
     </div>
   );
 }
