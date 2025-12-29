@@ -32,6 +32,7 @@ interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+  openExternal: (url: string) => Promise<void>;
 }
 interface ChromeHistoryContext {
   detectHistoryPath: () => Promise<{

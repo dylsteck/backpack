@@ -9,7 +9,7 @@ function AppDetailPage() {
   const { appId } = Route.useParams();
   const navigate = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: appsData, isLoading: appsLoading, error: appsError } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
+  const { data: appsData, isLoading: appsLoading, error: appsError, refetch: refetchApps } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes - apps list doesn't change frequently
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
   });

@@ -12,7 +12,7 @@ interface DragWindowRegionProps {
 
 export default function DragWindowRegion({ title }: DragWindowRegionProps) {
   return (
-    <div className="flex w-screen items-stretch justify-between">
+    <div className="flex w-full items-stretch justify-between">
       <div className="draglayer w-full">
         {title && (
           <div className="flex flex-1 items-center pl-4 text-base font-normal text-foreground select-none">

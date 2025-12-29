@@ -7,6 +7,10 @@ export interface DeepLinkCallbackData {
 	sessionToken: string | null;
 	accountIds: string[];
 	customerId: string | null;
+	// Teller-specific fields
+	accessToken?: string | null;
+	enrollmentId?: string | null;
+	institutionName?: string | null;
 	error: string | null;
 }
 
@@ -26,6 +30,10 @@ export function parseDeepLink(url: string): DeepLinkCallbackData | null {
 			sessionToken: params.get("sessionToken"),
 			accountIds: params.get("accountIds")?.split(",").filter(Boolean) || [],
 			customerId: params.get("customerId"),
+			// Teller-specific fields
+			accessToken: params.get("accessToken"),
+			enrollmentId: params.get("enrollmentId"),
+			institutionName: params.get("institutionName"),
 			error: params.get("error"),
 		};
 	} catch (error) {

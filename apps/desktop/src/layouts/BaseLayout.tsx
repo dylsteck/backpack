@@ -99,9 +99,14 @@ function TopbarTitle() {
 
   return (
     <>
-      {/* Full-width background bar to prevent bleed-through */}
+      {/* Full-width background bar to prevent bleed-through - only covers content area, not sidebar */}
       <div
-        className="fixed top-0 left-0 right-0 h-[44px] z-40 bg-background/95 backdrop-blur-sm border-b"
+        className="fixed top-0 h-[44px] z-40 bg-background/95 backdrop-blur-sm border-b"
+        style={{ 
+          left: state === "collapsed" ? "calc(76px + 3rem)" : "16rem",
+          right: 0,
+          pointerEvents: 'none'
+        }}
       />
       {/* Title text positioned correctly */}
       <div
@@ -136,10 +141,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <SidebarIcon />
         <TopbarTitle />
         <AppSidebar />
-        <SidebarInset className="flex flex-col overflow-y-auto scrollbar-hide">
+        <SidebarInset className="flex flex-col overflow-hidden min-h-0">
           <DragWindowRegion />
           <div className="h-[44px] shrink-0" />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 min-h-0 overflow-hidden flex flex-col">{children}</main>
         </SidebarInset>
         {selectedHistoryItem && historySidebarOpen && (
           <SidebarProvider open={true} onOpenChange={setHistorySidebarOpen} defaultOpen={false}>

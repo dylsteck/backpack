@@ -1,8 +1,10 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, connections, apps } from "@cortex/db";
+import { db, connections, apps, items } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { encryptCredentials, decryptCredentials } from "../lib/credentials";
+import { TellerService } from "../services/teller";
+import { ItemsService } from "../services/items/service";
 
 const transportConfigSchema = z.object({
 	command: z.string().optional(),
@@ -304,6 +306,7 @@ export const appsRouter = router({
 					updatedAt: now,
 				};
 
+				let connectionResult;
 				if (existingConnection.length > 0) {
 					const [updated] = await db
 						.update(connections)
@@ -313,7 +316,7 @@ export const appsRouter = router({
 						})
 						.where(eq(connections.serverId, input.appId))
 						.returning();
-					return { success: true, connection: updated };
+					connectionResult = updated;
 				} else {
 					const id = crypto.randomUUID();
 					const [created] = await db
@@ -324,8 +327,94 @@ export const appsRouter = router({
 							createdAt: now,
 						})
 						.returning();
-					return { success: true, connection: created };
+					connectionResult = created;
 				}
+
+				// Backfill Teller transactions to items table
+				try {
+					console.log("[saveTellerToken] Starting Teller transaction backfill...");
+					const tellerService = new TellerService(input.accessToken);
+					const itemsService = new ItemsService();
+					
+					// Get all accounts
+					const accounts = await tellerService.getAccounts();
+					console.log(`[saveTellerToken] Found ${accounts.length} accounts to backfill`);
+					
+					let totalTransactions = 0;
+					
+					// Fetch transactions from all accounts (with pagination)
+					for (const account of accounts) {
+						let fromId: string | undefined = undefined;
+						let hasMore = true;
+						let pageCount = 0;
+						const maxPages = 50; // Limit to prevent infinite loops
+						
+						while (hasMore && pageCount < maxPages) {
+							const transactions = await tellerService.getTransactions(account.id, {
+								count: 500, // Fetch 500 at a time
+								from_id: fromId,
+							});
+							
+							if (transactions.length === 0) {
+								hasMore = false;
+								break;
+							}
+							
+							// Save each transaction to items table
+							for (const transaction of transactions) {
+								try {
+									// Use transaction ID as item ID to prevent duplicates
+									const itemId = `teller_${transaction.id}`;
+									
+									// Try to insert - database will handle duplicate key errors
+									try {
+										await db.insert(items).values({
+											id: itemId,
+											source: "teller",
+											type: "transaction",
+											timestamp: new Date(transaction.date),
+											data: transaction as any,
+											createdAt: now,
+											updatedAt: now,
+										});
+										totalTransactions++;
+									} catch (insertError: any) {
+										// Ignore duplicate key errors (PostgreSQL error code 23505)
+										if (insertError?.code === "23505" || insertError?.message?.includes("duplicate") || insertError?.message?.includes("unique")) {
+											// Item already exists, skip
+											continue;
+										}
+										// Re-throw other errors
+										throw insertError;
+									}
+								} catch (itemError) {
+									console.error(`[saveTellerToken] Error saving transaction ${transaction.id}:`, itemError);
+									// Continue with next transaction
+								}
+							}
+							
+							// Set fromId for next page (use last transaction ID)
+							if (transactions.length > 0) {
+								fromId = transactions[transactions.length - 1].id;
+								pageCount++;
+							} else {
+								hasMore = false;
+							}
+							
+							// If we got fewer than requested, we're done
+							if (transactions.length < 500) {
+								hasMore = false;
+							}
+						}
+					}
+					
+					console.log(`[saveTellerToken] Backfill complete: ${totalTransactions} transactions saved to items table`);
+				} catch (backfillError) {
+					// Log error but don't fail the connection save
+					console.error("[saveTellerToken] Error during backfill:", backfillError);
+				}
+
+				return { success: true, connection: connectionResult };
 			} catch (error: any) {
 				console.error("Error in saveTellerToken mutation:", error);
 				throw new Error(error?.message || "Failed to save Teller token");

@@ -11,6 +11,41 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/utils/tailwind";
+import { setupDeepLinkListener, type DeepLinkCallbackData } from "@/lib/deepLink";
+
+// Teller Connect types
+interface TellerEnrollment {
+  accessToken: string;
+  enrollment: {
+    id: string;
+    institution: {
+      name: string;
+    };
+  };
+  user: {
+    id: string;
+  };
+  signatures?: string[];
+}
+
+interface TellerConnect {
+  setup: (config: {
+    applicationId: string;
+    environment: string;
+    products: string[];
+    onSuccess: (enrollment: TellerEnrollment) => void;
+    onExit: () => void;
+    onInit?: () => void;
+  }) => {
+    open: () => void;
+  };
+}
+
+declare global {
+  interface Window {
+    TellerConnect?: TellerConnect;
+  }
+}
 
 interface AppSetupDialogProps {
   app: {
@@ -34,7 +69,9 @@ interface AppSetupDialogProps {
       credentialStorage: string;
       secretUri?: string | null;
       transportType: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       transportConfig: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       connectionMetadata?: any;
     } | null;
   } | null;
@@ -91,12 +128,40 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
   const [detectingPath, setDetectingPath] = React.useState(false);
   const [bravePath, setBravePath] = React.useState("");
   const [detectingBravePath, setDetectingBravePath] = React.useState(false);
+  const [tellerSessionToken, setTellerSessionToken] = React.useState<string | null>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation();
-  const saveOAuthTokensMutation = (trpc as any).apps.saveOAuthTokens.useMutation();
-  const saveTellerTokenMutation = (trpc as any).apps.saveTellerToken.useMutation();
-  const connectChromeMutation = (trpc as any).apps.connectChrome.useMutation();
-  const connectBraveMutation = (trpc as any).apps.connectBrave.useMutation();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const utils = (trpc as any).useUtils();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const saveApiKeyMutation = (trpc as any).apps.saveApiKey.useMutation({
+    onSuccess: () => {
+      utils.apps.getAvailableServers.invalidate();
+      utils.timeline.getTimeline.invalidate();
+    },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const saveTellerTokenMutation = (trpc as any).apps.saveTellerToken.useMutation({
+    onSuccess: () => {
+      utils.apps.getAvailableServers.invalidate();
+      utils.timeline.getTimeline.invalidate();
+    },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const connectChromeMutation = (trpc as any).apps.connectChrome.useMutation({
+    onSuccess: () => {
+      utils.apps.getAvailableServers.invalidate();
+      utils.timeline.getTimeline.invalidate();
+    },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const connectBraveMutation = (trpc as any).apps.connectBrave.useMutation({
+    onSuccess: () => {
+      utils.apps.getAvailableServers.invalidate();
+      utils.timeline.getTimeline.invalidate();
+    },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getCredentialsQuery = (trpc as any).apps.getCredentials.useQuery(
     { connectionId: app?.connection?.id || "" },
     { enabled: false } // Don't auto-fetch, only fetch on demand
@@ -128,6 +193,22 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       setDetectingPath(false);
       setBravePath("");
       setDetectingBravePath(false);
+      setTellerSessionToken(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      // Force cleanup - ensure dialog overlay is removed
+      // Small delay to ensure Radix UI cleanup completes
+      setTimeout(() => {
+        // Remove any lingering overlays
+        const overlays = document.querySelectorAll('[data-slot="dialog-overlay"]');
+        overlays.forEach((overlay) => {
+          if (!overlay.closest('[data-state="open"]')) {
+            overlay.remove();
+          }
+        });
+      }, 100);
     }
   }, [open]);
 
@@ -139,6 +220,7 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
         setChromePath("~/Library/Application Support/Google/Chrome/Default/History");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isFile, isChrome]);
 
   React.useEffect(() => {
@@ -149,7 +231,42 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
         setBravePath("~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isFile, isBrave]);
+
+  // Ensure dialog closes properly and cleanup overlay
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      // Reset all state when closing
+      setApiKey("");
+      setFid("");
+      setError(null);
+      setSuccess(false);
+      setIsSubmitting(false);
+      setShowCredentials(false);
+      setStoredCredentials(null);
+      setChromePath("");
+      setDetectingPath(false);
+      setBravePath("");
+      setDetectingBravePath(false);
+      setTellerSessionToken(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      // Force cleanup of any lingering overlays after a short delay
+      setTimeout(() => {
+        const overlays = document.querySelectorAll('[data-slot="dialog-overlay"]');
+        overlays.forEach((overlay) => {
+          const dialog = overlay.closest('[data-state]');
+          if (!dialog || dialog.getAttribute('data-state') !== 'open') {
+            overlay.remove();
+          }
+        });
+      }, 200);
+    }
+    onOpenChange(newOpen);
+  }, [onOpenChange]);
 
   const handleDetectChromePath = async () => {
     if (!window.chromeHistory || typeof window.chromeHistory.detectHistoryPath !== "function") {
@@ -170,8 +287,9 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       } else if (result.error) {
         setError(result.error);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to detect Chrome path. You can enter it manually.");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to detect Chrome path. You can enter it manually.";
+      setError(errorMessage);
     } finally {
       setDetectingPath(false);
     }
@@ -193,11 +311,12 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       });
       setSuccess(true);
       setTimeout(() => {
-        onOpenChange(false);
+        handleOpenChange(false);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error connecting Chrome:", err);
-      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to connect Chrome";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (err as any)?.data?.message || (err instanceof Error ? err.message : String(err)) || "Failed to connect Chrome";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -223,8 +342,9 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       } else if (result.error) {
         setError(result.error);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to detect Brave path. You can enter it manually.");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to detect Brave path. You can enter it manually.";
+      setError(errorMessage);
     } finally {
       setDetectingBravePath(false);
     }
@@ -246,11 +366,12 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       });
       setSuccess(true);
       setTimeout(() => {
-        onOpenChange(false);
+        handleOpenChange(false);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error connecting Brave:", err);
-      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to connect Brave";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (err as any)?.data?.message || (err instanceof Error ? err.message : String(err)) || "Failed to connect Brave";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -275,8 +396,9 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
         setStoredCredentials(result.data.credentials);
         setShowCredentials(true);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to load credentials");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load credentials";
+      setError(errorMessage);
     } finally {
       setLoadingCredentials(false);
     }
@@ -306,12 +428,13 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       });
       setSuccess(true);
       setTimeout(() => {
-        onOpenChange(false);
+        handleOpenChange(false);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error saving API key:", err);
       // Handle tRPC errors - they might have a different structure
-      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to save API key";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (err as any)?.data?.message || (err instanceof Error ? err.message : String(err)) || "Failed to save API key";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -367,12 +490,93 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
       } else {
         throw new Error("OAuth not available for this server");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate OAuth flow");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to initiate OAuth flow";
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Handle Teller completion (from deep link or polling)
+  const handleTellerCompletion = React.useCallback(async (data: DeepLinkCallbackData) => {
+    if (!data.success || !data.accessToken) {
+      setError(data.error || "Failed to connect account");
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Save the access token to the backend
+      await saveTellerTokenMutation.mutateAsync({
+        appId: app?.id || "",
+        accessToken: data.accessToken,
+        enrollmentId: data.enrollmentId || undefined,
+        institutionName: data.institutionName || undefined,
+      });
+
+      setSuccess(true);
+      setError(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+
+      // Invalidate queries to refresh data
+      utils.apps.getAvailableServers.invalidate();
+      utils.timeline.getTimeline.invalidate();
+
+      // Close dialog after a delay
+      setTimeout(() => {
+        handleOpenChange(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Error completing Teller connection:", err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (err as any)?.data?.message || (err instanceof Error ? err.message : "Failed to save connection");
+      setError(errorMessage);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsSubmitting(false);
+    }
+  }, [app, saveTellerTokenMutation, handleOpenChange, utils]);
+
+  // Set up deep link listener for Teller
+  React.useEffect(() => {
+    if (!open || !isTeller || !tellerSessionToken) return;
+
+    const cleanup = setupDeepLinkListener((data: DeepLinkCallbackData) => {
+      if (data.sessionToken === tellerSessionToken && data.accessToken) {
+        handleTellerCompletion(data);
+      }
+    });
+
+    return cleanup;
+  }, [open, isTeller, tellerSessionToken, handleTellerCompletion]);
+
+  // Cleanup polling on unmount or dialog close
+  React.useEffect(() => {
+    if (!open) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [open]);
 
   const handleTellerConnect = async () => {
     if (!app) return;
@@ -381,73 +585,85 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
     setError(null);
 
     try {
-      // Load Teller Connect SDK if not already loaded
-      if (!(window as any).TellerConnect) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdn.teller.io/connect/connect.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
+      // Check if electronWindow is available
+      if (!window.electronWindow || typeof window.electronWindow.openExternal !== "function") {
+        throw new Error("External browser access not available. Please ensure you're running in Electron.");
       }
 
-      const TellerConnect = (window as any).TellerConnect;
-      
-      // Get application ID from environment
-      const applicationId = import.meta.env.VITE_TELLER_APPLICATION_ID;
-      if (!applicationId) {
-        throw new Error("Teller Application ID not configured");
-      }
+      // Generate session token
+      const sessionToken = `teller_${Math.random().toString(36).substring(2)}_${Date.now().toString(36)}`;
+      setTellerSessionToken(sessionToken);
 
-      // Setup Teller Connect
-      const tellerConnect = TellerConnect.setup({
-        applicationId,
-        environment: "sandbox", // Change to "production" for live data
-        products: ["transactions", "balance", "identity", "verify"],
-        onSuccess: async (enrollment: any) => {
-          try {
-            console.log("Teller enrollment successful:", enrollment);
-            
-            // Save the access token to the backend
-            await saveTellerTokenMutation.mutateAsync({
-              appId: app.id,
-              accessToken: enrollment.accessToken,
-              enrollmentId: enrollment.enrollment?.id,
-              institutionName: enrollment.enrollment?.institution?.name,
-            });
+      // Get server URL
+      const serverUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const connectUrl = `${serverUrl}/teller/connect?token=${sessionToken}`;
 
-            setSuccess(true);
-            setTimeout(() => {
-              onOpenChange(false);
-            }, 1500);
-          } catch (err: any) {
-            console.error("Error saving Teller token:", err);
-            setError(err?.data?.message || err?.message || "Failed to save Teller connection");
+      // Open external browser
+      await window.electronWindow.openExternal(connectUrl);
+
+      // Start polling as fallback (in case deep link doesn't work)
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const statusUrl = `${serverUrl}/teller/status/${sessionToken}`;
+          const response = await fetch(statusUrl);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status === "completed" && data.accessToken) {
+              // Clear polling
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              // Handle completion
+              await handleTellerCompletion({
+                success: true,
+                sessionToken: sessionToken,
+                accessToken: data.accessToken,
+                enrollmentId: data.enrollmentId,
+                institutionName: data.institutionName,
+                accountIds: [],
+                customerId: null,
+                error: null,
+              });
+            } else if (data.status === "error") {
+              // Clear polling
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              setError(data.error || "Connection failed");
+              setIsSubmitting(false);
+            }
           }
-        },
-        onExit: () => {
-          console.log("Teller Connect closed");
-          setIsSubmitting(false);
-        },
-        onInit: () => {
-          console.log("Teller Connect initialized");
-        },
-      });
+        } catch (pollError) {
+          console.error("Error polling Teller status:", pollError);
+        }
+      }, 2000); // Poll every 2 seconds
 
-      // Open Teller Connect
-      tellerConnect.open();
-    } catch (err: any) {
-      console.error("Error initializing Teller Connect:", err);
-      setError(err.message || "Failed to initialize Teller Connect");
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          if (!success) {
+            setError("Connection timed out. Please try again.");
+            setIsSubmitting(false);
+          }
+        }
+      }, 5 * 60 * 1000);
+    } catch (err) {
+      console.error("Error initiating Teller Connect:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to open browser for Teller connection";
+      setError(errorMessage);
       setIsSubmitting(false);
+      setTellerSessionToken(null);
     }
   };
 
   if (!app) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
@@ -526,7 +742,21 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
             </div>
           )}
 
-              {isApi ? (
+              {isTeller ? (
+            // Teller Connect OAuth Flow
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Connect your bank accounts securely through Teller. You'll be guided through selecting your bank and authenticating.
+              </p>
+              <Button
+                onClick={handleTellerConnect}
+                disabled={isSubmitting || success}
+                className="w-full"
+              >
+                {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Bank Account"}
+              </Button>
+            </div>
+          ) : isApi ? (
             // API Key Input (for non-OAuth API apps like Farcaster)
             <div className="space-y-3">
               <div>
@@ -645,20 +875,6 @@ export function AppSetupDialog({ app, open, onOpenChange }: AppSetupDialogProps)
                 className="w-full"
               >
                 {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Brave"}
-              </Button>
-            </div>
-          ) : isTeller ? (
-            // Teller Connect OAuth Flow
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Connect your bank accounts securely through Teller. You'll be guided through selecting your bank and authenticating.
-              </p>
-              <Button
-                onClick={handleTellerConnect}
-                disabled={isSubmitting || success}
-                className="w-full"
-              >
-                {isSubmitting ? "Connecting..." : success ? "Connected!" : "Connect Bank Account"}
               </Button>
             </div>
           ) : (isMcp || isApi) && requiresOAuth ? (

@@ -11029,6 +11029,9 @@ function handleDeepLink(url) {
     const sessionToken = params.get("sessionToken");
     const accountIds = params.get("accountIds")?.split(",") || [];
     const customerId = params.get("customerId");
+    const accessToken = params.get("accessToken");
+    const enrollmentId = params.get("enrollmentId");
+    const institutionName = params.get("institutionName");
     const error = params.get("error");
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("deep-link-callback", {
@@ -11036,6 +11039,10 @@ function handleDeepLink(url) {
         sessionToken,
         accountIds,
         customerId,
+        // Teller-specific fields
+        accessToken,
+        enrollmentId,
+        institutionName,
         error
       });
       if (mainWindow.isMinimized()) {

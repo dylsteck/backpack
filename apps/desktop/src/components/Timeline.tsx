@@ -437,9 +437,12 @@ export function Timeline() {
 	const groupedItems = groupItemsByDate(filteredItems);
 
 	return (
-		<div className="flex-1 flex flex-col">
-			<div className={`flex-1 overflow-y-auto ${allItems.length === 0 ? 'flex items-center justify-center' : ''}`} ref={scrollContainerRef}>
-				<div className={`max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full ${allItems.length === 0 ? 'flex items-center justify-center min-h-full' : ''}`}>
+		<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+			<div 
+				className="flex-1 overflow-y-auto scrollbar-hide min-h-0" 
+				ref={scrollContainerRef}
+			>
+				<div className="max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full">
 					{/* Continuous vertical line spanning entire timeline */}
 					{filteredItems.length > 0 && allItems.length > 0 && (
 						<div className="absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 z-0" />

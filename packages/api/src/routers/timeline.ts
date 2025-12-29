@@ -79,20 +79,45 @@ export const timelineRouter = router({
 					// Handle Teller transactions
 					if (connection.serverId === "teller" && connection.status === "connected") {
 						try {
-							// Use the teller router to get transactions
-							const caller = tellerRouter.createCaller({});
-							const response = await caller.getTransactions({
-								count: input.limit,
+							// First, try to get items from items table
+							const dbItems = await itemsService.getItems({
+								source: "teller",
+								type: "transaction",
+								limit: input.limit,
+								cursor: input.cursor,
 							});
 
-							for (const transaction of response.transactions) {
-								items.push({
-									id: transaction.id,
-									timestamp: new Date(transaction.date),
-									source: "teller",
-									type: "transaction",
-									data: transaction,
+							if (dbItems.items.length > 0) {
+								// Use items from database
+								for (const item of dbItems.items) {
+									items.push({
+										id: item.id,
+										timestamp: item.timestamp,
+										source: item.source,
+										type: item.type,
+										data: item.data,
+									});
+								}
+								if (dbItems.nextCursor) {
+									nextCursor = dbItems.nextCursor;
+								}
+							} else {
+								// Fallback to API if no items in database
+								console.log(`[Timeline] No Teller items in database, fetching from API...`);
+								const caller = tellerRouter.createCaller({});
+								const response = await caller.getTransactions({
+									count: input.limit,
 								});
+
+								for (const transaction of response.transactions) {
+									items.push({
+										id: transaction.id,
+										timestamp: new Date(transaction.date),
+										source: "teller",
+										type: "transaction",
+										data: transaction,
+									});
+								}
 							}
 						} catch (error) {
 							console.error(`Error fetching Teller timeline for connection ${connection.id}:`, error);

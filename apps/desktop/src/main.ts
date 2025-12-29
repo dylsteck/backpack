@@ -53,6 +53,7 @@ function handleDeepLink(url: string) {
   console.log("Deep link received:", url);
   
   // Parse deep link: cortex://callback?success=true&sessionToken=xxx&accountIds=xxx,yyy&customerId=xxx
+  // For Teller: cortex://callback?success=true&sessionToken=xxx&accessToken=xxx&enrollmentId=xxx&institutionName=xxx
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "cortex:") {
@@ -64,6 +65,10 @@ function handleDeepLink(url: string) {
     const sessionToken = params.get("sessionToken");
     const accountIds = params.get("accountIds")?.split(",") || [];
     const customerId = params.get("customerId");
+    // Teller-specific fields
+    const accessToken = params.get("accessToken");
+    const enrollmentId = params.get("enrollmentId");
+    const institutionName = params.get("institutionName");
     const error = params.get("error");
     
     // Send IPC message to renderer
@@ -73,6 +78,10 @@ function handleDeepLink(url: string) {
         sessionToken,
         accountIds,
         customerId,
+        // Teller-specific fields
+        accessToken,
+        enrollmentId,
+        institutionName,
         error,
       });
       

@@ -39,12 +39,27 @@ export function AppSettings({ app, isConnected }: AppSettingsProps) {
 	const [showApiKey, setShowApiKey] = React.useState(false);
 	const [isSetupOpen, setIsSetupOpen] = React.useState(false);
 	const utils = (trpc as any).useUtils();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const { refetch: refetchApps } = (trpc as any).apps.getAvailableServers.useQuery(undefined, {
+		enabled: false, // Only refetch manually
+	});
 
 	const disconnectMutation = (trpc as any).apps.removeConnection.useMutation({
 		onSuccess: () => {
 			utils.apps.getAvailableServers.invalidate();
+			utils.timeline.getTimeline.invalidate();
 		},
 	});
+
+	const handleDialogClose = React.useCallback((open: boolean) => {
+		setIsSetupOpen(open);
+		if (!open) {
+			// Refetch apps to update connection status
+			refetchApps();
+			utils.apps.getAvailableServers.invalidate();
+			utils.timeline.getTimeline.invalidate();
+		}
+	}, [refetchApps, utils]);
 
 	const handleDisconnect = async () => {
 		if (!app.connection?.id) return;
@@ -204,7 +219,7 @@ export function AppSettings({ app, isConnected }: AppSettingsProps) {
 			<AppSetupDialog
 				app={app}
 				open={isSetupOpen}
-				onOpenChange={setIsSetupOpen}
+				onOpenChange={handleDialogClose}
 			/>
 		</div>
 	);
