@@ -17,6 +17,14 @@ export class Timeline extends Component {
   private isLoadingMore = false;
   private iconUrls: Record<string, string | undefined> = {};
   
+  // Pull-to-refresh state
+  private pullStartY = 0;
+  private pullCurrentY = 0;
+  private isPulling = false;
+  private lastRefreshTime = 0;
+  private pullThreshold = 60; // Minimum pull distance in pixels
+  private refreshDebounceMs = 500; // Minimum time between refreshes
+  
   async init(): Promise<void> {
     this.render();
     
@@ -33,10 +41,32 @@ export class Timeline extends Component {
     // Set up infinite scroll
     this.setupInfiniteScroll();
     
+    // Set up pull-to-refresh
+    this.setupPullToRefresh();
+    
     // Subscribe to store changes
-    this.subscribe(store.timelineItems, () => this.renderItems());
+    this.subscribe(store.timelineItems, () => {
+      // Always render items when timeline items change
+      // This will clear skeleton and show actual items
+      this.renderItems();
+    });
     this.subscribe(store.expandedItemId, () => this.updateExpandedStates());
     this.subscribe(store.selectedSources, () => this.renderItems());
+    this.subscribe(store.timelineLoading, (loading, prevLoading) => {
+      if (loading && store.timelineItems.get().length === 0) {
+        // Show skeleton only if we have no items yet and we're loading
+        this.renderSkeleton();
+      } else if (!loading) {
+        // When loading completes, ensure we render items
+        // This handles the case where items were added while loading was true
+        if (store.timelineItems.get().length > 0) {
+          this.renderItems();
+        } else if (prevLoading) {
+          // If we were loading and now we're not, but still have no items, render empty state
+          this.renderItems();
+        }
+      }
+    });
     
     // Load browser history via IPC
     this.loadBrowserHistory();
@@ -94,19 +124,20 @@ export class Timeline extends Component {
   }
   
   private async loadInitialData(): Promise<void> {
-    // Show loading state
+    // Show skeleton loading state
     if (this.itemsContainer) {
-      this.itemsContainer.innerHTML = `
-        <div class="text-sm text-muted-foreground py-8 text-center font-mono uppercase tracking-wider">
-          Loading timeline...
-        </div>
-      `;
+      this.renderSkeleton();
     }
     
     try {
       const result = await fetchTimeline(25);
       actions.appendTimelineItems(result.items);
       actions.setTimelineCursor(result.nextCursor || null);
+      // Explicitly render items after adding them to ensure skeleton is cleared
+      // The subscription should handle this, but this ensures it happens
+      if (result.items.length > 0) {
+        this.renderItems();
+      }
     } catch {
       if (this.itemsContainer) {
         this.itemsContainer.innerHTML = `
@@ -115,6 +146,60 @@ export class Timeline extends Component {
           </div>
         `;
       }
+    }
+  }
+  
+  private renderSkeleton(): void {
+    if (!this.itemsContainer) return;
+    
+    clearChildren(this.itemsContainer);
+    
+    // Render 5 skeleton items
+    for (let i = 0; i < 5; i++) {
+      const skeletonEntry = createElement('div', {
+        className: 'timeline-entry relative pl-8',
+      });
+      
+      // Timeline dot skeleton
+      const dotSkeleton = createElement('div', {
+        className: 'absolute left-0 top-1 w-5 h-5 bg-muted skeleton rounded-full',
+      });
+      skeletonEntry.appendChild(dotSkeleton);
+      
+      // Time label skeleton
+      const timeSkeleton = createElement('div', {
+        className: 'skeleton h-3 w-24 mb-2 rounded',
+      });
+      skeletonEntry.appendChild(timeSkeleton);
+      
+      // Content skeleton
+      const contentSkeleton = createElement('div', {
+        className: 'p-3 bg-card border',
+      });
+      
+      // Author row skeleton
+      const authorSkeleton = createElement('div', {
+        className: 'flex items-center gap-2 mb-2',
+      });
+      authorSkeleton.innerHTML = `
+        <div class="skeleton w-6 h-6 rounded-full"></div>
+        <div class="skeleton h-4 w-32 rounded"></div>
+        <div class="skeleton h-4 w-24 rounded"></div>
+      `;
+      contentSkeleton.appendChild(authorSkeleton);
+      
+      // Text lines skeleton
+      const textSkeleton1 = createElement('div', {
+        className: 'skeleton h-4 w-full mb-2 rounded',
+      });
+      const textSkeleton2 = createElement('div', {
+        className: 'skeleton h-4 w-3/4 rounded',
+      });
+      contentSkeleton.appendChild(textSkeleton1);
+      contentSkeleton.appendChild(textSkeleton2);
+      
+      skeletonEntry.appendChild(contentSkeleton);
+      this.itemsContainer.appendChild(skeletonEntry);
     }
   }
   
@@ -196,6 +281,232 @@ export class Timeline extends Component {
     this.registerCleanup(() => {
       this.observer?.disconnect();
     });
+  }
+  
+  private setupPullToRefresh(): void {
+    if (!this.container) return;
+    
+    // Create refresh indicator
+    const refreshIndicator = createElement('div', {
+      className: 'pull-to-refresh-indicator fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity',
+      innerHTML: `
+        <div class="flex flex-col items-center gap-2 py-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pull-refresh-icon">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>
+          </svg>
+          <span class="text-xs font-mono uppercase tracking-wider text-muted-foreground pull-refresh-text">Pull to refresh</span>
+        </div>
+      `,
+    });
+    document.body.appendChild(refreshIndicator);
+    
+    // Touch events for mobile
+    let touchStartY = 0;
+    let touchStartX = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      if (this.container && this.container.scrollTop === 0 && !store.timelineLoading.get()) {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+        this.pullStartY = touchStartY;
+        this.isPulling = true;
+      }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!this.isPulling || store.timelineLoading.get()) return;
+      
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - touchStartY;
+      const deltaX = Math.abs(currentX - touchStartX);
+      
+      // Don't trigger if scrolling horizontally
+      if (deltaX > Math.abs(deltaY)) {
+        this.isPulling = false;
+        return;
+      }
+      
+      // Only allow pulling down when at top
+      if (this.container && this.container.scrollTop === 0 && deltaY > 0) {
+        e.preventDefault();
+        this.pullCurrentY = deltaY;
+        this.updatePullIndicator(refreshIndicator, deltaY);
+      } else {
+        this.isPulling = false;
+        this.hidePullIndicator(refreshIndicator);
+      }
+    };
+    
+    const handleTouchEnd = () => {
+      if (!this.isPulling) return;
+      
+      if (this.pullCurrentY >= this.pullThreshold) {
+        this.triggerRefresh(refreshIndicator);
+      } else {
+        this.hidePullIndicator(refreshIndicator);
+      }
+      
+      this.isPulling = false;
+      this.pullCurrentY = 0;
+      this.pullStartY = 0;
+    };
+    
+    // Mouse events for desktop trackpad
+    let mouseStartY = 0;
+    let mouseStartX = 0;
+    let isMouseDown = false;
+    
+    const handleMouseDown = (e: MouseEvent) => {
+      if (this.container && this.container.scrollTop === 0 && !store.timelineLoading.get()) {
+        mouseStartY = e.clientY;
+        mouseStartX = e.clientX;
+        this.pullStartY = mouseStartY;
+        isMouseDown = true;
+      }
+    };
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isMouseDown || store.timelineLoading.get()) return;
+      
+      const deltaY = e.clientY - mouseStartY;
+      const deltaX = Math.abs(e.clientX - mouseStartX);
+      
+      // Don't trigger if scrolling horizontally
+      if (deltaX > Math.abs(deltaY)) {
+        isMouseDown = false;
+        return;
+      }
+      
+      // Only allow pulling down when at top
+      if (this.container && this.container.scrollTop === 0 && deltaY > 0) {
+        e.preventDefault();
+        this.pullCurrentY = deltaY;
+        this.isPulling = true;
+        this.updatePullIndicator(refreshIndicator, deltaY);
+      } else {
+        isMouseDown = false;
+        this.isPulling = false;
+        this.hidePullIndicator(refreshIndicator);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      if (!isMouseDown) return;
+      
+      if (this.isPulling && this.pullCurrentY >= this.pullThreshold) {
+        this.triggerRefresh(refreshIndicator);
+      } else {
+        this.hidePullIndicator(refreshIndicator);
+      }
+      
+      isMouseDown = false;
+      this.isPulling = false;
+      this.pullCurrentY = 0;
+      this.pullStartY = 0;
+    };
+    
+    // Add event listeners
+    this.container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    this.container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    this.container.addEventListener('touchend', handleTouchEnd);
+    this.container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    this.registerCleanup(() => {
+      this.container?.removeEventListener('touchstart', handleTouchStart);
+      this.container?.removeEventListener('touchmove', handleTouchMove);
+      this.container?.removeEventListener('touchend', handleTouchEnd);
+      this.container?.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      refreshIndicator.remove();
+    });
+  }
+  
+  private updatePullIndicator(indicator: HTMLElement, pullDistance: number): void {
+    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
+    const text = indicator.querySelector('.pull-refresh-text') as HTMLElement;
+    
+    if (!icon || !text) return;
+    
+    indicator.style.opacity = '1';
+    indicator.style.transform = `translateX(-50%) translateY(${Math.min(pullDistance, this.pullThreshold)}px)`;
+    
+    // Rotate icon based on pull distance
+    const rotation = Math.min((pullDistance / this.pullThreshold) * 180, 180);
+    icon.style.transform = `rotate(${rotation}deg)`;
+    
+    // Update text
+    if (pullDistance >= this.pullThreshold) {
+      text.textContent = 'Release to refresh';
+      text.classList.remove('text-muted-foreground');
+      text.classList.add('text-primary');
+    } else {
+      text.textContent = 'Pull to refresh';
+      text.classList.remove('text-primary');
+      text.classList.add('text-muted-foreground');
+    }
+  }
+  
+  private hidePullIndicator(indicator: HTMLElement): void {
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translateX(-50%) translateY(0px)';
+    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
+    if (icon) {
+      icon.style.transform = 'rotate(0deg)';
+    }
+  }
+  
+  private async triggerRefresh(indicator: HTMLElement): Promise<void> {
+    // Debounce rapid refreshes
+    const now = Date.now();
+    if (now - this.lastRefreshTime < this.refreshDebounceMs) {
+      this.hidePullIndicator(indicator);
+      return;
+    }
+    this.lastRefreshTime = now;
+    
+    // Show loading state
+    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
+    const text = indicator.querySelector('.pull-refresh-text') as HTMLElement;
+    if (icon) {
+      icon.style.animation = 'spin 1s linear infinite';
+    }
+    if (text) {
+      text.textContent = 'Refreshing...';
+    }
+    
+    try {
+      // Clear existing items and fetch fresh data
+      store.timelineItems.set([]);
+      actions.setTimelineCursor(null);
+      store.timelineLoading.set(true);
+      
+      const result = await fetchTimeline(25);
+      actions.appendTimelineItems(result.items);
+      actions.setTimelineCursor(result.nextCursor || null);
+    } catch (error) {
+      console.error('[Timeline] Error refreshing:', error);
+      if (text) {
+        text.textContent = 'Refresh failed';
+        text.classList.add('text-status-error');
+      }
+    } finally {
+      store.timelineLoading.set(false);
+      // Hide indicator after a short delay
+      setTimeout(() => {
+        this.hidePullIndicator(indicator);
+        if (icon) {
+          icon.style.animation = '';
+        }
+        if (text) {
+          text.textContent = 'Pull to refresh';
+          text.classList.remove('text-status-error');
+        }
+      }, 500);
+    }
   }
   
   private async loadMore(): Promise<void> {

@@ -11037,7 +11037,21 @@ async function startServer() {
     serverPath = path.join(process.resourcesPath, binaryName);
     command = serverPath;
   } else {
-    serverPath = path.resolve(__dirname, "../../server/src/index.ts");
+    const possiblePaths = [
+      // From workspace root (typical case)
+      path.resolve(process.cwd(), "apps", "server", "src", "index.ts"),
+      // From apps/desktop (if cwd is there)
+      path.resolve(process.cwd(), "..", "server", "src", "index.ts"),
+      // From __dirname (if running from dist)
+      path.resolve(__dirname, "..", "..", "..", "server", "src", "index.ts")
+    ];
+    serverPath = possiblePaths.find((p) => {
+      try {
+        return fs__namespace.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) || possiblePaths[0];
     command = "bun";
     args = ["run", serverPath];
   }

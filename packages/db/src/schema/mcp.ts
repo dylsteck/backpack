@@ -51,6 +51,7 @@ export const connections = pgTable("connections", {
 	credentialStorage: text("credential_storage").notNull().default("onepassword"),
 	encryptedCredentials: text("encrypted_credentials"), // Base64 encoded credentials for database storage
 	connectionMetadata: json("connection_metadata").$type<Record<string, any>>(),
+	lastSyncedAt: timestamp("last_synced_at"), // Timestamp of last successful sync
 	createdAt: timestamp("created_at").notNull(),
 	updatedAt: timestamp("updated_at").notNull(),
 });

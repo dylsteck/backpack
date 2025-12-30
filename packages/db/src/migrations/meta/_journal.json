@@ -92,6 +92,13 @@
       "when": 1762700000002,
       "tag": "0012_add_teller_app",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1762700000003,
+      "tag": "0013_add_last_synced_at",
+      "breakpoints": true
     }
   ]
 }

@@ -39,6 +39,18 @@ export class AppDetail extends Component {
       if (this.appId) {
         this.app = getAppById(this.appId) || null;
         this.render();
+        // Re-setup refresh button if connection status changed
+        if (this.app?.connection?.status === 'connected') {
+          const refreshButton = this.container.querySelector('[data-refresh]');
+          if (!refreshButton) {
+            // Re-render header to add refresh button
+            const header = this.container.querySelector('.border-b');
+            if (header) {
+              const newHeader = this.createHeader();
+              header.replaceWith(newHeader);
+            }
+          }
+        }
       }
     });
     
@@ -193,14 +205,32 @@ export class AppDetail extends Component {
     
     // Text info
     const textInfo = createElement('div', {
-      className: 'flex flex-col gap-2 pt-0.5',
+      className: 'flex flex-col gap-2 pt-0.5 flex-1',
+    });
+    
+    const titleRow = createElement('div', {
+      className: 'flex items-center gap-3',
     });
     
     const title = createElement('h1', {
       className: 'text-3xl font-mono uppercase tracking-wider text-foreground',
       textContent: this.app?.name || '',
     });
-    textInfo.appendChild(title);
+    titleRow.appendChild(title);
+    
+    // Refresh button (only show if connected)
+    if (this.app?.connection?.status === 'connected') {
+      const refreshButton = createElement('button', {
+        className: 'p-2 hover:bg-accent transition-colors shrink-0',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>`,
+        dataset: { refresh: 'true' },
+        title: 'Refresh data',
+      });
+      this.addListener(refreshButton, 'click', () => this.handleRefresh());
+      titleRow.appendChild(refreshButton);
+    }
+    
+    textInfo.appendChild(titleRow);
     
     if (this.app?.description) {
       const desc = createElement('p', {
@@ -1215,6 +1245,74 @@ export class AppDetail extends Component {
     } catch (error) {
       console.error('[AppDetail] Error stopping backfill:', error);
       alert(`Failed to stop backfill: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  private async handleRefresh(): Promise<void> {
+    if (!this.app) return;
+    
+    const refreshButton = this.container.querySelector('[data-refresh]') as HTMLElement;
+    if (!refreshButton) return;
+    
+    // Disable button and show loading state
+    refreshButton.setAttribute('disabled', 'true');
+    refreshButton.style.opacity = '0.5';
+    refreshButton.style.cursor = 'not-allowed';
+    
+    // Add spinning animation
+    const svg = refreshButton.querySelector('svg');
+    if (svg) {
+      svg.style.animation = 'spin 1s linear infinite';
+    }
+    
+    try {
+      // Trigger sync for this app
+      const result = await api.sync.triggerSync.mutate({
+        appId: this.app.id,
+      });
+      
+      if (result.success) {
+        // Show success feedback
+        const originalTitle = refreshButton.getAttribute('title');
+        refreshButton.setAttribute('title', `Synced ${result.newItems} new items`);
+        
+        // Refresh apps to get updated lastSyncedAt
+        await fetchAppsWithCache();
+        this.app = getAppById(this.app.id) || null;
+        
+        // Refresh timeline if on data tab
+        if (this.currentTab === 'data') {
+          const { fetchTimeline } = await import('../api');
+          const timelineResult = await fetchTimeline(25);
+          actions.appendTimelineItems(timelineResult.items);
+          actions.setTimelineCursor(timelineResult.nextCursor || null);
+        }
+        
+        // Reset button after 2 seconds
+        setTimeout(() => {
+          refreshButton.setAttribute('title', originalTitle || 'Refresh data');
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
+    } catch (error) {
+      console.error('[AppDetail] Error refreshing:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      refreshButton.setAttribute('title', `Error: ${errorMessage}`);
+      
+      // Reset after 3 seconds
+      setTimeout(() => {
+        refreshButton.setAttribute('title', 'Refresh data');
+      }, 3000);
+    } finally {
+      // Re-enable button
+      refreshButton.removeAttribute('disabled');
+      refreshButton.style.opacity = '1';
+      refreshButton.style.cursor = 'pointer';
+      
+      if (svg) {
+        svg.style.animation = '';
+      }
     }
   }
   

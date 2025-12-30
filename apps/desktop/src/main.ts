@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { spawn, ChildProcess } from "child_process";
 import * as net from "net";
+import * as fs from "fs";
 import registerListeners from "./helpers/ipc/listeners-register";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
@@ -77,7 +78,25 @@ async function startServer(): Promise<number> {
     command = serverPath;
   } else {
     // Development: run with bun
-    serverPath = path.resolve(__dirname, "../../server/src/index.ts");
+    // Resolve server path - try multiple strategies
+    const possiblePaths = [
+      // From workspace root (typical case)
+      path.resolve(process.cwd(), "apps", "server", "src", "index.ts"),
+      // From apps/desktop (if cwd is there)
+      path.resolve(process.cwd(), "..", "server", "src", "index.ts"),
+      // From __dirname (if running from dist)
+      path.resolve(__dirname, "..", "..", "..", "server", "src", "index.ts"),
+    ];
+    
+    // Find the first path that exists
+    serverPath = possiblePaths.find(p => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) || possiblePaths[0]; // Fallback to first path
+    
     command = "bun";
     args = ["run", serverPath];
   }
