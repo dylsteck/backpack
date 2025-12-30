@@ -7,8 +7,8 @@
 import { Component } from './Component';
 import { store, actions } from '../store';
 import { fetchTimeline, loadMoreTimeline, fetchAppsWithCache } from '../api';
-import { createElement, batchAppend, clearChildren, formatTime, formatDate, formatFullDate, groupByDate, debounce, escapeHtml } from '../utils/dom';
-import type { TimelineItem, SourceType, AppServer, FarcasterCast, TellerTransaction, BrowserHistoryEntry, BrowserHistoryGroup } from '../types';
+import { createElement, clearChildren, formatTime, formatDate, formatFullDate, groupByDate, escapeHtml } from '../utils/dom';
+import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 
 export class Timeline extends Component {
   private itemsContainer: HTMLElement | null = null;
@@ -19,6 +19,10 @@ export class Timeline extends Component {
   
   async init(): Promise<void> {
     this.render();
+    
+    // Set up event delegation for clicks FIRST - before any async operations
+    // This ensures clicks work even if items render via subscriptions
+    this.setupEventDelegation();
     
     // Load apps data for icon URLs
     await this.loadAppsData();
@@ -33,9 +37,6 @@ export class Timeline extends Component {
     this.subscribe(store.timelineItems, () => this.renderItems());
     this.subscribe(store.expandedItemId, () => this.updateExpandedStates());
     this.subscribe(store.selectedSources, () => this.renderItems());
-    
-    // Set up event delegation for clicks
-    this.setupEventDelegation();
     
     // Load browser history via IPC
     this.loadBrowserHistory();
@@ -52,7 +53,7 @@ export class Timeline extends Component {
     
     // Vertical timeline line
     const timelineLine = createElement('div', {
-      className: 'timeline-line absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-gray-300 z-0 hidden',
+      className: 'timeline-line absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-border z-0 hidden',
     });
     wrapper.appendChild(timelineLine);
     
@@ -70,7 +71,7 @@ export class Timeline extends Component {
     
     // Loading indicator
     const loadingIndicator = createElement('div', {
-      className: 'loading-more hidden text-sm text-muted-foreground text-center py-4',
+      className: 'loading-more hidden text-sm text-muted-foreground text-center py-4 font-mono uppercase tracking-wider',
       textContent: 'Loading more...',
     });
     wrapper.appendChild(loadingIndicator);
@@ -96,7 +97,7 @@ export class Timeline extends Component {
     // Show loading state
     if (this.itemsContainer) {
       this.itemsContainer.innerHTML = `
-        <div class="text-sm text-muted-foreground py-8 text-center">
+        <div class="text-sm text-muted-foreground py-8 text-center font-mono uppercase tracking-wider">
           Loading timeline...
         </div>
       `;
@@ -106,11 +107,11 @@ export class Timeline extends Component {
       const result = await fetchTimeline(25);
       actions.appendTimelineItems(result.items);
       actions.setTimelineCursor(result.nextCursor || null);
-    } catch (error) {
+    } catch {
       if (this.itemsContainer) {
         this.itemsContainer.innerHTML = `
           <div class="flex items-center justify-center py-12">
-            <div class="text-red-500">Failed to load timeline</div>
+            <div class="text-status-error font-mono uppercase tracking-wider text-sm">Failed to load timeline</div>
           </div>
         `;
       }
@@ -139,7 +140,7 @@ export class Timeline extends Component {
       let attempts = 0;
       const maxAttempts = 15;
       
-      const checkInterval = this.registerInterval(() => {
+      this.registerInterval(() => {
         attempts++;
         const currentApi = browser === 'chrome' ? window.chromeHistory : window.braveHistory;
         
@@ -295,7 +296,7 @@ export class Timeline extends Component {
           <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
           <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
         </svg>
-        <p class="text-muted-foreground text-lg">${message}</p>
+        <p class="text-muted-foreground font-mono uppercase tracking-wider text-sm">${message}</p>
       </div>
     `;
   }
@@ -309,7 +310,7 @@ export class Timeline extends Component {
     });
     
     const dateLabel = createElement('span', {
-      className: 'text-xs font-medium text-muted-foreground uppercase tracking-wide',
+      className: 'text-xs font-mono text-muted-foreground uppercase tracking-wider',
       textContent: formatFullDate(date),
     });
     
@@ -343,17 +344,17 @@ export class Timeline extends Component {
     
     // Timeline dot with icon
     const dot = createElement('div', {
-      className: 'absolute left-0 top-1 w-5 h-5 rounded-full bg-background border-2 border-muted flex items-center justify-center z-10',
+      className: 'absolute left-0 top-1 w-5 h-5 bg-background border-2 border-border flex items-center justify-center z-10',
     });
     
     if (iconUrl) {
-      dot.innerHTML = `<img src="${iconUrl}" alt="" class="w-3 h-3 rounded-full" />`;
+      dot.innerHTML = `<img src="${iconUrl}" alt="" class="w-3 h-3" />`;
     }
     entry.appendChild(dot);
     
     // Time label
     const timeLabel = createElement('div', {
-      className: 'text-xs text-muted-foreground mb-1',
+      className: 'text-xs text-muted-foreground mb-1 font-mono',
       textContent: `${time} · ${date}`,
     });
     entry.appendChild(timeLabel);
@@ -386,7 +387,7 @@ export class Timeline extends Component {
         return this.renderTransactionContent(item.data as TellerTransaction);
       default:
         return createElement('div', {
-          className: 'text-sm p-3 bg-card rounded-lg border',
+          className: 'text-sm p-3 bg-card border font-mono',
           textContent: JSON.stringify(item.data),
         });
     }
@@ -394,7 +395,7 @@ export class Timeline extends Component {
   
   private renderCastContent(cast: FarcasterCast): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'p-3 bg-card rounded-lg border hover:bg-accent/50 transition-colors',
+      className: 'p-3 bg-card border hover:bg-accent transition-colors',
     });
     
     // Author row
@@ -404,15 +405,15 @@ export class Timeline extends Component {
     
     if (cast.author.pfp_url) {
       authorRow.innerHTML = `
-        <img src="${cast.author.pfp_url}" alt="" class="w-6 h-6 rounded-full" />
+        <img src="${cast.author.pfp_url}" alt="" class="w-6 h-6" />
         <span class="font-medium text-sm">${escapeHtml(cast.author.display_name)}</span>
-        <span class="text-muted-foreground text-sm">@${escapeHtml(cast.author.username)}</span>
+        <span class="text-muted-foreground text-sm font-mono">@${escapeHtml(cast.author.username)}</span>
       `;
     } else {
       authorRow.innerHTML = `
-        <div class="w-6 h-6 rounded-full bg-muted"></div>
+        <div class="w-6 h-6 bg-muted"></div>
         <span class="font-medium text-sm">${escapeHtml(cast.author.display_name)}</span>
-        <span class="text-muted-foreground text-sm">@${escapeHtml(cast.author.username)}</span>
+        <span class="text-muted-foreground text-sm font-mono">@${escapeHtml(cast.author.username)}</span>
       `;
     }
     wrapper.appendChild(authorRow);
@@ -427,7 +428,7 @@ export class Timeline extends Component {
     // Reactions
     if (cast.reactions) {
       const reactions = createElement('div', {
-        className: 'flex items-center gap-4 mt-2 text-xs text-muted-foreground',
+        className: 'flex items-center gap-4 mt-2 text-xs text-muted-foreground font-mono',
       });
       reactions.innerHTML = `
         <span>❤️ ${cast.reactions.likes_count}</span>
@@ -442,7 +443,7 @@ export class Timeline extends Component {
   
   private renderBrowserHistoryContent(entry: BrowserHistoryEntry): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'p-3 bg-card rounded-lg border hover:bg-accent/50 transition-colors',
+      className: 'p-3 bg-card border hover:bg-accent transition-colors',
     });
     
     // Get favicon
@@ -456,10 +457,10 @@ export class Timeline extends Component {
     
     wrapper.innerHTML = `
       <div class="flex items-start gap-3">
-        ${faviconUrl ? `<img src="${faviconUrl}" alt="" class="w-4 h-4 mt-0.5 rounded" />` : '<div class="w-4 h-4 mt-0.5 rounded bg-muted"></div>'}
+        ${faviconUrl ? `<img src="${faviconUrl}" alt="" class="w-4 h-4 mt-0.5" />` : '<div class="w-4 h-4 mt-0.5 bg-muted"></div>'}
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium truncate">${escapeHtml(entry.title || 'Untitled')}</p>
-          <p class="text-xs text-muted-foreground truncate">${escapeHtml(entry.url)}</p>
+          <p class="text-xs text-muted-foreground truncate font-mono">${escapeHtml(entry.url)}</p>
         </div>
       </div>
     `;
@@ -469,7 +470,7 @@ export class Timeline extends Component {
   
   private renderTransactionContent(transaction: TellerTransaction): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'p-3 bg-card rounded-lg border hover:bg-accent/50 transition-colors',
+      className: 'p-3 bg-card border hover:bg-accent transition-colors',
     });
     
     const amount = parseFloat(transaction.amount);
@@ -479,9 +480,9 @@ export class Timeline extends Component {
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium">${escapeHtml(transaction.description)}</p>
-          <p class="text-xs text-muted-foreground">${escapeHtml(transaction.details.category || 'Uncategorized')}</p>
+          <p class="text-xs text-muted-foreground font-mono uppercase">${escapeHtml(transaction.details.category || 'Uncategorized')}</p>
         </div>
-        <span class="font-mono text-sm ${isPositive ? 'text-green-600' : 'text-foreground'}">
+        <span class="font-mono text-sm ${isPositive ? 'text-status-connected' : 'text-foreground'}">
           ${isPositive ? '+' : ''}$${Math.abs(amount).toFixed(2)}
         </span>
       </div>
@@ -492,12 +493,12 @@ export class Timeline extends Component {
   
   private renderExpandedView(item: TimelineItem): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'mt-3 p-4 bg-muted/30 rounded-lg border border-border/50 relative',
+      className: 'mt-3 p-4 bg-card border border-border relative',
     });
     
     // Close button in top right
     const closeButton = createElement('button', {
-      className: 'absolute top-2 right-2 p-1.5 rounded hover:bg-accent/50 transition-colors z-10',
+      className: 'absolute top-2 right-2 p-1.5 hover:bg-accent transition-colors z-10',
       attributes: {
         'aria-label': 'Close',
         style: 'cursor: pointer;',
@@ -533,23 +534,23 @@ export class Timeline extends Component {
     
     // Author info
     const authorSection = createElement('div', {
-      className: 'flex items-center gap-3 pb-3 border-b border-border/50',
+      className: 'flex items-center gap-3 pb-3 border-b border-border',
     });
     
     if (cast.author.pfp_url) {
       authorSection.innerHTML = `
-        <img src="${escapeHtml(cast.author.pfp_url)}" alt="" class="w-10 h-10 rounded-full" />
+        <img src="${escapeHtml(cast.author.pfp_url)}" alt="" class="w-10 h-10" />
         <div>
           <div class="font-medium">${escapeHtml(cast.author.display_name)}</div>
-          <div class="text-xs text-muted-foreground">@${escapeHtml(cast.author.username)}</div>
+          <div class="text-xs text-muted-foreground font-mono">@${escapeHtml(cast.author.username)}</div>
         </div>
       `;
     } else {
       authorSection.innerHTML = `
-        <div class="w-10 h-10 rounded-full bg-muted"></div>
+        <div class="w-10 h-10 bg-muted"></div>
         <div>
           <div class="font-medium">${escapeHtml(cast.author.display_name)}</div>
-          <div class="text-xs text-muted-foreground">@${escapeHtml(cast.author.username)}</div>
+          <div class="text-xs text-muted-foreground font-mono">@${escapeHtml(cast.author.username)}</div>
         </div>
       `;
     }
@@ -565,7 +566,7 @@ export class Timeline extends Component {
     // Metadata
     if (cast.reactions || cast.replies) {
       const metaSection = createElement('div', {
-        className: 'flex items-center gap-4 pt-2 text-xs text-muted-foreground',
+        className: 'flex items-center gap-4 pt-2 text-xs text-muted-foreground font-mono',
       });
       
       const metaItems: string[] = [];
@@ -601,7 +602,7 @@ export class Timeline extends Component {
     
     // URL
     const urlSection = createElement('div', {
-      className: 'text-xs text-muted-foreground break-all',
+      className: 'text-xs text-muted-foreground break-all font-mono',
     });
     
     try {
@@ -616,12 +617,12 @@ export class Timeline extends Component {
     content.appendChild(urlSection);
     
     // Visit count if available
-    if (entry.visit_count) {
-      const visitCount = createElement('div', {
-        className: 'text-xs text-muted-foreground pt-2 border-t border-border/50',
-        textContent: `Visited ${entry.visit_count} time${entry.visit_count !== 1 ? 's' : ''}`,
+    if (entry.visitCount) {
+      const visitCountEl = createElement('div', {
+        className: 'text-xs text-muted-foreground pt-2 border-t border-border font-mono',
+        textContent: `Visited ${entry.visitCount} time${entry.visitCount !== 1 ? 's' : ''}`,
       });
-      content.appendChild(visitCount);
+      content.appendChild(visitCountEl);
     }
     
     wrapper.appendChild(content);
@@ -650,38 +651,38 @@ export class Timeline extends Component {
     const amount = parseFloat(transaction.amount);
     const isPositive = amount > 0;
     const amountSection = createElement('div', {
-      className: `text-lg font-mono ${isPositive ? 'text-green-600' : 'text-foreground'}`,
+      className: `text-lg font-mono ${isPositive ? 'text-status-connected' : 'text-foreground'}`,
       textContent: `${isPositive ? '+' : ''}$${Math.abs(amount).toFixed(2)}`,
     });
     content.appendChild(amountSection);
     
     // Details grid
     const detailsGrid = createElement('div', {
-      className: 'grid grid-cols-2 gap-3 pt-2 border-t border-border/50 text-xs',
+      className: 'grid grid-cols-2 gap-3 pt-2 border-t border-border text-xs',
     });
     
     if (transaction.details?.category) {
       const categoryRow = createElement('div');
       categoryRow.innerHTML = `
-        <div class="text-muted-foreground mb-1">Category</div>
+        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Category</div>
         <div>${escapeHtml(transaction.details.category)}</div>
       `;
       detailsGrid.appendChild(categoryRow);
     }
     
-    if (transaction.details?.merchant?.name) {
-      const merchantRow = createElement('div');
-      merchantRow.innerHTML = `
-        <div class="text-muted-foreground mb-1">Merchant</div>
-        <div>${escapeHtml(transaction.details.merchant.name)}</div>
+    if (transaction.details?.counterparty?.name) {
+      const counterpartyRow = createElement('div');
+      counterpartyRow.innerHTML = `
+        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Counterparty</div>
+        <div>${escapeHtml(transaction.details.counterparty.name)}</div>
       `;
-      detailsGrid.appendChild(merchantRow);
+      detailsGrid.appendChild(counterpartyRow);
     }
     
     if (transaction.account_id) {
       const accountRow = createElement('div');
       accountRow.innerHTML = `
-        <div class="text-muted-foreground mb-1">Account</div>
+        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Account</div>
         <div class="font-mono text-xs">${escapeHtml(transaction.account_id.slice(0, 8))}...</div>
       `;
       detailsGrid.appendChild(accountRow);
@@ -690,8 +691,8 @@ export class Timeline extends Component {
     if (transaction.status) {
       const statusRow = createElement('div');
       statusRow.innerHTML = `
-        <div class="text-muted-foreground mb-1">Status</div>
-        <div class="capitalize">${escapeHtml(transaction.status)}</div>
+        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Status</div>
+        <div class="uppercase">${escapeHtml(transaction.status)}</div>
       `;
       detailsGrid.appendChild(statusRow);
     }
@@ -716,8 +717,8 @@ export class Timeline extends Component {
     });
     
     content.innerHTML = `
-      <div class="font-medium mb-2">Details</div>
-      <pre class="text-xs bg-background/50 p-3 rounded overflow-auto max-h-64 border border-border/50">${escapeHtml(JSON.stringify(item.data, null, 2))}</pre>
+      <div class="font-mono uppercase tracking-wider mb-2">Details</div>
+      <pre class="text-xs bg-background p-3 overflow-auto max-h-64 border border-border font-mono">${escapeHtml(JSON.stringify(item.data, null, 2))}</pre>
     `;
     
     wrapper.appendChild(content);
@@ -734,11 +735,14 @@ export class Timeline extends Component {
    * Handle clicks via event delegation
    */
   protected setupEventDelegation(): void {
+    // Use capture phase to ensure we catch events even if they're stopped
     this.addListener(this.container, 'click', (e) => {
       const target = e.target as HTMLElement;
       
       // Check for close button
       if (target.closest('[data-close-expanded]')) {
+        e.preventDefault();
+        e.stopPropagation();
         actions.setExpandedItem(null);
         return;
       }
@@ -748,10 +752,12 @@ export class Timeline extends Component {
       if (clickable) {
         const entry = clickable.closest('[data-entry-id]') as HTMLElement;
         if (entry?.dataset.entryId) {
+          e.preventDefault();
+          e.stopPropagation();
           actions.toggleExpandedItem(entry.dataset.entryId);
         }
       }
-    });
+    }, { capture: true });
   }
 }
 

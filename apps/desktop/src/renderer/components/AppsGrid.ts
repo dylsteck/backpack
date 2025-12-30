@@ -59,7 +59,7 @@ export class AppsGrid extends Component {
     if (isLoading && this.gridContainer) {
       this.gridContainer.innerHTML = `
         <div class="col-span-full flex items-center justify-center py-12">
-          <div class="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
+          <div class="font-mono uppercase tracking-wider text-sm text-muted-foreground">Loading...</div>
         </div>
       `;
     }
@@ -74,7 +74,7 @@ export class AppsGrid extends Component {
     
     if (apps.length === 0) {
       this.gridContainer.innerHTML = `
-        <div class="col-span-full text-center py-12 text-muted-foreground">
+        <div class="col-span-full text-center py-12 text-muted-foreground font-mono uppercase tracking-wider text-sm">
           No apps available
         </div>
       `;
@@ -91,14 +91,14 @@ export class AppsGrid extends Component {
     const isConnected = app.connection?.status === 'connected';
     
     const card = createElement('div', {
-      className: 'group relative flex flex-col items-center p-6 rounded-xl border bg-card hover:bg-accent/50 transition-all cursor-pointer',
+      className: 'group relative flex flex-col items-center p-6 border bg-card hover:bg-accent transition-all cursor-pointer',
       dataset: { appId: app.id },
     });
     
     // Connection status indicator
     const statusDot = createElement('div', {
-      className: `absolute top-3 right-3 w-2 h-2 rounded-full ${
-        isConnected ? 'bg-green-500' : 'bg-muted-foreground/30'
+      className: `absolute top-3 right-3 w-2 h-2 ${
+        isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'
       }`,
     });
     card.appendChild(statusDot);
@@ -106,7 +106,7 @@ export class AppsGrid extends Component {
     // Icon
     if (app.iconUrl) {
       const icon = createElement('img', {
-        className: 'w-12 h-12 rounded-lg object-contain mb-3',
+        className: 'w-12 h-12 object-contain mb-3',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
@@ -116,15 +116,15 @@ export class AppsGrid extends Component {
       card.appendChild(icon);
     } else {
       const placeholder = createElement('div', {
-        className: 'w-12 h-12 rounded-lg bg-muted mb-3 flex items-center justify-center text-muted-foreground',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
+        className: 'w-12 h-12 bg-muted mb-3 flex items-center justify-center text-muted-foreground',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="0"/></svg>`,
       });
       card.appendChild(placeholder);
     }
     
     // Name
     const name = createElement('p', {
-      className: 'font-medium text-center',
+      className: 'font-mono uppercase tracking-wider text-sm text-center',
       textContent: app.name,
     });
     card.appendChild(name);
@@ -140,7 +140,7 @@ export class AppsGrid extends Component {
     
     // Connection type badge
     const badge = createElement('span', {
-      className: 'mt-2 px-2 py-0.5 text-xs rounded-full bg-secondary text-secondary-foreground',
+      className: 'mt-2 px-2 py-0.5 text-xs font-mono uppercase tracking-wider border border-border text-muted-foreground',
       textContent: app.connectionType,
     });
     card.appendChild(badge);

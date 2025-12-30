@@ -39,7 +39,7 @@ export class Onboarding extends Component {
     // Skip button (visible on step 2)
     if (this.currentStep === 2) {
       const skipButton = createElement('button', {
-        className: 'absolute bottom-4 right-6 px-4 py-2 border rounded-md hover:bg-accent transition-colors',
+        className: 'absolute bottom-4 right-6 px-4 py-2 border hover:bg-accent transition-colors font-mono uppercase tracking-wider text-sm',
         textContent: 'Skip',
       });
       this.addListener(skipButton, 'click', () => this.completeOnboarding());
@@ -89,7 +89,7 @@ export class Onboarding extends Component {
       className: 'relative',
     });
     const logo = createElement('img', {
-      className: 'h-24 w-24 rounded-lg object-contain animate-in zoom-in duration-500',
+      className: 'h-24 w-24 object-contain animate-in zoom-in duration-500',
       attributes: {
         src: iconImage,
         alt: 'Cortex',
@@ -103,18 +103,18 @@ export class Onboarding extends Component {
       className: 'text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700',
     });
     textWrapper.innerHTML = `
-      <h1 class="text-5xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+      <h1 class="text-5xl font-mono uppercase tracking-wider">
         Cortex
       </h1>
-      <p class="text-xl text-muted-foreground max-w-md">
-        Your whole life in one app
+      <p class="text-xl text-muted-foreground max-w-md font-mono">
+        Your life in one app
       </p>
     `;
     wrapper.appendChild(textWrapper);
     
     // Continue button
     const continueButton = createElement('button', {
-      className: 'mt-8 px-6 py-3 bg-primary text-primary-foreground rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-700',
+      className: 'mt-8 px-6 py-3 bg-primary text-primary-foreground flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-700 font-mono uppercase tracking-wider',
       innerHTML: `
         Continue
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -138,7 +138,7 @@ export class Onboarding extends Component {
       className: 'text-center space-y-2',
     });
     titleWrapper.innerHTML = `
-      <h2 class="text-4xl font-bold">Connect Your Apps</h2>
+      <h2 class="text-4xl font-mono uppercase tracking-wider">Connect Your Apps</h2>
       <p class="text-lg text-muted-foreground">
         Link your favorite apps to see everything in one place
       </p>
@@ -155,7 +155,7 @@ export class Onboarding extends Component {
     if (apps.length === 0) {
       appsContainer.innerHTML = `
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          ${[1, 2, 3, 4, 5, 6].map(() => '<div class="h-24 rounded-lg border bg-muted animate-pulse"></div>').join('')}
+          ${[1, 2, 3, 4, 5, 6].map(() => '<div class="h-24 border bg-muted animate-pulse"></div>').join('')}
         </div>
       `;
     } else {
@@ -179,7 +179,7 @@ export class Onboarding extends Component {
     });
     
     const backButton = createElement('button', {
-      className: 'px-4 py-2 border rounded-md flex items-center gap-2 hover:bg-accent transition-colors',
+      className: 'px-4 py-2 border flex items-center gap-2 hover:bg-accent transition-colors font-mono uppercase tracking-wider text-sm',
       innerHTML: `
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         Back
@@ -189,7 +189,7 @@ export class Onboarding extends Component {
     navWrapper.appendChild(backButton);
     
     const continueButton = createElement('button', {
-      className: `px-4 py-2 bg-primary text-primary-foreground rounded-md flex items-center gap-2 ${
+      className: `px-4 py-2 bg-primary text-primary-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-sm ${
         this.selectedApps.size === 0 ? 'opacity-50 cursor-not-allowed' : ''
       }`,
       innerHTML: `
@@ -211,17 +211,17 @@ export class Onboarding extends Component {
     const isConnected = app.connection?.status === 'connected';
     
     const card = createElement('button', {
-      className: `group relative flex flex-col items-center justify-center p-6 rounded-xl border transition-all duration-200 cursor-pointer ${
+      className: `group relative flex flex-col items-center justify-center p-6 border transition-all duration-200 cursor-pointer ${
         isSelected
-          ? 'border-primary bg-primary/5'
-          : 'border-border bg-card hover:border-primary/20'
+          ? 'border-primary bg-accent'
+          : 'border-border bg-card hover:bg-accent'
       }`,
     });
     
     // Icon
     if (app.iconUrl) {
       const icon = createElement('img', {
-        className: 'h-12 w-12 rounded-lg object-contain mb-3',
+        className: 'h-12 w-12 object-contain mb-3',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
@@ -232,7 +232,7 @@ export class Onboarding extends Component {
     
     // Name
     const name = createElement('p', {
-      className: 'text-sm font-medium text-center',
+      className: 'text-sm font-mono uppercase tracking-wider text-center',
       textContent: app.name,
     });
     card.appendChild(name);
@@ -240,12 +240,12 @@ export class Onboarding extends Component {
     // Selection indicator
     if (isSelected) {
       const indicator = createElement('div', {
-        className: 'absolute top-2 right-2 w-2 h-2 rounded-full bg-primary',
+        className: 'absolute top-2 right-2 w-2 h-2 bg-primary',
       });
       card.appendChild(indicator);
     } else if (isConnected) {
       const indicator = createElement('div', {
-        className: 'absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500',
+        className: 'absolute top-2 right-2 w-2 h-2 bg-status-connected',
       });
       card.appendChild(indicator);
     }
@@ -275,9 +275,8 @@ export class Onboarding extends Component {
       className: 'relative',
     });
     iconWrapper.innerHTML = `
-      <div class="absolute inset-0 bg-green-500/20 blur-3xl rounded-full"></div>
-      <div class="relative bg-green-500/10 p-8 rounded-3xl border border-green-500/20">
-        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-500 animate-in zoom-in duration-500">
+      <div class="relative bg-card p-8 border border-status-connected">
+        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-status-connected animate-in zoom-in duration-500">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
@@ -290,7 +289,7 @@ export class Onboarding extends Component {
       className: 'text-center space-y-4',
     });
     textWrapper.innerHTML = `
-      <h2 class="text-4xl font-bold">You're All Set!</h2>
+      <h2 class="text-4xl font-mono uppercase tracking-wider">You're All Set!</h2>
       <p class="text-lg text-muted-foreground max-w-md">
         Start exploring your unified timeline and connect more apps anytime from Settings.
       </p>
@@ -299,7 +298,7 @@ export class Onboarding extends Component {
     
     // Get started button
     const startButton = createElement('button', {
-      className: 'mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-md flex items-center gap-2',
+      className: 'mt-4 px-6 py-3 bg-primary text-primary-foreground flex items-center gap-2 font-mono uppercase tracking-wider',
       innerHTML: `
         Get Started
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -318,7 +317,7 @@ export class Onboarding extends Component {
     
     for (let i = 1; i <= 3; i++) {
       const dot = createElement('div', {
-        className: `h-2 rounded-full transition-all duration-300 ${
+        className: `h-2 transition-all duration-300 ${
           this.currentStep === i
             ? 'bg-primary w-8'
             : 'bg-muted-foreground/30 w-2'

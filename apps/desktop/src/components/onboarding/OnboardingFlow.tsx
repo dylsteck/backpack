@@ -79,11 +79,11 @@ export function OnboardingFlow() {
               />
             </div>
             <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-              <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                 Cortex
               </h1>
               <p className="text-xl text-muted-foreground max-w-md">
-                Your whole life in one app
+                Your life in one app
               </p>
             </div>
             <Button

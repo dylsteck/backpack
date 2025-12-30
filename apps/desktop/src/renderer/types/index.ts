@@ -14,6 +14,7 @@ export interface AppServer {
   oauth?: boolean;
   config?: Record<string, unknown>;
   connection?: {
+    id?: string;
     status: 'connected' | 'disconnected';
     connectionMetadata?: {
       localPath?: string;

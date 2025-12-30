@@ -33,7 +33,7 @@ export class TopbarTitle extends Component {
     this.container.innerHTML = '';
     
     this.titleElement = createElement('span', {
-      className: 'pointer-events-auto',
+      className: 'pointer-events-auto font-mono uppercase tracking-wider',
       textContent: routeTitles[this.currentView],
     });
     this.container.appendChild(this.titleElement);

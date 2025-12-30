@@ -46,7 +46,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* Space for traffic lights */}
         <div className="w-[76px]" />
         {/* Full-width border that extends across entire window */}
-        <div className="fixed top-[44px] left-0 right-0 h-[1px] bg-border opacity-60 z-40" />
+        <div className="fixed top-[44px] left-0 right-0 h-px bg-border opacity-60 z-40" />
       </div>
       <SidebarHeader className="pt-3">
         <SidebarMenu>
@@ -58,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Cortex</span>
-                  <span className="truncate text-xs">Your whole life in one app</span>
+                  <span className="truncate text-xs">Your life in one app</span>
                 </div>
               </Link>
             </SidebarMenuButton>

@@ -60,7 +60,7 @@ export class Layout extends Component {
     
     // Topbar background (covers content area)
     this.topbarContainer = createElement('div', {
-      className: 'fixed top-0 h-[44px] z-40 bg-background/95 backdrop-blur-sm',
+      className: 'fixed top-0 h-[44px] z-40 bg-background',
       attributes: {
         style: 'left: calc(16rem + 0.5rem); right: 0;',
       },
@@ -98,10 +98,12 @@ export class Layout extends Component {
     });
     mainWrapper.appendChild(dragRegion);
     
-    // Content container
+    // Content container - ensure it always has scroll capability
     this.contentContainer = createElement('div', {
-      className: 'w-full flex-1 overflow-y-auto',
+      className: 'w-full flex-1 overflow-y-auto min-h-0',
     });
+    // Set inline styles as backup to ensure scrolling always works
+    this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
     mainWrapper.appendChild(this.contentContainer);
     
     this.container.appendChild(mainWrapper);
@@ -153,6 +155,12 @@ export class Layout extends Component {
     
     // Clear content
     clearChildren(this.contentContainer);
+    
+    // CRITICAL: Always restore scroll styles after clearing
+    // Components should never override this container's className
+    // Use both className and inline styles to ensure scrolling always works
+    this.contentContainer.className = 'w-full flex-1 overflow-y-auto min-h-0';
+    this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
     
     // Create new view
     switch (view) {

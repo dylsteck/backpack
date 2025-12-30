@@ -32,6 +32,11 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  /* Status colors for terminal UI */
+  --color-status-connected: hsl(var(--status-connected, 120 70% 45%));
+  --color-status-warning: hsl(var(--status-warning, 50 100% 50%));
+  --color-status-error: hsl(var(--status-error, 0 70% 50%));
+
   --font-sans: Geist, sans-serif;
   --font-mono: Geist Mono, monospace;
   --font-tomorrow: Tomorrow, sans-serif;
@@ -118,65 +123,81 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Terminal Mono Theme - Light Mode - Dark Amber on Light */
+    --background: 0 0% 98%;
+    --foreground: 45 100% 30%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 45 100% 30%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 45 100% 30%;
 
-    --primary: 240 5.9% 10%;
+    --primary: 45 100% 30%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 45 100% 30%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 45 50% 25%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 45 100% 90%;
+    --accent-foreground: 45 100% 30%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+    --border: 45 100% 60%;
+    --input: 45 100% 60%;
+    --ring: 45 100% 30%;
 
-    --radius: 0.75rem;
+    /* Status colors for light mode */
+    --status-connected: 120 50% 35%;
+    --status-warning: 50 80% 40%;
+    --status-error: 0 60% 40%;
+
+    /* Sharp corners for terminal look */
+    --radius: 0px;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Terminal Mono Theme - Amber on Dark */
+    --background: 0 0% 4%;
+    --foreground: 45 100% 50%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 6%;
+    --card-foreground: 45 100% 50%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 45 100% 50%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 4%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 45 100% 50%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 45 50% 40%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 45 100% 12%;
+    --accent-foreground: 45 100% 50%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 45 100% 25%;
+    --input: 45 100% 25%;
+    --ring: 45 100% 50%;
+
+    /* Status colors */
+    --status-connected: 120 70% 45%;
+    --status-warning: 50 100% 50%;
+    --status-error: 0 70% 50%;
+
+    /* Sharp corners for terminal look */
+    --radius: 0px;
   }
 }
 
@@ -213,28 +234,46 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Chrome, Safari, Opera */
   }
+
+  /* Terminal styling utilities */
+  .terminal-header {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+  }
+  .terminal-panel {
+    border-width: 1px;
+    background-color: hsl(var(--card));
+    padding: 1rem;
+  }
+  .terminal-text {
+    font-family: var(--font-mono);
+  }
 }
 
 :root {
+  /* Terminal sidebar - Light Mode */
   --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(45 100% 30%);
+  --sidebar-primary: hsl(45 100% 30%);
   --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar-accent: hsl(45 100% 90%);
+  --sidebar-accent-foreground: hsl(45 100% 30%);
+  --sidebar-border: hsl(45 100% 60%);
+  --sidebar-ring: hsl(45 100% 30%);
 }
 
 .dark {
-  --sidebar: hsl(0 0% 0%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(0 0% 0%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(0 0% 0%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  /* Terminal sidebar - matches main theme */
+  --sidebar: hsl(0 0% 4%);
+  --sidebar-foreground: hsl(45 100% 50%);
+  --sidebar-primary: hsl(45 100% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 4%);
+  --sidebar-accent: hsl(45 100% 12%);
+  --sidebar-accent-foreground: hsl(45 100% 50%);
+  --sidebar-border: hsl(45 100% 25%);
+  --sidebar-ring: hsl(45 100% 50%);
 }
 
 @theme inline {

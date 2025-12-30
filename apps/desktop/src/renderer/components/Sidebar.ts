@@ -55,7 +55,7 @@ export class Sidebar extends Component {
     // Fixed toggle button - always visible, positioned well after traffic lights
     // Using inline styles to ensure -webkit-app-region works and button is clickable
     const toggleButton = document.createElement('button');
-    toggleButton.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 rounded hover:bg-sidebar-accent/50 transition-colors';
+    toggleButton.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 hover:bg-sidebar-accent transition-colors';
     toggleButton.style.cssText = 'left: 90px; -webkit-app-region: no-drag; z-index: 9999; cursor: pointer;';
     toggleButton.setAttribute('aria-label', 'Toggle sidebar');
     toggleButton.innerHTML = `
@@ -100,7 +100,7 @@ export class Sidebar extends Component {
       className: 'pt-3 px-2',
     });
     
-    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors');
+    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-2 py-2 hover:bg-sidebar-accent transition-colors');
     header.appendChild(logoLink);
     this.container.appendChild(header);
     
@@ -139,11 +139,11 @@ export class Sidebar extends Component {
     });
     
     const iconWrapper = createElement('div', {
-      className: 'flex aspect-square size-8 items-center justify-center rounded-lg',
+      className: 'flex aspect-square size-8 items-center justify-center',
     });
     
     const icon = createElement('img', {
-      className: 'size-8 rounded-lg',
+      className: 'size-8',
       attributes: {
         src: iconImage,
         alt: 'Cortex',
@@ -159,13 +159,13 @@ export class Sidebar extends Component {
       });
       
       const title = createElement('span', {
-        className: 'truncate font-semibold',
+        className: 'truncate font-semibold font-mono uppercase tracking-wider',
         textContent: 'Cortex',
       });
       
       const subtitle = createElement('span', {
-        className: 'truncate text-xs text-sidebar-foreground/70',
-        textContent: 'Your whole life in one app',
+        className: 'truncate text-xs text-sidebar-foreground/70 font-mono',
+        textContent: 'Your life in one app',
       });
       
       textWrapper.appendChild(title);
@@ -192,6 +192,7 @@ export class Sidebar extends Component {
     
     if (!collapsed) {
       const text = createElement('span', {
+        className: 'font-mono uppercase tracking-wider text-sm',
         textContent: item.title,
       });
       linkContent.appendChild(text);
@@ -200,10 +201,10 @@ export class Sidebar extends Component {
     const link = createLink(
       item.url,
       linkContent,
-      `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+      `flex items-center gap-3 px-3 py-2 transition-colors border-l-2 ${
         active 
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-primary' 
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 border-transparent'
       }`
     );
     
@@ -219,13 +220,13 @@ export class Sidebar extends Component {
     });
     
     const label = createElement('span', {
-      className: 'text-sm font-medium text-sidebar-foreground',
+      className: 'text-sm font-mono uppercase tracking-wider text-sidebar-foreground',
       textContent: 'Theme',
     });
     wrapper.appendChild(label);
     
     const toggleGroup = createElement('div', {
-      className: 'flex items-center gap-1 bg-sidebar-accent rounded-lg p-1',
+      className: 'flex items-center gap-1 border border-border p-1',
     });
     
     const themes: Array<{ value: 'light' | 'dark' | 'system'; icon: string; label: string }> = [
@@ -248,9 +249,9 @@ export class Sidebar extends Component {
     
     for (const theme of themes) {
       const button = createElement('button', {
-        className: `p-1.5 rounded transition-colors ${
+        className: `p-1.5 transition-colors ${
           store.theme.get() === theme.value
-            ? 'bg-background text-foreground shadow-sm'
+            ? 'bg-accent text-foreground'
             : 'text-sidebar-foreground/70 hover:text-sidebar-foreground'
         }`,
         attributes: {
@@ -281,10 +282,10 @@ export class Sidebar extends Component {
       const url = (link as HTMLElement).dataset.navItem || '';
       const active = isActive(url);
       
-      link.className = `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+      link.className = `flex items-center gap-3 px-3 py-2 transition-colors border-l-2 ${
         active 
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-primary' 
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 border-transparent'
       }`;
     });
   }
