@@ -45,31 +45,57 @@ export const timelineRouter = router({
 
 					if (connection.serverId === "farcaster" && connection.status === "connected") {
 						try {
-							const fid = connection.connectionMetadata?.fid as string | undefined;
-							if (!fid) {
-								continue;
-							}
-
-							// Use the cached tRPC route instead of direct service call
-							const caller = farcasterRouter.createCaller({});
-							const response = await caller.getUserCasts({
-								fid: parseInt(fid),
+							// First, try to get items from items table
+							const dbItems = await itemsService.getItems({
+								source: "farcaster",
+								type: "cast",
 								limit: input.limit,
 								cursor: input.cursor,
 							});
 
-							for (const cast of response.casts) {
-								items.push({
-									id: cast.hash,
-									timestamp: new Date(cast.timestamp),
-									source: "farcaster",
-									type: "cast",
-									data: cast,
-								});
-							}
+							if (dbItems.items.length > 0) {
+								// Use items from database
+								for (const item of dbItems.items) {
+									items.push({
+										id: item.id,
+										timestamp: item.timestamp,
+										source: item.source,
+										type: item.type,
+										data: item.data,
+									});
+								}
+								if (dbItems.nextCursor) {
+									nextCursor = dbItems.nextCursor;
+								}
+							} else {
+								// Fallback to API if no items in database
+								console.log(`[Timeline] No Farcaster items in database, fetching from API...`);
+								const fid = connection.connectionMetadata?.fid as string | undefined;
+								if (!fid) {
+									continue;
+								}
 
-							if (response.next?.cursor) {
-								nextCursor = response.next.cursor;
+								// Use the cached tRPC route instead of direct service call
+								const caller = farcasterRouter.createCaller({});
+								const response = await caller.getUserCasts({
+									fid: parseInt(fid),
+									limit: input.limit,
+									cursor: input.cursor,
+								});
+
+								for (const cast of response.casts) {
+									items.push({
+										id: cast.hash,
+										timestamp: new Date(cast.timestamp),
+										source: "farcaster",
+										type: "cast",
+										data: cast,
+									});
+								}
+
+								if (response.next?.cursor) {
+									nextCursor = response.next.cursor;
+								}
 							}
 						} catch (error) {
 							console.error(`Error fetching Farcaster timeline for connection ${connection.id}:`, error);
@@ -137,6 +163,27 @@ export const timelineRouter = router({
 			} catch (error) {
 				console.error("Error in getTimeline:", error);
 				return { items: [], nextCursor: undefined };
+			}
+		}),
+
+	getItemCount: publicProcedure
+		.input(
+			z.object({
+				source: z.string().optional(),
+				type: z.string().optional(),
+			})
+		)
+		.query(async ({ input }) => {
+			try {
+				const itemsService = new ItemsService();
+				const count = await itemsService.getCount({
+					source: input.source,
+					type: input.type,
+				});
+				return { count };
+			} catch (error) {
+				console.error("Error in getItemCount:", error);
+				return { count: 0 };
 			}
 		}),
 });

@@ -88,5 +88,24 @@ export class ItemsService {
 		};
 	}
 
+	async getCount(params: { source?: string; type?: string } = {}): Promise<number> {
+		let query = db.select({ count: sql<number>`count(*)` }).from(items);
+
+		const conditions = [];
+		if (params.source) {
+			conditions.push(eq(items.source, params.source));
+		}
+		if (params.type) {
+			conditions.push(eq(items.type, params.type));
+		}
+
+		if (conditions.length > 0) {
+			query = query.where(and(...conditions)) as any;
+		}
+
+		const result = await query;
+		return result[0]?.count || 0;
+	}
+
 }
 

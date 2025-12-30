@@ -86,7 +86,8 @@ export const api = new Proxy({} as TRPCClient<AppRouter>, {
  */
 export async function fetchTimeline(
   limit = 25,
-  cursor?: string
+  cursor?: string,
+  source?: string
 ): Promise<{ items: TimelineItem[]; nextCursor?: string }> {
   store.timelineLoading.set(true);
   store.timelineError.set(null);
@@ -95,7 +96,8 @@ export async function fetchTimeline(
     // Use the raw tRPC client
     const result = await api.timeline.getTimeline.query({ 
       limit, 
-      cursor: cursor || undefined 
+      cursor: cursor || undefined,
+      source: source || undefined
     }) as { items: Array<{ id: string; timestamp: string; source: string; type: string; data: unknown }>; nextCursor?: string };
     
     // Transform timestamps to Date objects

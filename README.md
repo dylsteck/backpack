@@ -1,22 +1,33 @@
 # cortex
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Elysia, TRPC, and more.
+A modern TypeScript stack for building high-performance desktop applications with an embedded API server.
 
 ## Features
 
+### Core Stack
 - **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **React Native** - Build mobile apps using React
-- **Expo** - Tools for React Native development
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **shadcn/ui** - Reusable UI components
-- **Elysia** - Type-safe, high-performance framework
+- **Bun** - Runtime environment and package manager
 - **tRPC** - End-to-end type-safe APIs
-- **Bun** - Runtime environment
 - **Drizzle** - TypeScript-first ORM
 - **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
 - **Turborepo** - Optimized monorepo build system
+
+### Desktop Application (Electron)
+- **Vanilla TypeScript** - No framework overhead, maximum performance (no React)
+- **esbuild** - Ultra-fast bundler for main, renderer, and server processes
+- **Electron** - Cross-platform desktop app framework
+- **TailwindCSS** - Utility-first CSS framework
+- **Custom Observable State** - Lightweight, reactive state management (~100 lines)
+- **Direct DOM Manipulation** - Event delegation and virtual scrolling for performance
+- **tRPC Client** - Type-safe API communication via IPC
+
+> 📖 **Performance Guide**: See [`apps/desktop/electron-performance-guide.md`](apps/desktop/electron-performance-guide.md) for a detailed guide on building high-performance Electron apps with vanilla TypeScript, inspired by Obsidian, VS Code, and Figma. This guide explains why we chose vanilla TypeScript over React and covers techniques like event delegation, virtual scrolling, and memory management.
+
+### Backend API
+- **Elysia** - Type-safe, high-performance framework
+- **Bun** - Runtime for API server, compiled to standalone binary
+- **tRPC** - End-to-end type-safe APIs
+- **Authentication** - Better-Auth
 
 ## Getting Started
 
@@ -82,9 +93,8 @@ Then, run the development server:
 pnpm dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-Use the Expo Go app to run the mobile application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+- **Desktop**: The Electron app will launch automatically
+- **API**: Running at [http://localhost:3000](http://localhost:3000)
 
 
 
@@ -97,22 +107,43 @@ The API is running at [http://localhost:3000](http://localhost:3000).
 ```
 cortex/
 ├── apps/
-│   ├── web/         # Frontend application (Next.js)
-│   ├── native/      # Mobile application (React Native, Expo)
-│   └── server/      # Backend API (Elysia, TRPC)
+│   ├── desktop/     # Desktop application (Electron + Vanilla TypeScript)
+│   └── server/      # Backend API (Elysia + tRPC + Bun)
 ├── packages/
-│   ├── api/         # API layer / business logic
+│   ├── api/         # API layer / business logic (tRPC routers)
 │   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   └── db/          # Database schema & queries (Drizzle ORM)
 ```
+
+### Desktop App Architecture
+
+The desktop app follows a performance-first architecture inspired by Obsidian, VS Code, and Figma:
+
+- **Vanilla TypeScript** - No React overhead, direct DOM manipulation
+- **esbuild** - Fast bundling for all processes (main, renderer, server)
+- **Custom Components** - Lightweight component pattern with automatic cleanup
+- **Observable State** - Reactive state management without framework dependencies
+- **Event Delegation** - Efficient event handling at container level
+- **Virtual Scrolling** - Render only visible items for large lists
+- **IPC Communication** - Type-safe API calls via Electron IPC
+- **Embedded Server** - API server bundled as standalone binary
 
 ## Available Scripts
 
-- `pnpm dev`: Start all applications in development mode
+### Development
+- `pnpm dev`: Start desktop app and API server in development mode
+- `pnpm dev:server`: Start only the API server
+- `pnpm dev:desktop`: Start the Electron desktop app (uses esbuild + Electron Forge)
+
+### Building
 - `pnpm build`: Build all applications
-- `pnpm dev:web`: Start only the web application
-- `pnpm dev:server`: Start only the server
-- `pnpm check-types`: Check TypeScript types across all apps
-- `pnpm dev:native`: Start the React Native/Expo development server
+- `pnpm build:desktop`: Build desktop app with esbuild
+- `pnpm build:server`: Compile API server to standalone binary
+
+### Database
 - `pnpm db:push`: Push schema changes to database
 - `pnpm db:studio`: Open database studio UI
+
+### Quality
+- `pnpm check-types`: Check TypeScript types across all apps
+- `pnpm lint`: Run ESLint across all apps

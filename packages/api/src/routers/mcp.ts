@@ -4,14 +4,24 @@ import { db, connections, apps, items } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { encryptCredentials, decryptCredentials } from "../lib/credentials";
 import { TellerService } from "../services/teller";
-import { ItemsService } from "../services/items/service";
+
+// Track running backfills to prevent duplicates
+const runningBackfills = new Set<string>();
+
+// Track backfill cancellation controllers
+const backfillControllers = new Map<string, AbortController>();
+
+// Helper to generate backfill key
+function getBackfillKey(appId: string, fid?: string): string {
+	return fid ? `${appId}:${fid}` : appId;
+}
 
 const transportConfigSchema = z.object({
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
 	url: z.string().optional(),
-	headers: z.record(z.string()).optional(),
-	env: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	env: z.record(z.string(), z.string()).optional(),
 });
 
 export const appsRouter = router({
@@ -176,6 +186,7 @@ export const appsRouter = router({
 					updatedAt: now,
 				};
 
+				let connectionResult;
 				if (existingConnection.length > 0) {
 					const [updated] = await db
 						.update(connections)
@@ -185,7 +196,7 @@ export const appsRouter = router({
 						})
 						.where(eq(connections.serverId, input.appId))
 						.returning();
-					return { success: true, connection: updated };
+					connectionResult = updated;
 				} else {
 					const id = crypto.randomUUID();
 					const [created] = await db
@@ -196,8 +207,169 @@ export const appsRouter = router({
 							createdAt: now,
 						})
 						.returning();
-					return { success: true, connection: created };
+					connectionResult = created;
 				}
+
+				// Backfill Farcaster casts to items table (run async, don't block response)
+				if (input.appId === "farcaster" && input.connectionMetadata?.fid) {
+					const fid = parseInt(input.connectionMetadata.fid as string);
+					if (isNaN(fid)) {
+						console.error("[saveApiKey] Invalid FID:", input.connectionMetadata.fid);
+					} else {
+						const backfillKey = getBackfillKey("farcaster", fid.toString());
+						
+						// Prevent duplicate backfills
+						if (runningBackfills.has(backfillKey)) {
+							console.log(`[saveApiKey] Backfill already running for ${backfillKey}, skipping...`);
+						} else {
+							// Mark as running
+							runningBackfills.add(backfillKey);
+							
+							// Create abort controller for cancellation
+							const abortController = new AbortController();
+							backfillControllers.set(backfillKey, abortController);
+							
+							// Run backfill asynchronously so it doesn't block the connection response
+							(async () => {
+								const startTime = Date.now();
+								const MAX_BACKFILL_TIME_MS = 10 * 60 * 1000; // 10 minutes max
+								const seenCursors = new Set<string>();
+								
+								try {
+									console.log("[saveApiKey] Starting Farcaster casts backfill...");
+									const { FarcasterService } = await import("../services/farcaster");
+									
+									const farcasterService = new FarcasterService(input.apiKey);
+									
+									let cursor: string | undefined = undefined;
+									let hasMore = true;
+									let pageCount = 0;
+									const maxPages = 100; // Limit to prevent infinite loops
+									let totalCasts = 0;
+									let newCasts = 0;
+									let duplicateCasts = 0;
+									
+									while (hasMore && pageCount < maxPages) {
+										// Check for cancellation
+										if (abortController.signal.aborted) {
+											console.log(`[saveApiKey] Backfill cancelled by user`);
+											break;
+										}
+										
+										// Check timeout
+										if (Date.now() - startTime > MAX_BACKFILL_TIME_MS) {
+											console.warn(`[saveApiKey] Backfill timeout after ${MAX_BACKFILL_TIME_MS}ms, stopping...`);
+											break;
+										}
+										
+										// Prevent cursor loops - if we've seen this cursor before, stop
+										if (cursor && seenCursors.has(cursor)) {
+											console.warn(`[saveApiKey] Detected cursor loop (seen cursor: ${cursor}), stopping backfill`);
+											break;
+										}
+										if (cursor) {
+											seenCursors.add(cursor);
+										}
+										
+										pageCount++;
+										console.log(`[saveApiKey] Fetching page ${pageCount} of Farcaster casts...`);
+										
+										const response = await farcasterService.getUserCasts({
+											fid,
+											limit: 100, // Fetch 100 at a time
+											cursor,
+											include_replies: true,
+										});
+										
+										if (!response.casts || response.casts.length === 0) {
+											hasMore = false;
+											break;
+										}
+										
+										console.log(`[saveApiKey] Saving ${response.casts.length} casts to database...`);
+										
+										// Save each cast to items table
+										for (const cast of response.casts) {
+											try {
+												// Use cast hash as item ID to prevent duplicates
+												const itemId = `farcaster_${cast.hash}`;
+												
+												// Try to insert - database will handle duplicate key errors
+												try {
+													await db.insert(items).values({
+														id: itemId,
+														source: "farcaster",
+														type: "cast",
+														timestamp: new Date(cast.timestamp),
+														data: cast as any,
+														createdAt: new Date(),
+														updatedAt: new Date(),
+													});
+													totalCasts++;
+													newCasts++;
+												} catch (insertError: any) {
+													// Ignore duplicate key errors (PostgreSQL error code 23505)
+													if (insertError?.code === "23505" || insertError?.message?.includes("duplicate") || insertError?.message?.includes("unique")) {
+														// Item already exists, skip
+														duplicateCasts++;
+														continue;
+													}
+													// Re-throw other errors
+													throw insertError;
+												}
+											} catch (itemError) {
+												console.error(`[saveApiKey] Error saving cast ${cast.hash}:`, itemError);
+												// Continue with next cast
+											}
+										}
+										
+										// If we're getting mostly duplicates (90%+), we've likely already backfilled
+										if (response.casts.length > 0 && duplicateCasts / (newCasts + duplicateCasts) > 0.9 && pageCount > 3) {
+											console.log(`[saveApiKey] Getting mostly duplicates (${duplicateCasts}/${duplicateCasts + newCasts}), likely already backfilled. Stopping...`);
+											hasMore = false;
+											break;
+										}
+										
+										// Set cursor for next page
+										if (response.next?.cursor) {
+											const nextCursor = response.next.cursor;
+											// Safety check: if cursor hasn't changed, stop
+											if (nextCursor === cursor) {
+												console.warn(`[saveApiKey] Cursor unchanged (${nextCursor}), stopping backfill`);
+												hasMore = false;
+												break;
+											}
+											cursor = nextCursor;
+											console.log(`[saveApiKey] Page ${pageCount} complete, ${newCasts} new casts saved (${duplicateCasts} duplicates skipped)...`);
+										} else {
+											hasMore = false;
+										}
+										
+										// If we got fewer than requested, we're done
+										if (response.casts.length < 100) {
+											hasMore = false;
+										}
+									}
+									
+									const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+									console.log(`[saveApiKey] ✅ Farcaster backfill complete: ${newCasts} new casts saved (${duplicateCasts} duplicates skipped) in ${duration}s`);
+								} catch (backfillError) {
+									// Log error but don't fail the connection save
+									console.error("[saveApiKey] ❌ Error during Farcaster backfill:", backfillError);
+									if (backfillError instanceof Error) {
+										console.error("[saveApiKey] Error details:", backfillError.message, backfillError.stack);
+									}
+								} finally {
+									// Always remove from running set and controller
+									runningBackfills.delete(backfillKey);
+									backfillControllers.delete(backfillKey);
+								}
+							})();
+						}
+					}
+				}
+
+				return { success: true, connection: connectionResult };
 			} catch (error: any) {
 				console.error("Error in saveApiKey mutation:", error);
 				throw new Error(error?.message || "Failed to save API key");
@@ -330,88 +502,152 @@ export const appsRouter = router({
 					connectionResult = created;
 				}
 
-				// Backfill Teller transactions to items table
-				try {
-					console.log("[saveTellerToken] Starting Teller transaction backfill...");
-					const tellerService = new TellerService(input.accessToken);
-					const itemsService = new ItemsService();
+				// Backfill Teller transactions to items table (run async, don't block response)
+				const tellerBackfillKey = getBackfillKey("teller", input.enrollmentId);
+				
+				// Prevent duplicate backfills
+				if (runningBackfills.has(tellerBackfillKey)) {
+					console.log(`[saveTellerToken] Backfill already running for ${tellerBackfillKey}, skipping...`);
+				} else {
+					// Mark as running
+					runningBackfills.add(tellerBackfillKey);
 					
-					// Get all accounts
-					const accounts = await tellerService.getAccounts();
-					console.log(`[saveTellerToken] Found ${accounts.length} accounts to backfill`);
-					
-					let totalTransactions = 0;
-					
-					// Fetch transactions from all accounts (with pagination)
-					for (const account of accounts) {
-						let fromId: string | undefined = undefined;
-						let hasMore = true;
-						let pageCount = 0;
-						const maxPages = 50; // Limit to prevent infinite loops
+					// Run backfill asynchronously so it doesn't block the connection response
+					(async () => {
+						const startTime = Date.now();
+						const MAX_BACKFILL_TIME_MS = 10 * 60 * 1000; // 10 minutes max
+						const seenFromIds = new Set<string>();
 						
-						while (hasMore && pageCount < maxPages) {
-							const transactions = await tellerService.getTransactions(account.id, {
-								count: 500, // Fetch 500 at a time
-								from_id: fromId,
-							});
+						try {
+							console.log("[saveTellerToken] Starting Teller transaction backfill...");
+							const tellerService = new TellerService(input.accessToken);
 							
-							if (transactions.length === 0) {
-								hasMore = false;
-								break;
-							}
+							// Get all accounts
+							const accounts = await tellerService.getAccounts();
+							console.log(`[saveTellerToken] Found ${accounts.length} accounts to backfill`);
 							
-							// Save each transaction to items table
-							for (const transaction of transactions) {
-								try {
-									// Use transaction ID as item ID to prevent duplicates
-									const itemId = `teller_${transaction.id}`;
-									
-									// Try to insert - database will handle duplicate key errors
-									try {
-										await db.insert(items).values({
-											id: itemId,
-											source: "teller",
-											type: "transaction",
-											timestamp: new Date(transaction.date),
-											data: transaction as any,
-											createdAt: now,
-											updatedAt: now,
-										});
-										totalTransactions++;
-									} catch (insertError: any) {
-										// Ignore duplicate key errors (PostgreSQL error code 23505)
-										if (insertError?.code === "23505" || insertError?.message?.includes("duplicate") || insertError?.message?.includes("unique")) {
-											// Item already exists, skip
-											continue;
-										}
-										// Re-throw other errors
-										throw insertError;
+							let totalTransactions = 0;
+							let newTransactions = 0;
+							let duplicateTransactions = 0;
+							
+							// Fetch transactions from all accounts (with pagination)
+							for (const account of accounts) {
+								let fromId: string | undefined = undefined;
+								let hasMore = true;
+								let pageCount = 0;
+								const maxPages = 50; // Limit to prevent infinite loops
+								
+								while (hasMore && pageCount < maxPages) {
+									// Check timeout
+									if (Date.now() - startTime > MAX_BACKFILL_TIME_MS) {
+										console.warn(`[saveTellerToken] Backfill timeout after ${MAX_BACKFILL_TIME_MS}ms, stopping...`);
+										hasMore = false;
+										break;
 									}
-								} catch (itemError) {
-									console.error(`[saveTellerToken] Error saving transaction ${transaction.id}:`, itemError);
-									// Continue with next transaction
+									
+									// Prevent fromId loops - if we've seen this fromId before, stop
+									if (fromId && seenFromIds.has(fromId)) {
+										console.warn(`[saveTellerToken] Detected fromId loop (seen fromId: ${fromId}), stopping backfill for account ${account.id}`);
+										hasMore = false;
+										break;
+									}
+									if (fromId) {
+										seenFromIds.add(fromId);
+									}
+									
+									pageCount++;
+									console.log(`[saveTellerToken] Fetching page ${pageCount} for account ${account.id}...`);
+									
+									const transactions = await tellerService.getTransactions(account.id, {
+										count: 500, // Fetch 500 at a time
+										from_id: fromId,
+									});
+									
+									if (transactions.length === 0) {
+										hasMore = false;
+										break;
+									}
+							
+									// Save each transaction to items table
+									for (const transaction of transactions) {
+										try {
+											// Use transaction ID as item ID to prevent duplicates
+											const itemId = `teller_${transaction.id}`;
+											
+											// Try to insert - database will handle duplicate key errors
+											try {
+												await db.insert(items).values({
+													id: itemId,
+													source: "teller",
+													type: "transaction",
+													timestamp: new Date(transaction.date),
+													data: transaction as any,
+													createdAt: new Date(),
+													updatedAt: new Date(),
+												});
+												totalTransactions++;
+												newTransactions++;
+											} catch (insertError: any) {
+												// Ignore duplicate key errors (PostgreSQL error code 23505)
+												if (insertError?.code === "23505" || insertError?.message?.includes("duplicate") || insertError?.message?.includes("unique")) {
+													// Item already exists, skip
+													duplicateTransactions++;
+													continue;
+												}
+												// Re-throw other errors
+												throw insertError;
+											}
+										} catch (itemError) {
+											console.error(`[saveTellerToken] Error saving transaction ${transaction.id}:`, itemError);
+											// Continue with next transaction
+										}
+									}
+									
+									// If we're getting mostly duplicates (90%+), we've likely already backfilled
+									if (transactions.length > 0 && duplicateTransactions / (newTransactions + duplicateTransactions) > 0.9 && pageCount > 3) {
+										console.log(`[saveTellerToken] Getting mostly duplicates (${duplicateTransactions}/${duplicateTransactions + newTransactions}), likely already backfilled. Stopping account ${account.id}...`);
+										hasMore = false;
+										break;
+									}
+									
+									// Set fromId for next page (use last transaction ID)
+									if (transactions.length > 0) {
+										const lastTransactionId = transactions[transactions.length - 1]?.id;
+										if (!lastTransactionId) {
+											hasMore = false;
+											break;
+										}
+										// Safety check: if fromId hasn't changed, stop
+										if (lastTransactionId === fromId) {
+											console.warn(`[saveTellerToken] fromId unchanged (${fromId}), stopping backfill for account ${account.id}`);
+											hasMore = false;
+											break;
+										}
+										fromId = lastTransactionId;
+										console.log(`[saveTellerToken] Page ${pageCount} complete for account ${account.id}, ${newTransactions} new transactions saved (${duplicateTransactions} duplicates skipped)...`);
+									} else {
+										hasMore = false;
+									}
+									
+									// If we got fewer than requested, we're done
+									if (transactions.length < 500) {
+										hasMore = false;
+									}
 								}
 							}
 							
-							// Set fromId for next page (use last transaction ID)
-							if (transactions.length > 0) {
-								fromId = transactions[transactions.length - 1].id;
-								pageCount++;
-							} else {
-								hasMore = false;
+							const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+							console.log(`[saveTellerToken] ✅ Backfill complete: ${newTransactions} new transactions saved (${duplicateTransactions} duplicates skipped) in ${duration}s`);
+						} catch (backfillError) {
+							console.error("[saveTellerToken] ❌ Error during backfill:", backfillError);
+							if (backfillError instanceof Error) {
+								console.error("[saveTellerToken] Error details:", backfillError.message, backfillError.stack);
 							}
-							
-							// If we got fewer than requested, we're done
-							if (transactions.length < 500) {
-								hasMore = false;
-							}
+						} finally {
+							// Always remove from running set
+							runningBackfills.delete(tellerBackfillKey);
 						}
-					}
-					
-					console.log(`[saveTellerToken] Backfill complete: ${totalTransactions} transactions saved to items table`);
-				} catch (backfillError) {
-					// Log error but don't fail the connection save
-					console.error("[saveTellerToken] Error during backfill:", backfillError);
+					})();
 				}
 
 				return { success: true, connection: connectionResult };
@@ -437,12 +673,15 @@ export const appsRouter = router({
 				}
 
 				const conn = connection[0];
+				if (!conn) {
+					throw new Error("Connection not found");
+				}
 
-					if (!conn.encryptedCredentials) {
-						throw new Error("No encrypted credentials found");
-					}
+				if (!conn.encryptedCredentials) {
+					throw new Error("No encrypted credentials found");
+				}
 
-					const decrypted = decryptCredentials(conn.encryptedCredentials);
+				const decrypted = decryptCredentials(conn.encryptedCredentials);
 				return { credentials: decrypted };
 			} catch (error: any) {
 				console.error("Error in getCredentials query:", error);
@@ -570,6 +809,27 @@ export const appsRouter = router({
 				console.error("Error in connectBrave mutation:", error);
 				throw new Error(error?.message || "Failed to connect Brave");
 			}
+		}),
+
+	// Stop a running backfill
+	stopBackfill: publicProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				fid: z.string().optional(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			const backfillKey = getBackfillKey(input.appId, input.fid);
+			const controller = backfillControllers.get(backfillKey);
+			
+			if (controller && !controller.signal.aborted) {
+				controller.abort();
+				console.log(`[stopBackfill] Cancelled backfill for ${backfillKey}`);
+				return { success: true, message: "Backfill stopped" };
+			}
+			
+			return { success: false, message: "No running backfill found" };
 		}),
 });
 

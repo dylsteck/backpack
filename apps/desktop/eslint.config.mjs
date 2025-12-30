@@ -21,4 +21,13 @@ export default defineConfig([
   pluginJs.configs.recommended,
   eslintPluginPrettierRecommended,
   ...tseslint.configs.recommended,
+  // Node.js config files need Node.js globals
+  {
+    files: ["**/*.config.{js,mjs,cjs}", "**/*.config.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ]);

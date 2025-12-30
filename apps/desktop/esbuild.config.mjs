@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.argv.includes('--watch');
 
 // Ensure dist directory exists
-const distDir = path.join(__dirname, 'dist-vanilla');
+const distDir = path.join(__dirname, 'dist');
 if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true });
 }

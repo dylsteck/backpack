@@ -144,6 +144,9 @@ export const store = {
   apps: new Observable<AppServer[]>([]),
   appsLoading: new Observable<boolean>(false),
   
+  // Backfill status per app
+  backfillStatus: new Observable<Map<string, { status: 'idle' | 'running' | 'success' | 'error'; message?: string; progress?: number }>>(new Map()),
+  
   // Browser history (loaded via IPC)
   chromeHistory: new Observable<BrowserHistoryEntry[]>([]),
   braveHistory: new Observable<BrowserHistoryEntry[]>([]),
