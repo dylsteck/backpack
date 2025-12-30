@@ -469,9 +469,9 @@ var hasRequiredUtils$1;
 function requireUtils$1() {
   if (hasRequiredUtils$1) return utils$1;
   hasRequiredUtils$1 = 1;
-  (function(exports) {
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.changePermissions = exports.downloadFile = exports.getPath = void 0;
+  (function(exports$1) {
+    Object.defineProperty(exports$1, "__esModule", { value: true });
+    exports$1.changePermissions = exports$1.downloadFile = exports$1.getPath = void 0;
     const electron_1 = require$$0;
     const fs$1 = fs;
     const path$1 = path;
@@ -480,14 +480,14 @@ function requireUtils$1() {
       const savePath = electron_1.app.getPath("userData");
       return path$1.resolve(`${savePath}/extensions`);
     };
-    exports.getPath = getPath;
+    exports$1.getPath = getPath;
     const request = electron_1.net ? electron_1.net.request : https.get;
     const downloadFile = (from, to) => {
       return new Promise((resolve, reject) => {
         const req = request(from);
         req.on("response", (res) => {
           if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-            return (0, exports.downloadFile)(res.headers.location, to).then(resolve).catch(reject);
+            return (0, exports$1.downloadFile)(res.headers.location, to).then(resolve).catch(reject);
           }
           res.pipe(fs$1.createWriteStream(to)).on("close", resolve);
           res.on("error", reject);
@@ -496,18 +496,18 @@ function requireUtils$1() {
         req.end();
       });
     };
-    exports.downloadFile = downloadFile;
+    exports$1.downloadFile = downloadFile;
     const changePermissions = (dir, mode) => {
       const files = fs$1.readdirSync(dir);
       files.forEach((file) => {
         const filePath = path$1.join(dir, file);
         fs$1.chmodSync(filePath, parseInt(`${mode}`, 8));
         if (fs$1.statSync(filePath).isDirectory()) {
-          (0, exports.changePermissions)(filePath, mode);
+          (0, exports$1.changePermissions)(filePath, mode);
         }
       });
     };
-    exports.changePermissions = changePermissions;
+    exports$1.changePermissions = changePermissions;
   })(utils$1);
   return utils$1;
 }
@@ -584,7 +584,7 @@ var hasRequiredSafeBuffer;
 function requireSafeBuffer() {
   if (hasRequiredSafeBuffer) return safeBuffer.exports;
   hasRequiredSafeBuffer = 1;
-  (function(module, exports) {
+  (function(module, exports$1) {
     var buffer = require$$0$2;
     var Buffer2 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -595,8 +595,8 @@ function requireSafeBuffer() {
     if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
       module.exports = buffer;
     } else {
-      copyProps(buffer, exports);
-      exports.Buffer = SafeBuffer;
+      copyProps(buffer, exports$1);
+      exports$1.Buffer = SafeBuffer;
     }
     function SafeBuffer(arg, encodingOrOffset, length) {
       return Buffer2(arg, encodingOrOffset, length);
@@ -2475,25 +2475,25 @@ var hasRequiredReadable;
 function requireReadable() {
   if (hasRequiredReadable) return readable.exports;
   hasRequiredReadable = 1;
-  (function(module, exports) {
+  (function(module, exports$1) {
     var Stream = require$$0$1;
     if (process.env.READABLE_STREAM === "disable" && Stream) {
       module.exports = Stream;
-      exports = module.exports = Stream.Readable;
-      exports.Readable = Stream.Readable;
-      exports.Writable = Stream.Writable;
-      exports.Duplex = Stream.Duplex;
-      exports.Transform = Stream.Transform;
-      exports.PassThrough = Stream.PassThrough;
-      exports.Stream = Stream;
+      exports$1 = module.exports = Stream.Readable;
+      exports$1.Readable = Stream.Readable;
+      exports$1.Writable = Stream.Writable;
+      exports$1.Duplex = Stream.Duplex;
+      exports$1.Transform = Stream.Transform;
+      exports$1.PassThrough = Stream.PassThrough;
+      exports$1.Stream = Stream;
     } else {
-      exports = module.exports = require_stream_readable();
-      exports.Stream = Stream || exports;
-      exports.Readable = exports;
-      exports.Writable = require_stream_writable();
-      exports.Duplex = require_stream_duplex();
-      exports.Transform = require_stream_transform();
-      exports.PassThrough = require_stream_passthrough();
+      exports$1 = module.exports = require_stream_readable();
+      exports$1.Stream = Stream || exports$1;
+      exports$1.Readable = exports$1;
+      exports$1.Writable = require_stream_writable();
+      exports$1.Duplex = require_stream_duplex();
+      exports$1.Transform = require_stream_transform();
+      exports$1.PassThrough = require_stream_passthrough();
     }
   })(readable, readable.exports);
   return readable.exports;
@@ -3174,7 +3174,7 @@ var hasRequiredUtils;
 function requireUtils() {
   if (hasRequiredUtils) return utils;
   hasRequiredUtils = 1;
-  (function(exports) {
+  (function(exports$1) {
     var support2 = requireSupport();
     var base642 = requireBase64();
     var nodejsUtils2 = requireNodejsUtils();
@@ -3189,8 +3189,8 @@ function requireUtils() {
       }
       return stringToArrayLike(str, result);
     }
-    exports.newBlob = function(part, type) {
-      exports.checkSupport("blob");
+    exports$1.newBlob = function(part, type) {
+      exports$1.checkSupport("blob");
       try {
         return new Blob([part], {
           type
@@ -3278,7 +3278,7 @@ function requireUtils() {
       }
     };
     function arrayLikeToString(array) {
-      var chunk = 65536, type = exports.getTypeOf(array), canUseApply = true;
+      var chunk = 65536, type = exports$1.getTypeOf(array), canUseApply = true;
       if (type === "uint8array") {
         canUseApply = arrayToStringHelper.applyCanBeUsed.uint8array;
       } else if (type === "nodebuffer") {
@@ -3295,7 +3295,7 @@ function requireUtils() {
       }
       return arrayToStringHelper.stringifyByChar(array);
     }
-    exports.applyFromCharCode = arrayLikeToString;
+    exports$1.applyFromCharCode = arrayLikeToString;
     function arrayLikeToArrayLike(arrayFrom, arrayTo) {
       for (var i = 0; i < arrayFrom.length; i++) {
         arrayTo[i] = arrayFrom[i];
@@ -3372,19 +3372,19 @@ function requireUtils() {
       },
       "nodebuffer": identity
     };
-    exports.transformTo = function(outputType, input) {
+    exports$1.transformTo = function(outputType, input) {
       if (!input) {
         input = "";
       }
       if (!outputType) {
         return input;
       }
-      exports.checkSupport(outputType);
-      var inputType = exports.getTypeOf(input);
+      exports$1.checkSupport(outputType);
+      var inputType = exports$1.getTypeOf(input);
       var result = transform[inputType][outputType](input);
       return result;
     };
-    exports.resolve = function(path2) {
+    exports$1.resolve = function(path2) {
       var parts = path2.split("/");
       var result = [];
       for (var index = 0; index < parts.length; index++) {
@@ -3399,7 +3399,7 @@ function requireUtils() {
       }
       return result.join("/");
     };
-    exports.getTypeOf = function(input) {
+    exports$1.getTypeOf = function(input) {
       if (typeof input === "string") {
         return "string";
       }
@@ -3416,15 +3416,15 @@ function requireUtils() {
         return "arraybuffer";
       }
     };
-    exports.checkSupport = function(type) {
+    exports$1.checkSupport = function(type) {
       var supported = support2[type.toLowerCase()];
       if (!supported) {
         throw new Error(type + " is not supported by this platform");
       }
     };
-    exports.MAX_VALUE_16BITS = 65535;
-    exports.MAX_VALUE_32BITS = -1;
-    exports.pretty = function(str) {
+    exports$1.MAX_VALUE_16BITS = 65535;
+    exports$1.MAX_VALUE_32BITS = -1;
+    exports$1.pretty = function(str) {
       var res = "", code, i;
       for (i = 0; i < (str || "").length; i++) {
         code = str.charCodeAt(i);
@@ -3432,18 +3432,18 @@ function requireUtils() {
       }
       return res;
     };
-    exports.delay = function(callback, args, self2) {
+    exports$1.delay = function(callback, args, self2) {
       setImmediate(function() {
         callback.apply(self2 || null, args || []);
       });
     };
-    exports.inherits = function(ctor, superCtor) {
+    exports$1.inherits = function(ctor, superCtor) {
       var Obj = function() {
       };
       Obj.prototype = superCtor.prototype;
       ctor.prototype = new Obj();
     };
-    exports.extend = function() {
+    exports$1.extend = function() {
       var result = {}, i, attr;
       for (i = 0; i < arguments.length; i++) {
         for (attr in arguments[i]) {
@@ -3454,7 +3454,7 @@ function requireUtils() {
       }
       return result;
     };
-    exports.prepareContent = function(name, inputData, isBinary, isOptimizedBinaryString, isBase64) {
+    exports$1.prepareContent = function(name, inputData, isBinary, isOptimizedBinaryString, isBase64) {
       var promise = external2.Promise.resolve(inputData).then(function(data) {
         var isBlob = support2.blob && (data instanceof Blob || ["[object File]", "[object Blob]"].indexOf(Object.prototype.toString.call(data)) !== -1);
         if (isBlob && typeof FileReader !== "undefined") {
@@ -3473,14 +3473,14 @@ function requireUtils() {
         }
       });
       return promise.then(function(data) {
-        var dataType = exports.getTypeOf(data);
+        var dataType = exports$1.getTypeOf(data);
         if (!dataType) {
           return external2.Promise.reject(
             new Error("Can't read the data of '" + name + "'. Is it in a supported JavaScript type (String, Blob, ArrayBuffer, etc) ?")
           );
         }
         if (dataType === "arraybuffer") {
-          data = exports.transformTo("uint8array", data);
+          data = exports$1.transformTo("uint8array", data);
         } else if (dataType === "string") {
           if (isBase64) {
             data = base642.decode(data);
@@ -3727,7 +3727,7 @@ var hasRequiredUtf8;
 function requireUtf8() {
   if (hasRequiredUtf8) return utf8;
   hasRequiredUtf8 = 1;
-  (function(exports) {
+  (function(exports$1) {
     var utils2 = requireUtils();
     var support2 = requireSupport();
     var nodejsUtils2 = requireNodejsUtils();
@@ -3842,13 +3842,13 @@ function requireUtf8() {
       }
       return utils2.applyFromCharCode(utf16buf);
     };
-    exports.utf8encode = function utf8encode(str) {
+    exports$1.utf8encode = function utf8encode(str) {
       if (support2.nodebuffer) {
         return nodejsUtils2.newBufferFrom(str, "utf-8");
       }
       return string2buf(str);
     };
-    exports.utf8decode = function utf8decode(buf) {
+    exports$1.utf8decode = function utf8decode(buf) {
       if (support2.nodebuffer) {
         return utils2.transformTo("nodebuffer", buf).toString("utf-8");
       }
@@ -3885,31 +3885,31 @@ function requireUtf8() {
         }
       }
       this.push({
-        data: exports.utf8decode(usableData),
+        data: exports$1.utf8decode(usableData),
         meta: chunk.meta
       });
     };
     Utf8DecodeWorker.prototype.flush = function() {
       if (this.leftOver && this.leftOver.length) {
         this.push({
-          data: exports.utf8decode(this.leftOver),
+          data: exports$1.utf8decode(this.leftOver),
           meta: {}
         });
         this.leftOver = null;
       }
     };
-    exports.Utf8DecodeWorker = Utf8DecodeWorker;
+    exports$1.Utf8DecodeWorker = Utf8DecodeWorker;
     function Utf8EncodeWorker() {
       GenericWorker.call(this, "utf-8 encode");
     }
     utils2.inherits(Utf8EncodeWorker, GenericWorker);
     Utf8EncodeWorker.prototype.processChunk = function(chunk) {
       this.push({
-        data: exports.utf8encode(chunk.data),
+        data: exports$1.utf8encode(chunk.data),
         meta: chunk.meta
       });
     };
-    exports.Utf8EncodeWorker = Utf8EncodeWorker;
+    exports$1.Utf8EncodeWorker = Utf8EncodeWorker;
   })(utf8);
   return utf8;
 }
@@ -4489,12 +4489,12 @@ var hasRequiredCommon;
 function requireCommon() {
   if (hasRequiredCommon) return common;
   hasRequiredCommon = 1;
-  (function(exports) {
+  (function(exports$1) {
     var TYPED_OK = typeof Uint8Array !== "undefined" && typeof Uint16Array !== "undefined" && typeof Int32Array !== "undefined";
     function _has(obj, key) {
       return Object.prototype.hasOwnProperty.call(obj, key);
     }
-    exports.assign = function(obj) {
+    exports$1.assign = function(obj) {
       var sources = Array.prototype.slice.call(arguments, 1);
       while (sources.length) {
         var source = sources.shift();
@@ -4512,7 +4512,7 @@ function requireCommon() {
       }
       return obj;
     };
-    exports.shrinkBuf = function(buf, size) {
+    exports$1.shrinkBuf = function(buf, size) {
       if (buf.length === size) {
         return buf;
       }
@@ -4560,20 +4560,20 @@ function requireCommon() {
         return [].concat.apply([], chunks);
       }
     };
-    exports.setTyped = function(on) {
+    exports$1.setTyped = function(on) {
       if (on) {
-        exports.Buf8 = Uint8Array;
-        exports.Buf16 = Uint16Array;
-        exports.Buf32 = Int32Array;
-        exports.assign(exports, fnTyped);
+        exports$1.Buf8 = Uint8Array;
+        exports$1.Buf16 = Uint16Array;
+        exports$1.Buf32 = Int32Array;
+        exports$1.assign(exports$1, fnTyped);
       } else {
-        exports.Buf8 = Array;
-        exports.Buf16 = Array;
-        exports.Buf32 = Array;
-        exports.assign(exports, fnUntyped);
+        exports$1.Buf8 = Array;
+        exports$1.Buf16 = Array;
+        exports$1.Buf32 = Array;
+        exports$1.assign(exports$1, fnUntyped);
       }
     };
-    exports.setTyped(TYPED_OK);
+    exports$1.setTyped(TYPED_OK);
   })(common);
   return common;
 }
@@ -10866,9 +10866,9 @@ var hasRequiredDownloadChromeExtension;
 function requireDownloadChromeExtension() {
   if (hasRequiredDownloadChromeExtension) return downloadChromeExtension;
   hasRequiredDownloadChromeExtension = 1;
-  (function(exports) {
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.downloadChromeExtension = void 0;
+  (function(exports$1) {
+    Object.defineProperty(exports$1, "__esModule", { value: true });
+    exports$1.downloadChromeExtension = void 0;
     const fs$1 = fs;
     const path$1 = path;
     const utils_1 = requireUtils$1();
@@ -10904,7 +10904,7 @@ function requireDownloadChromeExtension() {
             throw err;
           }
           await new Promise((resolve) => setTimeout(resolve, 200));
-          return await (0, exports.downloadChromeExtension)(chromeStoreID, {
+          return await (0, exports$1.downloadChromeExtension)(chromeStoreID, {
             forceDownload,
             attempts: attempts - 1
           });
@@ -10912,7 +10912,7 @@ function requireDownloadChromeExtension() {
       }
       return extensionFolder;
     };
-    exports.downloadChromeExtension = downloadChromeExtension2;
+    exports$1.downloadChromeExtension = downloadChromeExtension2;
   })(downloadChromeExtension);
   return downloadChromeExtension;
 }

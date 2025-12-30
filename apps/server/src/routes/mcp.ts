@@ -89,6 +89,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 		}
 	})
 	.get("/servers/:id", async ({ params, set }) => {
+		const { id } = params;
 		
 		try {
 			const servers = await db

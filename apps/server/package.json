@@ -19,7 +19,7 @@
     "@openrouter/ai-sdk-provider": "^1.5.4",
     "@sinclair/typebox": "^0.34.0",
     "@trpc/server": "catalog:",
-    "ai": "^5.0.80",
+    "ai": "^6.0.0",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.44.7",
     "elysia": "catalog:",

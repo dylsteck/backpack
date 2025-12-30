@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { streamText, type CoreMessage } from "ai";
+import { streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { experimental_createMCPClient } from "@ai-sdk/mcp";
 import { db } from "@cortex/db";
@@ -11,7 +11,7 @@ export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 
 		try {
 			// Parse request body
-			const body = (await request.json()) as { messages?: CoreMessage[] };
+			const body = (await request.json()) as { messages?: ModelMessage[] };
 			const { messages } = body;
 
 			if (!messages || !Array.isArray(messages)) {
