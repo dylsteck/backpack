@@ -7,6 +7,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { mcpRoutes } from "./routes/mcp";
 import { chatRoutes } from "./routes/chat";
 import { tellerRoutes } from "./routes/teller";
+import { openrouterRoutes } from "./routes/openrouter";
 
 const port = process.env.PORT ?? 3000;
 
@@ -28,6 +29,7 @@ const app = new Elysia()
 	.use(mcpRoutes)
 	.use(chatRoutes)
 	.use(tellerRoutes)
+	.use(openrouterRoutes)
 	.all("/trpc/*", async (context) => {
 		const res = await fetchRequestHandler({
 			endpoint: "/trpc",
