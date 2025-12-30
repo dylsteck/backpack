@@ -54,18 +54,14 @@ function exposeBraveContext() {
 }
 const DEEPLINK_CALLBACK_CHANNEL = "deep-link-callback";
 function exposeDeepLinkContext() {
-  if (typeof window === "undefined") {
-    return;
-  }
-  const { contextBridge: contextBridge2, ipcRenderer: ipcRenderer2 } = window.require("electron");
-  contextBridge2.exposeInMainWorld("electronDeepLink", {
+  electron.contextBridge.exposeInMainWorld("electronDeepLink", {
     onCallback: (callback) => {
-      ipcRenderer2.on(DEEPLINK_CALLBACK_CHANNEL, (_event, data) => {
+      electron.ipcRenderer.on(DEEPLINK_CALLBACK_CHANNEL, (_event, data) => {
         callback(data);
       });
     },
     removeCallback: () => {
-      ipcRenderer2.removeAllListeners(DEEPLINK_CALLBACK_CHANNEL);
+      electron.ipcRenderer.removeAllListeners(DEEPLINK_CALLBACK_CHANNEL);
     }
   });
 }
