@@ -1,104 +1,14 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1761537367988,
-      "tag": "0000_deep_the_spike",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1761788267887,
-      "tag": "0001_heavy_makkari",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1761884044641,
-      "tag": "0002_white_lady_bullseye",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1762000000000,
-      "tag": "0003_rename_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1762100000000,
-      "tag": "0004_add_connection_type",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1762200000000,
-      "tag": "0005_add_timestamps_remove_domains",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1762300000000,
-      "tag": "0006_make_transport_nullable",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1762400000000,
-      "tag": "0007_add_credential_storage",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1762500000000,
-      "tag": "0008_add_encrypted_credentials",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1762600000000,
-      "tag": "0009_add_connection_metadata",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1762700000000,
-      "tag": "0010_create_items_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1762700000001,
-      "tag": "0011_add_stripe_app",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1762700000002,
-      "tag": "0012_add_teller_app",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1762700000003,
-      "tag": "0013_add_last_synced_at",
+      "version": "5",
+      "when": 1735849200000,
+      "tag": "0000_initial_schema",
       "breakpoints": true
     }
   ]
 }
+

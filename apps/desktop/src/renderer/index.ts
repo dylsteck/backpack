@@ -41,6 +41,12 @@ class App {
     // Initialize API with server port
     await initializeApi();
     
+    // If database path exists, ensure the server has initialized the database
+    const existingDbPath = store.databasePath.get();
+    if (existingDbPath && store.hasSeenOnboarding.get()) {
+      await this.ensureDatabaseInitialized(existingDbPath);
+    }
+    
     // Get app container
     const appContainer = getElementById<HTMLDivElement>('app');
     if (!appContainer) {
@@ -63,14 +69,35 @@ class App {
     // Start router
     router.start();
     
-    // Prefetch data in background
-    this.prefetchData();
+    // Prefetch data in background (only if onboarding is complete)
+    if (store.hasSeenOnboarding.get()) {
+      this.prefetchData();
+    }
     
     console.timeEnd('app-init');
     performance.mark(perfMarks.end);
     
     // Log performance metrics
     this.logPerformance();
+  }
+  
+  /**
+   * Ensure the database is initialized on the server
+   * This is needed on app restart when the database path is already set
+   */
+  private async ensureDatabaseInitialized(dbPath: string): Promise<void> {
+    try {
+      // Use the databaseApi if available (Electron)
+      if (typeof window !== 'undefined' && (window as any).databaseApi?.initDatabase) {
+        console.log('[App] Re-initializing database on server:', dbPath);
+        const result = await (window as any).databaseApi.initDatabase(dbPath);
+        if (!result.success) {
+          console.error('[App] Failed to initialize database:', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('[App] Error initializing database:', error);
+    }
   }
   
   private setupRoutes(): void {

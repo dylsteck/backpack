@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { db } from "@cortex/db";
+import { getDatabase } from "@cortex/db";
 import { apps, connections } from "@cortex/db/schema/mcp";
 import { eq, sql } from "drizzle-orm";
 
@@ -28,6 +28,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 		console.log("📡 Fetching MCP servers from database...");
 		
 		try {
+			const db = getDatabase();
 			const servers = await db.select().from(apps);
 			
 			console.log(`✅ Found ${servers.length} servers in database`);
@@ -60,6 +61,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 		console.log("📡 Fetching connections from database...");
 		
 		try {
+			const db = getDatabase();
 			const connectionList = await db
 				.select()
 				.from(connections);
@@ -67,7 +69,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 			console.log(`✅ Found ${connectionList.length} connections in database`);
 			
 			return {
-				connections: connectionList.map((conn) => ({
+				connections: connectionList.map((conn: typeof connections.$inferSelect) => ({
 					id: conn.id,
 					serverId: conn.serverId,
 					serverName: conn.serverName,
@@ -92,6 +94,7 @@ export const mcpRoutes = new Elysia({ prefix: "/api/apps" })
 		const { id } = params;
 		
 		try {
+			const db = getDatabase();
 			const servers = await db
 				.select()
 				.from(apps)

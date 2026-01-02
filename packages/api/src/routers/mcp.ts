@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, connections, apps, items } from "@cortex/db";
+import { getDatabase, connections, apps, items } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { encryptCredentials, decryptCredentials } from "../lib/credentials";
 import { TellerService } from "../services/teller";
@@ -24,11 +24,23 @@ const transportConfigSchema = z.object({
 	env: z.record(z.string(), z.string()).optional(),
 });
 
+// Helper to serialize connection objects (convert Date to ISO string for JSON serialization)
+function serializeConnection(conn: any) {
+	if (!conn) return null;
+	return {
+		...conn,
+		createdAt: conn.createdAt instanceof Date ? conn.createdAt.toISOString() : conn.createdAt,
+		updatedAt: conn.updatedAt instanceof Date ? conn.updatedAt.toISOString() : conn.updatedAt,
+		lastSyncedAt: conn.lastSyncedAt instanceof Date ? conn.lastSyncedAt.toISOString() : conn.lastSyncedAt,
+	};
+}
+
 export const appsRouter = router({
 	// Get all available servers from database
 	getAvailableServers: publicProcedure.query(async () => {
 		try {
 			console.log("[getAvailableServers] Fetching apps and connections from database");
+			const db = getDatabase();
 			const servers = await db.select().from(apps);
 			const connectionList = await db.select().from(connections);
 			
@@ -163,6 +175,7 @@ export const appsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			try {
+				const db = getDatabase();
 				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 				const appName = app[0]?.name || input.appId;
 
@@ -369,7 +382,7 @@ export const appsRouter = router({
 					}
 				}
 
-				return { success: true, connection: connectionResult };
+				return { success: true, connection: serializeConnection(connectionResult) };
 			} catch (error: any) {
 				console.error("Error in saveApiKey mutation:", error);
 				throw new Error(error?.message || "Failed to save API key");
@@ -391,6 +404,7 @@ export const appsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
+			const db = getDatabase();
 			const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 			const appName = app[0]?.name || input.appId;
 
@@ -423,7 +437,7 @@ export const appsRouter = router({
 					})
 					.where(eq(connections.serverId, input.appId))
 					.returning();
-				return { success: true, connection: updated };
+				return { success: true, connection: serializeConnection(updated) };
 			} else {
 				const id = crypto.randomUUID();
 				const [created] = await db
@@ -434,7 +448,7 @@ export const appsRouter = router({
 						createdAt: now,
 					})
 					.returning();
-				return { success: true, connection: created };
+				return { success: true, connection: serializeConnection(created) };
 			}
 		}),
 
@@ -450,6 +464,7 @@ export const appsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			try {
+				const db = getDatabase();
 				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 				const appName = app[0]?.name || input.appId;
 
@@ -650,7 +665,7 @@ export const appsRouter = router({
 					})();
 				}
 
-				return { success: true, connection: connectionResult };
+				return { success: true, connection: serializeConnection(connectionResult) };
 			} catch (error: any) {
 				console.error("Error in saveTellerToken mutation:", error);
 				throw new Error(error?.message || "Failed to save Teller token");
@@ -699,6 +714,7 @@ export const appsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			try {
+				const db = getDatabase();
 				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 				const appName = app[0]?.name || input.appId;
 
@@ -731,7 +747,7 @@ export const appsRouter = router({
 						})
 						.where(eq(connections.serverId, input.appId))
 						.returning();
-					return { success: true, connection: updated };
+					return { success: true, connection: serializeConnection(updated) };
 				} else {
 					const id = crypto.randomUUID();
 					const [created] = await db
@@ -742,7 +758,7 @@ export const appsRouter = router({
 							createdAt: now,
 						})
 						.returning();
-					return { success: true, connection: created };
+					return { success: true, connection: serializeConnection(created) };
 				}
 			} catch (error: any) {
 				console.error("Error in connectChrome mutation:", error);
@@ -760,6 +776,7 @@ export const appsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			try {
+				const db = getDatabase();
 				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
 				const appName = app[0]?.name || input.appId;
 
@@ -792,7 +809,7 @@ export const appsRouter = router({
 						})
 						.where(eq(connections.serverId, input.appId))
 						.returning();
-					return { success: true, connection: updated };
+					return { success: true, connection: serializeConnection(updated) };
 				} else {
 					const id = crypto.randomUUID();
 					const [created] = await db
@@ -803,7 +820,7 @@ export const appsRouter = router({
 							createdAt: now,
 						})
 						.returning();
-					return { success: true, connection: created };
+					return { success: true, connection: serializeConnection(created) };
 				}
 			} catch (error: any) {
 				console.error("Error in connectBrave mutation:", error);

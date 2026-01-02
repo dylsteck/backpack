@@ -25,6 +25,7 @@ export class Layout extends Component {
   private sidebarContainer: HTMLElement | null = null;
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
+  private lastViewWasOnboarding: boolean = false;
   
   async init(): Promise<void> {
     this.render();
@@ -34,9 +35,17 @@ export class Layout extends Component {
   }
   
   render(): void {
-    const isOnboarding = router.getCurrentPath() === '/onboarding';
+    const isOnboarding = router.getCurrentPath() === '/onboarding' || this.lastViewWasOnboarding;
     
-    if (isOnboarding) {
+    if (isOnboarding && this.lastViewWasOnboarding) {
+      // We're transitioning OUT of onboarding, update the flag
+      this.lastViewWasOnboarding = false;
+    }
+    
+    if (router.getCurrentPath() === '/onboarding') {
+      // Track that we're in onboarding
+      this.lastViewWasOnboarding = true;
+      
       // Onboarding has its own full-screen layout
       this.container.innerHTML = '';
       this.container.className = 'h-full w-full';
@@ -139,15 +148,16 @@ export class Layout extends Component {
       this.currentView = null;
     }
     
-    if (!this.contentContainer) {
-      this.render();
-    }
-    
     // Re-render layout if switching to/from onboarding
     const isOnboarding = view === 'onboarding';
-    const wasOnboarding = router.getCurrentPath() === '/onboarding' && view !== 'onboarding';
+    const wasOnboarding = this.lastViewWasOnboarding && view !== 'onboarding';
     
-    if (isOnboarding || wasOnboarding) {
+    // Track if current view is onboarding for next transition
+    this.lastViewWasOnboarding = isOnboarding;
+    
+    // Re-render layout when transitioning to/from onboarding
+    // or if contentContainer doesn't exist
+    if (!this.contentContainer || isOnboarding || wasOnboarding) {
       this.render();
     }
     

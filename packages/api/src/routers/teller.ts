@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, connections } from "@cortex/db";
+import { getDatabase, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { TellerService } from "../services/teller";
 import { decryptCredentials } from "../lib/credentials";
@@ -12,6 +12,7 @@ export const tellerRouter = router({
 	getAccounts: publicProcedure.query(async () => {
 		try {
 			// Find the connected Teller connection
+			const db = getDatabase();
 			const tellerConnections = await db
 				.select()
 				.from(connections)

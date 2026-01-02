@@ -1,15 +1,15 @@
 import { defineConfig } from "drizzle-kit";
-import dotenv from "dotenv";
+import path from "path";
+import os from "os";
 
-dotenv.config({
-	path: "../../apps/server/.env",
-});
+// Default database path for development
+const defaultDbPath = path.join(os.homedir(), "Library", "Application Support", "Cortex", "cortex.db");
 
 export default defineConfig({
 	schema: "./src/schema",
 	out: "./src/migrations",
-	dialect: "postgresql",
+	dialect: "sqlite",
 	dbCredentials: {
-		url: process.env.DATABASE_URL || "",
+		url: process.env.DATABASE_PATH || defaultDbPath,
 	},
 });

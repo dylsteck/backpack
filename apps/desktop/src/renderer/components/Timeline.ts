@@ -133,11 +133,8 @@ export class Timeline extends Component {
       const result = await fetchTimeline(25);
       actions.appendTimelineItems(result.items);
       actions.setTimelineCursor(result.nextCursor || null);
-      // Explicitly render items after adding them to ensure skeleton is cleared
-      // The subscription should handle this, but this ensures it happens
-      if (result.items.length > 0) {
-        this.renderItems();
-      }
+      // Always render items after loading - this will show empty state if no items
+      this.renderItems();
     } catch {
       if (this.itemsContainer) {
         this.itemsContainer.innerHTML = `
@@ -597,19 +594,44 @@ export class Timeline extends Component {
   private renderEmptyState(hasFiltered: boolean): void {
     if (!this.itemsContainer) return;
     
-    const message = hasFiltered
-      ? 'No items match the selected filters.'
-      : 'No content available';
-    
-    this.itemsContainer.innerHTML = `
-      <div class="flex flex-col items-center justify-center py-12 min-h-[60vh]">
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40 mb-4">
-          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-        </svg>
-        <p class="text-muted-foreground font-mono uppercase tracking-wider text-sm">${message}</p>
-      </div>
-    `;
+    if (hasFiltered) {
+      this.itemsContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 min-h-[60vh]">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40 mb-4">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          <p class="text-muted-foreground font-mono uppercase tracking-wider text-sm">No items match the selected filters</p>
+        </div>
+      `;
+    } else {
+      this.itemsContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 min-h-[60vh]">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40 mb-6">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          <h3 class="text-lg font-mono uppercase tracking-wider mb-2 text-foreground">Your timeline is empty</h3>
+          <p class="text-muted-foreground text-sm text-center max-w-md mb-6">
+            Connect your apps to start seeing your activity here.
+          </p>
+          <a href="/apps" class="px-6 py-2.5 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs hover:opacity-90 transition-opacity" data-link>
+            Connect Apps
+          </a>
+        </div>
+      `;
+      
+      // Set up link handler
+      const link = this.itemsContainer.querySelector('[data-link]');
+      if (link) {
+        this.addListener(link as HTMLElement, 'click', (e) => {
+          e.preventDefault();
+          import('../router').then(({ router }) => {
+            router.navigate('/apps');
+          });
+        });
+      }
+    }
   }
   
   private renderDateSection(date: Date, items: TimelineItem[]): HTMLElement {

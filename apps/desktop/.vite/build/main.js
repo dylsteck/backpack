@@ -455,11 +455,127 @@ function addBraveEventListeners() {
     }
   });
 }
+const DATABASE_SELECT_FOLDER_CHANNEL = "database:select-folder";
+const DATABASE_GET_PATH_CHANNEL = "database:get-path";
+const DATABASE_SET_PATH_CHANNEL = "database:set-path";
+const DATABASE_GET_DEFAULT_PATH_CHANNEL = "database:get-default-path";
+const DATABASE_INIT_CHANNEL = "database:init";
+let databasePath = null;
+let serverPort$1 = 3e3;
+const CONFIG_FILE = "cortex-config.json";
+function getConfigPath() {
+  return path__namespace.join(require$$0.app.getPath("userData"), CONFIG_FILE);
+}
+function loadConfig() {
+  try {
+    const configPath = getConfigPath();
+    if (fs__namespace.existsSync(configPath)) {
+      const data = fs__namespace.readFileSync(configPath, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Failed to load config:", error);
+  }
+  return {};
+}
+function saveConfig(config) {
+  try {
+    const configPath = getConfigPath();
+    fs__namespace.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  } catch (error) {
+    console.error("Failed to save config:", error);
+  }
+}
+function getDefaultDatabasePath() {
+  return path__namespace.join(require$$0.app.getPath("userData"), "cortex.db");
+}
+function getDatabasePath() {
+  if (databasePath) return databasePath;
+  const config = loadConfig();
+  if (config.databasePath) {
+    databasePath = config.databasePath;
+    return databasePath;
+  }
+  return null;
+}
+function setDatabasePath(newPath) {
+  databasePath = newPath;
+  saveConfig({ databasePath: newPath });
+}
+function setServerPort(port) {
+  serverPort$1 = port;
+}
+function addDatabaseEventListeners() {
+  require$$0.ipcMain.handle(DATABASE_GET_DEFAULT_PATH_CHANNEL, () => {
+    return getDefaultDatabasePath();
+  });
+  require$$0.ipcMain.handle(DATABASE_GET_PATH_CHANNEL, () => {
+    return getDatabasePath();
+  });
+  require$$0.ipcMain.handle(DATABASE_SET_PATH_CHANNEL, (_event, newPath) => {
+    setDatabasePath(newPath);
+    return { success: true };
+  });
+  require$$0.ipcMain.handle(DATABASE_SELECT_FOLDER_CHANNEL, async () => {
+    const result = await require$$0.dialog.showOpenDialog({
+      title: "Choose Data Location",
+      defaultPath: require$$0.app.getPath("documents"),
+      properties: ["openDirectory", "createDirectory"],
+      buttonLabel: "Select Folder"
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+  require$$0.ipcMain.handle(DATABASE_INIT_CHANNEL, async (_event, dbPath) => {
+    try {
+      const dir = path__namespace.dirname(dbPath);
+      if (!fs__namespace.existsSync(dir)) {
+        fs__namespace.mkdirSync(dir, { recursive: true });
+      }
+      const response = await fetch(`http://127.0.0.1:${serverPort$1}/api/init-database`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ path: dbPath })
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
+      }
+      const result = await response.json();
+      if (result.success) {
+        setDatabasePath(dbPath);
+        return { success: true, path: dbPath };
+      } else {
+        throw new Error("Server failed to initialize database");
+      }
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+      return { success: false, error: String(error) };
+    }
+  });
+}
+const SHELL_OPEN_EXTERNAL_CHANNEL = "shell:open-external";
+function addShellEventListeners() {
+  require$$0.ipcMain.handle(SHELL_OPEN_EXTERNAL_CHANNEL, async (_event, url) => {
+    try {
+      await require$$0.shell.openExternal(url);
+    } catch (error) {
+      console.error("[Shell] Failed to open external URL:", error);
+      throw error;
+    }
+  });
+}
 function registerListeners(mainWindow2) {
   addWindowEventListeners(mainWindow2);
   addThemeEventListeners();
   addChromeEventListeners();
   addBraveEventListeners();
+  addDatabaseEventListeners();
+  addShellEventListeners();
 }
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var dist$1 = {};
@@ -11058,10 +11174,12 @@ async function startServer() {
   console.log(`Starting server on port ${port}...`);
   console.log(`Server path: ${serverPath}`);
   return new Promise((resolve, reject) => {
+    const dbPath = getDatabasePath() || getDefaultDatabasePath();
     const env = {
       ...process.env,
       PORT: port.toString(),
-      NODE_ENV: inDevelopment ? "development" : "production"
+      NODE_ENV: inDevelopment ? "development" : "production",
+      DATABASE_PATH: dbPath
     };
     if (require$$0.app.isPackaged) {
       serverProcess = child_process.spawn(command, [], {
@@ -11233,6 +11351,7 @@ if (!gotTheLock) {
     }
     try {
       serverPort = await startServer();
+      setServerPort(serverPort);
       console.log(`API server running on http://127.0.0.1:${serverPort}`);
     } catch (error) {
       console.error("Failed to start API server:", error);

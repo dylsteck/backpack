@@ -1,4 +1,4 @@
-import { db, connections, items } from "@cortex/db";
+import { getDatabase, connections, items } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { decryptCredentials } from "../../lib/credentials";
 import { FarcasterService } from "../farcaster/service";
@@ -113,6 +113,7 @@ export class SyncService {
 				}
 
 				// Save new casts
+				const db = getDatabase();
 				for (const cast of newCastsInPage) {
 					try {
 						const itemId = `farcaster_${cast.hash}`;
@@ -152,7 +153,8 @@ export class SyncService {
 			}
 
 			// Update lastSyncedAt
-			await db.update(connections)
+			const dbForUpdate = getDatabase();
+			await dbForUpdate.update(connections)
 				.set({ 
 					lastSyncedAt: new Date(),
 					updatedAt: new Date(),
@@ -239,11 +241,12 @@ export class SyncService {
 					}
 
 					// Save new transactions
+					const dbTeller = getDatabase();
 					for (const transaction of newTransactionsInPage) {
 						try {
 							const itemId = `teller_${transaction.id}`;
 							
-							await db.insert(items).values({
+							await dbTeller.insert(items).values({
 								id: itemId,
 								source: "teller",
 								type: "transaction",
@@ -284,7 +287,8 @@ export class SyncService {
 			}
 
 			// Update lastSyncedAt
-			await db.update(connections)
+			const dbTellerUpdate = getDatabase();
+			await dbTellerUpdate.update(connections)
 				.set({ 
 					lastSyncedAt: new Date(),
 					updatedAt: new Date(),
@@ -311,6 +315,7 @@ export class SyncService {
 	 * Sync a specific app by appId
 	 */
 	async syncApp(appId: string): Promise<SyncResult> {
+		const db = getDatabase();
 		const connection = await db.select()
 			.from(connections)
 			.where(eq(connections.serverId, appId))
@@ -351,6 +356,7 @@ export class SyncService {
 
 		this.isSyncing = true;
 		try {
+			const db = getDatabase();
 			const allConnections = await db.select()
 				.from(connections)
 				.where(eq(connections.status, "connected"));

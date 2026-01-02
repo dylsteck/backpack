@@ -2,8 +2,7 @@ import { Elysia } from "elysia";
 import { streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { experimental_createMCPClient } from "@ai-sdk/mcp";
-import { db } from "@cortex/db";
-import { connections } from "@cortex/db";
+import { getDatabase, connections } from "@cortex/db";
 
 export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 	.post("/", async ({ request }) => {
@@ -19,6 +18,7 @@ export const chatRoutes = new Elysia({ prefix: "/api/chat" })
 			}
 
 			// Fetch all MCP connections
+			const db = getDatabase();
 			const connectionList = await db
 				.select()
 				.from(connections);

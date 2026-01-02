@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { db, connections } from "@cortex/db";
+import { getDatabase, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
 import { farcasterRouter } from "./farcaster";
 import { tellerRouter } from "./teller";
@@ -26,6 +26,7 @@ export const timelineRouter = router({
 		)
 		.query(async ({ input }) => {
 			try {
+				const db = getDatabase();
 				const allConnections = await db.select().from(connections);
 				const items: TimelineItem[] = [];
 				let nextCursor: string | undefined = undefined;

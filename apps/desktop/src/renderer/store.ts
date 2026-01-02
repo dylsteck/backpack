@@ -155,11 +155,25 @@ export const store = {
   hasSeenOnboarding: new Observable<boolean>(
     localStorage.getItem('hasSeenOnboarding') === 'true'
   ),
+  
+  // Database path
+  databasePath: new Observable<string | null>(
+    localStorage.getItem('databasePath')
+  ),
 };
 
 // Persist hasSeenOnboarding to localStorage
 store.hasSeenOnboarding.subscribe((value) => {
   localStorage.setItem('hasSeenOnboarding', value.toString());
+});
+
+// Persist databasePath to localStorage
+store.databasePath.subscribe((value) => {
+  if (value) {
+    localStorage.setItem('databasePath', value);
+  } else {
+    localStorage.removeItem('databasePath');
+  }
 });
 
 // Initialize theme from system/localStorage
@@ -267,6 +281,11 @@ export const actions = {
   
   setBraveHistory(entries: BrowserHistoryEntry[]): void {
     store.braveHistory.set(entries);
+  },
+  
+  // Database path
+  setDatabasePath(path: string): void {
+    store.databasePath.set(path);
   },
 };
 

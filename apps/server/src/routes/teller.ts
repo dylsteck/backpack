@@ -67,8 +67,11 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Connect Bank Account - Teller</title>
+	<title>Connect Bank Account - Cortex</title>
 	<script src="https://cdn.teller.io/connect/connect.js"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	<style>
 		* {
 			margin: 0;
@@ -76,92 +79,135 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 			box-sizing: border-box;
 		}
 		body {
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			font-family: 'JetBrains Mono', monospace;
+			background: #0a0a0a;
 			min-height: 100vh;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			padding: 20px;
+			color: #fafafa;
 		}
 		.container {
-			background: white;
-			border-radius: 12px;
-			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-			max-width: 500px;
+			background: #141414;
+			border: 1px solid rgba(212, 165, 116, 0.2);
+			border-radius: 16px;
+			max-width: 460px;
 			width: 100%;
-			padding: 40px;
+			padding: 48px 40px;
 			text-align: center;
 		}
 		.logo {
-			width: 60px;
-			height: 60px;
+			width: 72px;
+			height: 72px;
 			background: #1a1a1a;
-			border-radius: 12px;
+			border: 2px solid rgba(212, 165, 116, 0.3);
+			border-radius: 16px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			margin: 0 auto 20px;
-			font-size: 32px;
-			font-weight: bold;
-			color: white;
+			margin: 0 auto 24px;
+		}
+		.logo svg {
+			width: 36px;
+			height: 36px;
+			color: #d4a574;
 		}
 		h1 {
-			color: #1a1a1a;
-			margin-bottom: 10px;
-			font-size: 24px;
+			color: #d4a574;
+			margin-bottom: 12px;
+			font-size: 20px;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.15em;
 		}
 		p {
-			color: #666;
-			margin-bottom: 30px;
-			line-height: 1.6;
+			color: #737373;
+			margin-bottom: 32px;
+			line-height: 1.7;
+			font-size: 13px;
 		}
 		#teller-container {
-			margin: 30px 0;
-			min-height: 200px;
+			margin: 32px 0;
+			min-height: 100px;
 		}
 		.error {
-			background: #fee;
-			border: 1px solid #fcc;
-			color: #c33;
-			padding: 15px;
+			background: rgba(239, 68, 68, 0.1);
+			border: 1px solid rgba(239, 68, 68, 0.3);
+			color: #f87171;
+			padding: 16px;
 			border-radius: 8px;
 			margin: 20px 0;
+			font-size: 13px;
 		}
 		.success {
-			background: #efe;
-			border: 1px solid #cfc;
-			color: #3c3;
-			padding: 15px;
+			background: rgba(34, 197, 94, 0.1);
+			border: 1px solid rgba(34, 197, 94, 0.3);
+			color: #4ade80;
+			padding: 16px;
 			border-radius: 8px;
 			margin: 20px 0;
+			font-size: 13px;
 		}
 		#error-container, #success-container {
 			display: none;
 		}
 		#fallback {
 			display: none;
-			margin-top: 20px;
-			padding-top: 20px;
-			border-top: 1px solid #eee;
+			margin-top: 24px;
+			padding-top: 24px;
+			border-top: 1px solid rgba(212, 165, 116, 0.1);
+		}
+		#fallback p {
+			margin-bottom: 0;
 		}
 		#fallback a {
-			color: #667eea;
+			color: #d4a574;
 			text-decoration: none;
 			font-weight: 500;
+			transition: opacity 0.2s;
 		}
 		#fallback a:hover {
-			text-decoration: underline;
+			opacity: 0.8;
+		}
+		.spinner {
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 2px solid rgba(212, 165, 116, 0.2);
+			border-top-color: #d4a574;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			margin-bottom: 16px;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.loading-text {
+			color: #737373;
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
 		}
 	</style>
 </head>
 <body>
 	<div class="container">
-		<div class="logo">T</div>
-		<h1>Connect Your Bank Account</h1>
+		<div class="logo">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+				<rect width="7" height="7" x="3" y="3" rx="1"/>
+				<rect width="7" height="7" x="14" y="3" rx="1"/>
+				<rect width="7" height="7" x="14" y="14" rx="1"/>
+				<rect width="7" height="7" x="3" y="14" rx="1"/>
+			</svg>
+		</div>
+		<h1>Connect Bank Account</h1>
 		<p>Securely connect your bank account through Teller. You'll be guided through selecting your bank and authenticating.</p>
 		
-		<div id="teller-container"></div>
+		<div id="teller-container">
+			<div class="spinner"></div>
+			<div class="loading-text">Initializing...</div>
+		</div>
 		<div id="error-container"></div>
 		<div id="success-container"></div>
 		

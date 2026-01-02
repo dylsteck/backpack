@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../index";
 import { SyncService } from "../services/sync/service";
-import { db, connections } from "@cortex/db";
+import { getDatabase, connections } from "@cortex/db";
 import { eq } from "drizzle-orm";
 
 const syncService = new SyncService();
@@ -44,6 +44,7 @@ export const syncRouter = router({
 	 */
 	getSyncStatus: publicProcedure.query(async () => {
 		try {
+			const db = getDatabase();
 			const allConnections = await db.select({
 				id: connections.id,
 				serverId: connections.serverId,

@@ -10,6 +10,31 @@ import { fetchAppsWithCache, fetchApps, getAppById, api, appsCache, fetchTimelin
 import { createElement, clearChildren, escapeHtml, formatTime, formatDate } from '../utils/dom';
 import type { AppServer, TimelineItem, SourceType, FarcasterCast, BrowserHistoryEntry, TellerTransaction } from '../types';
 
+// Declare window interfaces for Electron APIs
+declare global {
+  interface Window {
+    electronDeepLink?: {
+      onCallback: (callback: (data: DeepLinkCallbackData) => void) => void;
+      removeCallback: () => void;
+    };
+    serverApi?: {
+      getPort: () => Promise<number | null>;
+    };
+    shellApi?: {
+      openExternal: (url: string) => Promise<void>;
+    };
+  }
+}
+
+interface DeepLinkCallbackData {
+  success: boolean;
+  sessionToken: string | null;
+  accessToken?: string | null;
+  enrollmentId?: string | null;
+  institutionName?: string | null;
+  error?: string | null;
+}
+
 type TabType = 'settings' | 'data';
 
 export class AppDetail extends Component {
@@ -1124,13 +1149,32 @@ export class AppDetail extends Component {
           this.render();
         }
       } else if (this.app.oauth) {
-        // TODO: Implement OAuth flow
-        console.log('OAuth connection not yet implemented');
-        alert('OAuth connections are not yet implemented');
-        if (connectButton) {
-          connectButton.textContent = originalButtonText;
-          connectButton.removeAttribute('disabled');
-          (connectButton as HTMLButtonElement).disabled = false;
+        // Handle OAuth flow for supported apps
+        if (this.app.id === 'teller') {
+          // Teller has a special OAuth flow
+          await this.handleTellerOAuth(connectButton, originalButtonText);
+        } else {
+          // Other OAuth apps - redirect to their OAuth URL
+          const config = this.app.config as { url?: string } | undefined;
+          if (config?.url) {
+            // Open OAuth URL in browser
+            if (window.shellApi) {
+              await window.shellApi.openExternal(config.url);
+            } else {
+              window.open(config.url, '_blank');
+            }
+            
+            // Show info message
+            alert(`Please complete the OAuth flow in your browser for ${this.app.name}. The app will update when authentication is complete.`);
+          } else {
+            alert(`OAuth setup for ${this.app.name} is not yet configured.`);
+          }
+          
+          if (connectButton) {
+            connectButton.textContent = originalButtonText;
+            connectButton.removeAttribute('disabled');
+            (connectButton as HTMLButtonElement).disabled = false;
+          }
         }
       } else {
         console.log('Unknown connection type:', this.app.connectionType);
@@ -1150,6 +1194,87 @@ export class AppDetail extends Component {
       if (this.app) {
         this.setBackfillStatus('error', errorMessage);
       }
+      
+      if (connectButton) {
+        connectButton.textContent = originalButtonText;
+        connectButton.removeAttribute('disabled');
+        (connectButton as HTMLButtonElement).disabled = false;
+      }
+    }
+  }
+  
+  private async handleTellerOAuth(connectButton: HTMLElement | null, originalButtonText: string): Promise<void> {
+    if (!this.app) return;
+    
+    // Generate session token
+    const sessionToken = crypto.randomUUID();
+    
+    // Get server port
+    let serverPort = 3000;
+    if (window.serverApi) {
+      const port = await window.serverApi.getPort();
+      if (port) serverPort = port;
+    }
+    
+    // Set up deep link callback listener
+    const callbackPromise = new Promise<DeepLinkCallbackData>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        window.electronDeepLink?.removeCallback();
+        reject(new Error('OAuth timeout - please try again'));
+      }, 5 * 60 * 1000); // 5 minute timeout
+      
+      window.electronDeepLink?.onCallback((data: DeepLinkCallbackData) => {
+        if (data.sessionToken === sessionToken) {
+          clearTimeout(timeout);
+          window.electronDeepLink?.removeCallback();
+          resolve(data);
+        }
+      });
+    });
+    
+    // Open Teller Connect URL
+    const tellerConnectUrl = `http://localhost:${serverPort}/teller/connect?token=${sessionToken}`;
+    
+    if (window.shellApi) {
+      await window.shellApi.openExternal(tellerConnectUrl);
+    } else {
+      window.open(tellerConnectUrl, '_blank');
+    }
+    
+    if (connectButton) {
+      connectButton.textContent = 'Waiting for authorization...';
+    }
+    
+    try {
+      // Wait for callback
+      const callbackData = await callbackPromise;
+      
+      if (callbackData.success && callbackData.accessToken) {
+        // Save the Teller token
+        await api.apps.saveTellerToken.mutate({
+          appId: 'teller',
+          accessToken: callbackData.accessToken,
+          enrollmentId: callbackData.enrollmentId || undefined,
+          institutionName: callbackData.institutionName || undefined,
+        });
+        
+        // Refresh apps to get updated connection status
+        appsCache.clear();
+        await fetchApps();
+        this.app = getAppById(this.app.id) || null;
+        
+        // Set backfill status
+        this.setBackfillStatus('running', 'Syncing transaction history...');
+        
+        // Re-render
+        this.render();
+      } else {
+        throw new Error(callbackData.error || 'OAuth failed');
+      }
+    } catch (error) {
+      console.error('[AppDetail] Teller OAuth error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to connect Teller: ${errorMessage}`);
       
       if (connectButton) {
         connectButton.textContent = originalButtonText;

@@ -3,6 +3,7 @@ import { spawn, ChildProcess } from "child_process";
 import * as net from "net";
 import * as fs from "fs";
 import registerListeners from "./helpers/ipc/listeners-register";
+import { getDatabasePath, getDefaultDatabasePath, setServerPort } from "./helpers/ipc/database/database-listeners";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
 import path from "path";
@@ -105,10 +106,14 @@ async function startServer(): Promise<number> {
   console.log(`Server path: ${serverPath}`);
   
   return new Promise((resolve, reject) => {
+    // Get the database path (either user-configured or default)
+    const dbPath = getDatabasePath() || getDefaultDatabasePath();
+    
     const env = {
       ...process.env,
       PORT: port.toString(),
       NODE_ENV: inDevelopment ? "development" : "production",
+      DATABASE_PATH: dbPath,
     };
     
     if (app.isPackaged) {
@@ -343,6 +348,8 @@ if (!gotTheLock) {
     // Start server before creating window
     try {
       serverPort = await startServer();
+      // Let database listeners know the server port for API calls
+      setServerPort(serverPort);
       console.log(`API server running on http://127.0.0.1:${serverPort}`);
     } catch (error) {
       console.error("Failed to start API server:", error);

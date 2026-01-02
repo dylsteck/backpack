@@ -80,6 +80,29 @@ function exposeServerContext() {
   };
   electron.contextBridge.exposeInMainWorld("serverApi", serverContext);
 }
+const DATABASE_SELECT_FOLDER_CHANNEL = "database:select-folder";
+const DATABASE_GET_PATH_CHANNEL = "database:get-path";
+const DATABASE_SET_PATH_CHANNEL = "database:set-path";
+const DATABASE_GET_DEFAULT_PATH_CHANNEL = "database:get-default-path";
+const DATABASE_INIT_CHANNEL = "database:init";
+function exposeDatabaseContext() {
+  const databaseContext = {
+    selectFolder: () => electron.ipcRenderer.invoke(DATABASE_SELECT_FOLDER_CHANNEL),
+    getPath: () => electron.ipcRenderer.invoke(DATABASE_GET_PATH_CHANNEL),
+    setPath: (path) => electron.ipcRenderer.invoke(DATABASE_SET_PATH_CHANNEL, path),
+    getDefaultPath: () => electron.ipcRenderer.invoke(DATABASE_GET_DEFAULT_PATH_CHANNEL),
+    initDatabase: (path) => electron.ipcRenderer.invoke(DATABASE_INIT_CHANNEL, path)
+  };
+  electron.contextBridge.exposeInMainWorld("databaseApi", databaseContext);
+}
+const SHELL_OPEN_EXTERNAL_CHANNEL = "shell:open-external";
+function exposeShellContext() {
+  electron.contextBridge.exposeInMainWorld("shellApi", {
+    openExternal: (url) => {
+      return electron.ipcRenderer.invoke(SHELL_OPEN_EXTERNAL_CHANNEL, url);
+    }
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
@@ -87,5 +110,7 @@ function exposeContexts() {
   exposeBraveContext();
   exposeDeepLinkContext();
   exposeServerContext();
+  exposeDatabaseContext();
+  exposeShellContext();
 }
 exposeContexts();

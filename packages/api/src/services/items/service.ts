@@ -1,4 +1,4 @@
-import { db, items } from "@cortex/db";
+import { getDatabase, items } from "@cortex/db";
 import { eq, and, desc, lt, gte } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
@@ -18,6 +18,7 @@ export interface GetItemsParams {
 
 export class ItemsService {
 	async createItem(params: CreateItemParams): Promise<{ id: string }> {
+		const db = getDatabase();
 		const id = crypto.randomUUID();
 		const now = new Date();
 
@@ -44,6 +45,7 @@ export class ItemsService {
 		}>;
 		nextCursor?: string;
 	}> {
+		const db = getDatabase();
 		const limit = params.limit || 25;
 		let query = db.select().from(items);
 
@@ -89,6 +91,7 @@ export class ItemsService {
 	}
 
 	async getCount(params: { source?: string; type?: string } = {}): Promise<number> {
+		const db = getDatabase();
 		let query = db.select({ count: sql<number>`count(*)` }).from(items);
 
 		const conditions = [];
