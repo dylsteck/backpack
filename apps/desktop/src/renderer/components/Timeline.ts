@@ -9,6 +9,7 @@ import { store, actions } from '../store';
 import { fetchTimeline, loadMoreTimeline, fetchAppsWithCache } from '../api';
 import { createElement, clearChildren, formatTime, formatDate, formatFullDate, groupByDate, escapeHtml } from '../utils/dom';
 import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
+import { DetailModal } from './DetailModal';
 
 export class Timeline extends Component {
   private itemsContainer: HTMLElement | null = null;
@@ -24,6 +25,12 @@ export class Timeline extends Component {
   private lastRefreshTime = 0;
   private pullThreshold = 60; // Minimum pull distance in pixels
   private refreshDebounceMs = 500; // Minimum time between refreshes
+  
+  // Bottom input bar state
+  private inputMode: 'note' | 'chat' = 'note';
+  private inputContainer: HTMLElement | null = null;
+  private chatPanelOpen = false;
+  private chatPanelContainer: HTMLElement | null = null;
   
   async init(): Promise<void> {
     this.render();
@@ -76,9 +83,19 @@ export class Timeline extends Component {
     this.container.innerHTML = '';
     // Don't override container className - it has overflow-y-auto from Layout
     
+    // Main layout container - flex column to position input at bottom
+    const mainContainer = createElement('div', {
+      className: 'flex flex-col h-full relative',
+    });
+    
+    // Scrollable timeline area
+    const scrollArea = createElement('div', {
+      className: 'flex-1 overflow-y-auto min-h-0',
+    });
+    
     // Create inner wrapper for timeline content
     const wrapper = createElement('div', {
-      className: 'max-w-3xl mx-auto pb-3 px-3 space-y-6 relative w-full',
+      className: 'max-w-3xl mx-auto pb-24 px-3 space-y-6 relative w-full',
     });
     
     // Vertical timeline line
@@ -106,7 +123,205 @@ export class Timeline extends Component {
     });
     wrapper.appendChild(loadingIndicator);
     
-    this.container.appendChild(wrapper);
+    scrollArea.appendChild(wrapper);
+    mainContainer.appendChild(scrollArea);
+    
+    // Chat panel container (for slide-up panel)
+    this.chatPanelContainer = createElement('div', {
+      className: 'chat-panel-container absolute inset-0 pointer-events-none z-40',
+    });
+    mainContainer.appendChild(this.chatPanelContainer);
+    
+    // Bottom input bar
+    this.inputContainer = this.createBottomInputBar();
+    mainContainer.appendChild(this.inputContainer);
+    
+    this.container.appendChild(mainContainer);
+  }
+  
+  private createBottomInputBar(): HTMLElement {
+    const inputBar = createElement('div', {
+      className: 'bottom-input-bar absolute bottom-0 left-0 right-0 bg-background border-t border-border z-30',
+    });
+    
+    const innerWrapper = createElement('div', {
+      className: 'max-w-3xl mx-auto px-3 py-3',
+    });
+    
+    const inputWrapper = createElement('div', {
+      className: 'flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2',
+    });
+    
+    // Mode toggle buttons
+    const toggleContainer = createElement('div', {
+      className: 'flex items-center gap-1 border-r border-border pr-2',
+    });
+    
+    // Chat toggle button
+    const chatToggle = createElement('button', {
+      className: `mode-toggle p-1.5 rounded transition-colors ${this.inputMode === 'chat' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`,
+      innerHTML: `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
+        </svg>
+      `,
+      attributes: { title: 'Ask AI' },
+    });
+    this.addListener(chatToggle, 'click', () => this.setInputMode('chat'));
+    toggleContainer.appendChild(chatToggle);
+    
+    // Note toggle button
+    const noteToggle = createElement('button', {
+      className: `mode-toggle p-1.5 rounded transition-colors ${this.inputMode === 'note' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`,
+      innerHTML: `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+      `,
+      attributes: { title: 'Write a note' },
+    });
+    this.addListener(noteToggle, 'click', () => this.setInputMode('note'));
+    toggleContainer.appendChild(noteToggle);
+    
+    inputWrapper.appendChild(toggleContainer);
+    
+    // Input field - refined textarea
+    const input = createElement('textarea', {
+      className: 'flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground font-mono text-sm resize-none py-1 min-h-[24px] max-h-32 custom-scrollbar',
+      attributes: {
+        placeholder: this.inputMode === 'note' ? 'Write something new...' : 'Ask a question...',
+        id: 'timeline-input',
+        rows: '1',
+      },
+    }) as HTMLTextAreaElement;
+    
+    // Auto-resize textarea
+    this.addListener(input, 'input', () => {
+      input.style.height = 'auto';
+      input.style.height = (input.scrollHeight) + 'px';
+    });
+    
+    this.addListener(input, 'keydown', (e: KeyboardEvent) => {
+      // Enter without Option/Alt submits
+      if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        this.handleInputSubmit(input.value);
+        input.value = '';
+        input.style.height = 'auto'; // Reset height
+      }
+      // Option + Enter (Alt+Enter) adds a newline by default in textarea
+    });
+    
+    inputWrapper.appendChild(input);
+    
+    // Hint text
+    const hint = createElement('span', {
+      className: 'text-xs text-muted-foreground/50 font-mono whitespace-nowrap',
+      textContent: 'Option + ⏎ for newline',
+    });
+    inputWrapper.appendChild(hint);
+    
+    innerWrapper.appendChild(inputWrapper);
+    inputBar.appendChild(innerWrapper);
+    
+    return inputBar;
+  }
+  
+  private setInputMode(mode: 'note' | 'chat'): void {
+    this.inputMode = mode;
+    
+    // Update toggle button states
+    const toggles = this.inputContainer?.querySelectorAll('.mode-toggle');
+    toggles?.forEach((toggle, index) => {
+      const isActive = (index === 0 && mode === 'chat') || (index === 1 && mode === 'note');
+      toggle.className = `mode-toggle p-1.5 rounded transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`;
+    });
+    
+    // Update placeholder
+    const input = this.inputContainer?.querySelector('#timeline-input') as HTMLInputElement;
+    if (input) {
+      input.placeholder = mode === 'note' ? 'Write something new...' : 'Ask a question...';
+    }
+    
+    // If switching to chat mode, just update the UI
+    // The panel will only open once a message is sent
+  }
+  
+  private async handleInputSubmit(value: string): Promise<void> {
+    if (!value.trim()) return;
+    
+    if (this.inputMode === 'note') {
+      await this.createNote(value.trim());
+    } else {
+      // Chat mode - open panel and send message
+      this.openChatPanel(value.trim());
+    }
+  }
+  
+  private async createNote(body: string): Promise<void> {
+    try {
+      const { api } = await import('../api');
+      const result = await api.notes.create.mutate({ body });
+      
+      if (result.success && result.note) {
+        // Add the note to timeline
+        const noteItem: TimelineItem = {
+          id: result.note.id,
+          timestamp: new Date(result.note.timestamp),
+          source: 'user' as SourceType,
+          type: 'note',
+          data: result.note.data,
+        };
+        
+        // Prepend to timeline items
+        const currentItems = store.timelineItems.get();
+        actions.setTimelineItems([noteItem, ...currentItems]);
+      }
+    } catch (error) {
+      console.error('Failed to create note:', error);
+    }
+  }
+  
+  private openChatPanel(initialMessage?: string): void {
+    if (this.chatPanelOpen) return;
+    this.chatPanelOpen = true;
+    
+    // Hide timeline content and input bar to "replace" the view
+    const scrollArea = this.container.querySelector('.flex-1.overflow-y-auto');
+    if (scrollArea) (scrollArea as HTMLElement).style.display = 'none';
+    if (this.inputContainer) this.inputContainer.style.display = 'none';
+    
+    // Import and render ChatPanel dynamically
+    import('./ChatPanel').then(({ ChatPanel }) => {
+      if (!this.chatPanelContainer) return;
+      
+      this.chatPanelContainer.innerHTML = '';
+      this.chatPanelContainer.className = 'chat-panel-container absolute inset-0 z-40';
+      
+      const panel = new ChatPanel(this.chatPanelContainer, {
+        onClose: () => this.closeChatPanel(),
+        initialMessage,
+      });
+      panel.init();
+    });
+  }
+  
+  private closeChatPanel(): void {
+    this.chatPanelOpen = false;
+    
+    // Show timeline content and input bar again
+    const scrollArea = this.container.querySelector('.flex-1.overflow-y-auto');
+    if (scrollArea) (scrollArea as HTMLElement).style.display = 'block';
+    if (this.inputContainer) this.inputContainer.style.display = 'block';
+    
+    if (this.chatPanelContainer) {
+      this.chatPanelContainer.innerHTML = '';
+      this.chatPanelContainer.className = 'chat-panel-container absolute inset-0 pointer-events-none z-40';
+    }
+    
+    // Reset to note mode
+    this.setInputMode('note');
   }
   
   private async loadAppsData(): Promise<void> {
@@ -680,7 +895,14 @@ export class Timeline extends Component {
       className: 'absolute left-0 top-1 w-5 h-5 bg-background border-2 border-border flex items-center justify-center z-10',
     });
     
-    if (iconUrl) {
+    if (item.source === 'user') {
+      dot.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+      `;
+    } else if (iconUrl) {
       dot.innerHTML = `<img src="${iconUrl}" alt="" class="w-3 h-3" />`;
     }
     entry.appendChild(dot);
@@ -718,12 +940,44 @@ export class Timeline extends Component {
         return this.renderBrowserHistoryContent(item.data as BrowserHistoryEntry);
       case 'transaction':
         return this.renderTransactionContent(item.data as TellerTransaction);
+      case 'note':
+        return this.renderNoteContent(item.data as { body: string });
       default:
         return createElement('div', {
           className: 'text-sm p-3 bg-card border font-mono',
           textContent: JSON.stringify(item.data),
         });
     }
+  }
+  
+  private renderNoteContent(note: { body: string }): HTMLElement {
+    const wrapper = createElement('div', {
+      className: 'p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-lg',
+    });
+    
+    // Note header with icon
+    const header = createElement('div', {
+      className: 'flex items-center gap-2 mb-2',
+    });
+    header.innerHTML = `
+      <div class="w-5 h-5 flex items-center justify-center bg-amber-500/20 rounded">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+      </div>
+      <span class="text-xs font-mono uppercase tracking-wider text-amber-500/70">Note</span>
+    `;
+    wrapper.appendChild(header);
+    
+    // Note body
+    const body = createElement('p', {
+      className: 'text-sm text-foreground whitespace-pre-wrap',
+      textContent: note.body,
+    });
+    wrapper.appendChild(body);
+    
+    return wrapper;
   }
   
   private renderCastContent(cast: FarcasterCast): HTMLElement {
@@ -849,6 +1103,8 @@ export class Timeline extends Component {
         return this.renderBrowserHistoryExpanded(item.data as BrowserHistoryEntry, wrapper);
       case 'transaction':
         return this.renderTransactionExpanded(item.data as TellerTransaction, wrapper);
+      case 'note':
+        return this.renderNoteExpanded(item.data as { body: string }, wrapper);
       default:
         return this.renderDefaultExpanded(item, wrapper);
     }
@@ -1038,6 +1294,46 @@ export class Timeline extends Component {
     return wrapper;
   }
   
+  private renderNoteExpanded(note: { body: string }, wrapper: HTMLElement): HTMLElement {
+    // Clear only the content, keep the close button
+    const existingContent = wrapper.querySelector('.expanded-content');
+    if (existingContent) {
+      existingContent.remove();
+    }
+    
+    // Style wrapper with amber theme
+    wrapper.className = 'mt-3 p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-lg relative';
+    
+    const content = createElement('div', {
+      className: 'expanded-content space-y-3',
+    });
+    
+    // Header
+    const header = createElement('div', {
+      className: 'flex items-center gap-2 pb-3 border-b border-amber-500/20',
+    });
+    header.innerHTML = `
+      <div class="w-6 h-6 flex items-center justify-center bg-amber-500/20 rounded">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+      </div>
+      <span class="text-sm font-mono uppercase tracking-wider text-amber-500">Note</span>
+    `;
+    content.appendChild(header);
+    
+    // Note body
+    const body = createElement('div', {
+      className: 'text-sm text-foreground whitespace-pre-wrap',
+      textContent: note.body,
+    });
+    content.appendChild(body);
+    
+    wrapper.appendChild(content);
+    return wrapper;
+  }
+  
   private renderDefaultExpanded(item: TimelineItem, wrapper: HTMLElement): HTMLElement {
     // Clear only the content, keep the close button
     const existingContent = wrapper.querySelector('.expanded-content');
@@ -1087,7 +1383,21 @@ export class Timeline extends Component {
         if (entry?.dataset.entryId) {
           e.preventDefault();
           e.stopPropagation();
-          actions.toggleExpandedItem(entry.dataset.entryId);
+          
+          const itemId = entry.dataset.entryId;
+          const allItems = this.getAllItems();
+          const item = allItems.find(i => i.id === itemId);
+          
+          if (item) {
+            const modalContainer = createElement('div', { id: 'detail-modal-portal' });
+            document.body.appendChild(modalContainer);
+            
+            const modal = new DetailModal(modalContainer, item, () => {
+              modal.destroy();
+              modalContainer.remove();
+            });
+            modal.init();
+          }
         }
       }
     }, { capture: true });

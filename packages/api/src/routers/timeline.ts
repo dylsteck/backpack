@@ -1,7 +1,7 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { getDatabase, connections } from "@cortex/db";
-import { eq } from "drizzle-orm";
+import { getDatabase, connections, items } from "@cortex/db";
+import { eq, and, desc } from "drizzle-orm";
 import { farcasterRouter } from "./farcaster";
 import { tellerRouter } from "./teller";
 import { ItemsService } from "../services/items/service";
@@ -28,7 +28,7 @@ export const timelineRouter = router({
 			try {
 				const db = getDatabase();
 				const allConnections = await db.select().from(connections);
-				const items: TimelineItem[] = [];
+				const timelineItems: TimelineItem[] = [];
 				let nextCursor: string | undefined = undefined;
 
 				const itemsService = new ItemsService();
@@ -57,7 +57,7 @@ export const timelineRouter = router({
 							if (dbItems.items.length > 0) {
 								// Use items from database
 								for (const item of dbItems.items) {
-									items.push({
+									timelineItems.push({
 										id: item.id,
 										timestamp: item.timestamp,
 										source: item.source,
@@ -85,7 +85,7 @@ export const timelineRouter = router({
 								});
 
 								for (const cast of response.casts) {
-									items.push({
+									timelineItems.push({
 										id: cast.hash,
 										timestamp: new Date(cast.timestamp),
 										source: "farcaster",
@@ -117,7 +117,7 @@ export const timelineRouter = router({
 							if (dbItems.items.length > 0) {
 								// Use items from database
 								for (const item of dbItems.items) {
-									items.push({
+									timelineItems.push({
 										id: item.id,
 										timestamp: item.timestamp,
 										source: item.source,
@@ -137,7 +137,7 @@ export const timelineRouter = router({
 								});
 
 								for (const transaction of response.transactions) {
-									items.push({
+									timelineItems.push({
 										id: transaction.id,
 										timestamp: new Date(transaction.date),
 										source: "teller",
@@ -153,12 +153,37 @@ export const timelineRouter = router({
 
 				}
 
-				items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+				// Also fetch user notes
+				if (!sourceFilter || sourceFilter.includes("user")) {
+					try {
+						const db = getDatabase();
+						const userNotes = await db
+							.select()
+							.from(items as any)
+							.where(and(eq((items as any).source, "user"), eq((items as any).type, "note")))
+							.orderBy(desc((items as any).timestamp))
+							.limit(input.limit);
 
-				console.log(`[Timeline] Returning ${items.length} total items (${items.filter(i => i.source === 'farcaster').length} Farcaster)`);
+						for (const note of userNotes) {
+							timelineItems.push({
+								id: note.id,
+								timestamp: note.timestamp,
+								source: note.source,
+								type: note.type,
+								data: note.data,
+							});
+						}
+					} catch (error) {
+						console.error("Error fetching user notes:", error);
+					}
+				}
+
+				timelineItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+				console.log(`[Timeline] Returning ${timelineItems.length} total items (${timelineItems.filter(i => i.source === 'farcaster').length} Farcaster, ${timelineItems.filter(i => i.source === 'user').length} Notes)`);
 
 				return {
-					items,
+					items: timelineItems,
 					nextCursor,
 				};
 			} catch (error) {
@@ -185,6 +210,24 @@ export const timelineRouter = router({
 			} catch (error) {
 				console.error("Error in getItemCount:", error);
 				return { count: 0 };
+			}
+		}),
+
+	// Delete a timeline item
+	deleteItem: publicProcedure
+		.input(
+			z.object({
+				id: z.string(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const db = getDatabase();
+				await db.delete(items).where(eq(items.id, input.id));
+				return { success: true };
+			} catch (error) {
+				console.error("Error deleting item:", error);
+				throw new Error("Failed to delete item");
 			}
 		}),
 });

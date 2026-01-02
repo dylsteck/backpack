@@ -1,6 +1,6 @@
 // Shared types for the vanilla TS renderer
 
-export type SourceType = 'all' | 'farcaster' | 'chrome' | 'brave' | 'teller';
+export type SourceType = 'all' | 'farcaster' | 'chrome' | 'brave' | 'teller' | 'user';
 
 export type ConnectionType = 'oauth' | 'local' | 'api';
 export type ConnectionStatus = 'all' | 'connected' | 'disconnected';
@@ -119,5 +119,27 @@ export interface TellerTransaction {
   };
   status: string;
   type: string;
+}
+
+export interface Comment {
+  id: string;
+  itemId: string;
+  content: string;
+  createdAt: string | Date;
+}
+
+export interface ChatSession {
+  id: string;
+  title?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string | Date;
 }
 

@@ -1,15 +1,23 @@
 /**
  * Chat Component
- * OpenRouter-powered chat with API key management
+ * OpenRouter-powered chat with API key management and session history
  */
 
 import { Component } from './Component';
-import { createElement } from '../utils/dom';
+import { createElement, clearChildren } from '../utils/dom';
 import { hasApiKey, encryptApiKey, decryptApiKey, clearApiKey } from '../utils/crypto';
+import { api } from '../api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface ChatSession {
+  id: string;
+  title: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const DEFAULT_MODEL = 'mistralai/devstral-2512:free';
@@ -23,6 +31,12 @@ export class Chat extends Component {
   private inputElement: HTMLInputElement | null = null;
   private apiUrl = 'http://localhost:3000';
   private settingsModal: HTMLElement | null = null;
+  
+  // Chat history state
+  private sessions: ChatSession[] = [];
+  private currentSessionId: string | null = null;
+  private expandedSessionId: string | null = null;
+  private showHistory = true;
 
   private getModel(): string {
     return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
@@ -46,7 +60,24 @@ export class Chat extends Component {
     }
 
     this.apiKeyExists = hasApiKey();
+    
+    // Load chat sessions
+    await this.loadSessions();
+    
     this.render();
+  }
+  
+  private async loadSessions(): Promise<void> {
+    try {
+      const result = await api.chat.getSessions.query({ limit: 50 });
+      this.sessions = result.sessions.map(s => ({
+        ...s,
+        createdAt: new Date(s.createdAt),
+        updatedAt: new Date(s.updatedAt),
+      }));
+    } catch (error) {
+      console.error('[Chat] Failed to load sessions:', error);
+    }
   }
 
   render(): void {
@@ -151,6 +182,13 @@ export class Chat extends Component {
     const wrapper = createElement('div', {
       className: 'flex flex-col w-full h-full relative',
     });
+    
+    // If showing history and we have sessions, show history view
+    if (this.showHistory && this.sessions.length > 0 && this.messages.length === 0) {
+      this.renderHistoryView(wrapper);
+      this.container.appendChild(wrapper);
+      return;
+    }
 
     // Messages area
     this.messagesContainer = createElement('div', {
@@ -534,6 +572,259 @@ export class Chat extends Component {
 
     // Scroll to bottom
     this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+  }
+  
+  private renderHistoryView(wrapper: HTMLElement): void {
+    // Header
+    const header = createElement('div', {
+      className: 'flex items-center justify-between p-4 border-b border-border',
+    });
+    
+    const title = createElement('h2', {
+      className: 'font-mono uppercase tracking-wider text-sm',
+      textContent: 'Chat History',
+    });
+    header.appendChild(title);
+    
+    const newChatBtn = createElement('button', {
+      className: 'px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs hover:opacity-90 transition-opacity',
+      textContent: 'New Chat',
+    });
+    newChatBtn.addEventListener('click', () => {
+      this.showHistory = false;
+      this.messages = [];
+      this.currentSessionId = null;
+      this.render();
+    });
+    header.appendChild(newChatBtn);
+    
+    wrapper.appendChild(header);
+    
+    // Sessions list
+    const sessionsList = createElement('div', {
+      className: 'flex-1 overflow-y-auto p-4 space-y-2',
+    });
+    
+    if (this.sessions.length === 0) {
+      const emptyState = createElement('div', {
+        className: 'flex flex-col items-center justify-center h-full text-center py-12',
+      });
+      emptyState.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-muted-foreground/30 mb-4">
+          <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
+        </svg>
+        <p class="text-muted-foreground font-mono text-sm">No chat history yet</p>
+      `;
+      sessionsList.appendChild(emptyState);
+    } else {
+      for (const session of this.sessions) {
+        const sessionCard = this.createSessionCard(session);
+        sessionsList.appendChild(sessionCard);
+      }
+    }
+    
+    wrapper.appendChild(sessionsList);
+    
+    // Settings footer
+    const footer = createElement('div', {
+      className: 'p-4 border-t border-border',
+    });
+    
+    const settingsBtn = createElement('button', {
+      className: 'text-xs text-muted-foreground font-mono uppercase tracking-wider hover:text-foreground transition-colors',
+      textContent: '[Settings]',
+    });
+    settingsBtn.addEventListener('click', () => this.showSettingsModal());
+    footer.appendChild(settingsBtn);
+    
+    wrapper.appendChild(footer);
+  }
+  
+  private createSessionCard(session: ChatSession): HTMLElement {
+    const isExpanded = this.expandedSessionId === session.id;
+    
+    const card = createElement('div', {
+      className: 'border border-border bg-card rounded-lg overflow-hidden',
+    });
+    
+    // Card header (always visible)
+    const header = createElement('button', {
+      className: 'w-full p-4 flex items-center justify-between hover:bg-accent/50 transition-colors text-left',
+    });
+    
+    const titleSection = createElement('div', {
+      className: 'flex-1 min-w-0',
+    });
+    
+    const titleText = createElement('p', {
+      className: 'font-mono text-sm truncate',
+      textContent: session.title || 'New conversation',
+    });
+    titleSection.appendChild(titleText);
+    
+    const dateText = createElement('p', {
+      className: 'text-xs text-muted-foreground font-mono',
+      textContent: this.formatDate(session.updatedAt),
+    });
+    titleSection.appendChild(dateText);
+    
+    header.appendChild(titleSection);
+    
+    // Expand icon
+    const expandIcon = createElement('div', {
+      className: `transition-transform ${isExpanded ? 'rotate-180' : ''}`,
+      innerHTML: `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      `,
+    });
+    header.appendChild(expandIcon);
+    
+    header.addEventListener('click', () => this.toggleSessionExpand(session.id));
+    card.appendChild(header);
+    
+    // Expanded content
+    if (isExpanded) {
+      const content = createElement('div', {
+        className: 'border-t border-border p-4 space-y-3 bg-background/50',
+      });
+      
+      // Messages will be loaded here
+      const messagesArea = createElement('div', {
+        className: 'space-y-2 max-h-64 overflow-y-auto',
+        attributes: { id: `session-messages-${session.id}` },
+      });
+      
+      // Loading state
+      messagesArea.innerHTML = `
+        <div class="text-xs text-muted-foreground font-mono animate-pulse">Loading messages...</div>
+      `;
+      
+      content.appendChild(messagesArea);
+      
+      // Load messages
+      this.loadSessionMessages(session.id, messagesArea);
+      
+      // Action buttons
+      const actions = createElement('div', {
+        className: 'flex gap-2 pt-2 border-t border-border',
+      });
+      
+      const continueBtn = createElement('button', {
+        className: 'px-3 py-1.5 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs hover:opacity-90',
+        textContent: 'Continue',
+      });
+      continueBtn.addEventListener('click', () => this.continueSession(session.id));
+      actions.appendChild(continueBtn);
+      
+      const deleteBtn = createElement('button', {
+        className: 'px-3 py-1.5 border border-border font-mono uppercase tracking-wider text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors',
+        textContent: 'Delete',
+      });
+      deleteBtn.addEventListener('click', () => this.deleteSession(session.id));
+      actions.appendChild(deleteBtn);
+      
+      content.appendChild(actions);
+      card.appendChild(content);
+    }
+    
+    return card;
+  }
+  
+  private async toggleSessionExpand(sessionId: string): Promise<void> {
+    if (this.expandedSessionId === sessionId) {
+      this.expandedSessionId = null;
+    } else {
+      this.expandedSessionId = sessionId;
+    }
+    this.render();
+  }
+  
+  private async loadSessionMessages(sessionId: string, container: HTMLElement): Promise<void> {
+    try {
+      const result = await api.chat.getSession.query({ sessionId });
+      
+      clearChildren(container);
+      
+      if (result.messages.length === 0) {
+        container.innerHTML = `<p class="text-xs text-muted-foreground font-mono">No messages</p>`;
+        return;
+      }
+      
+      for (const msg of result.messages) {
+        const msgEl = createElement('div', {
+          className: `p-2 rounded text-xs font-mono ${msg.role === 'user' ? 'bg-primary/10' : 'bg-muted/50'}`,
+        });
+        
+        const roleLabel = createElement('span', {
+          className: 'uppercase tracking-wider text-muted-foreground',
+          textContent: msg.role === 'user' ? 'You: ' : 'AI: ',
+        });
+        msgEl.appendChild(roleLabel);
+        
+        const content = createElement('span', {
+          textContent: msg.content.slice(0, 200) + (msg.content.length > 200 ? '...' : ''),
+        });
+        msgEl.appendChild(content);
+        
+        container.appendChild(msgEl);
+      }
+    } catch (error) {
+      console.error('[Chat] Failed to load session messages:', error);
+      container.innerHTML = `<p class="text-xs text-destructive font-mono">Failed to load messages</p>`;
+    }
+  }
+  
+  private async continueSession(sessionId: string): Promise<void> {
+    try {
+      const result = await api.chat.getSession.query({ sessionId });
+      
+      this.currentSessionId = sessionId;
+      this.messages = result.messages.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+      this.showHistory = false;
+      this.expandedSessionId = null;
+      
+      this.render();
+    } catch (error) {
+      console.error('[Chat] Failed to continue session:', error);
+    }
+  }
+  
+  private async deleteSession(sessionId: string): Promise<void> {
+    try {
+      await api.chat.deleteSession.mutate({ sessionId });
+      
+      // Remove from local state
+      this.sessions = this.sessions.filter(s => s.id !== sessionId);
+      
+      if (this.expandedSessionId === sessionId) {
+        this.expandedSessionId = null;
+      }
+      
+      this.render();
+    } catch (error) {
+      console.error('[Chat] Failed to delete session:', error);
+    }
+  }
+  
+  private formatDate(date: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+      return 'Today';
+    } else if (days === 1) {
+      return 'Yesterday';
+    } else if (days < 7) {
+      return `${days} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   }
 }
 

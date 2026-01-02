@@ -90,7 +90,7 @@ export class Layout extends Component {
     // Sidebar
     this.sidebarContainer = createElement('aside', {
       className: 'w-64 h-full border-r bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-200',
-      dataset: { state: 'expanded' },
+      dataset: { state: 'expanded', sidebar: 'true' },
     });
     this.container.appendChild(this.sidebarContainer);
     this.sidebar = new Sidebar(this.sidebarContainer);

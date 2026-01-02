@@ -75,7 +75,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			
 			CREATE TABLE IF NOT EXISTS "items" (
 				"id" text PRIMARY KEY NOT NULL,
-				"source" text NOT NULL REFERENCES "apps"("id") ON DELETE CASCADE,
+				"source" text NOT NULL,
 				"type" text NOT NULL,
 				"timestamp" integer NOT NULL,
 				"data" text NOT NULL,
@@ -83,12 +83,64 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 				"updated_at" integer NOT NULL
 			);
 			
+			CREATE TABLE IF NOT EXISTS "chat_sessions" (
+				"id" text PRIMARY KEY NOT NULL,
+				"title" text,
+				"created_at" integer NOT NULL,
+				"updated_at" integer NOT NULL
+			);
+			
+			CREATE TABLE IF NOT EXISTS "chat_messages" (
+				"id" text PRIMARY KEY NOT NULL,
+				"session_id" text NOT NULL REFERENCES "chat_sessions"("id") ON DELETE CASCADE,
+				"role" text NOT NULL,
+				"content" text NOT NULL,
+				"created_at" integer NOT NULL
+			);
+			
+			CREATE TABLE IF NOT EXISTS "comments" (
+				"id" text PRIMARY KEY NOT NULL,
+				"item_id" text NOT NULL,
+				"content" text NOT NULL,
+				"created_at" integer NOT NULL
+			);
+			
 			CREATE INDEX IF NOT EXISTS "items_source_idx" ON "items"("source");
 			CREATE INDEX IF NOT EXISTS "items_timestamp_idx" ON "items"("timestamp");
 			CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
 			CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
+			CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
+			CREATE INDEX IF NOT EXISTS "comments_item_id_idx" ON "comments"("item_id");
 		`);
 	}
+	
+	// Always ensure chat and comment tables exist (for existing databases)
+	sqliteDb.exec(`
+		CREATE TABLE IF NOT EXISTS "chat_sessions" (
+			"id" text PRIMARY KEY NOT NULL,
+			"title" text,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+		
+		CREATE TABLE IF NOT EXISTS "chat_messages" (
+			"id" text PRIMARY KEY NOT NULL,
+			"session_id" text NOT NULL REFERENCES "chat_sessions"("id") ON DELETE CASCADE,
+			"role" text NOT NULL,
+			"content" text NOT NULL,
+			"created_at" integer NOT NULL
+		);
+		
+		CREATE TABLE IF NOT EXISTS "comments" (
+			"id" text PRIMARY KEY NOT NULL,
+			"item_id" text NOT NULL,
+			"content" text NOT NULL,
+			"created_at" integer NOT NULL
+		);
+		
+		CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
+		CREATE INDEX IF NOT EXISTS "comments_item_id_idx" ON "comments"("item_id");
+	`);
 
 	return { db, isNew };
 }

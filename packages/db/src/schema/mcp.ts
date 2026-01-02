@@ -64,7 +64,7 @@ export const connections = sqliteTable("connections", {
 
 export const items = sqliteTable("items", {
 	id: text("id").primaryKey(),
-	source: text("source").notNull().references(() => apps.id, { onDelete: "cascade" }),
+	source: text("source").notNull(), // Can be app id or 'user' for user-created notes
 	type: text("type").notNull(),
 	timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
 	data: text("data", { mode: "json" }).notNull().$type<Record<string, any>>(),
@@ -72,13 +72,57 @@ export const items = sqliteTable("items", {
 	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+// Chat sessions for persisting chat history
+export const chatSessions = sqliteTable("chat_sessions", {
+	id: text("id").primaryKey(),
+	title: text("title"), // First user message, truncated
+	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+// Chat messages within a session
+export const chatMessages = sqliteTable("chat_messages", {
+	id: text("id").primaryKey(),
+	sessionId: text("session_id").notNull().references(() => chatSessions.id, { onDelete: "cascade" }),
+	role: text("role").notNull(), // 'user' | 'assistant'
+	content: text("content").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// Comments for timeline items
+export const comments = sqliteTable("comments", {
+	id: text("id").primaryKey(),
+	itemId: text("item_id").notNull(), // References items.id, but kept as text for flexibility
+	content: text("content").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 export const appsRelations = relations(apps, ({ many }) => ({
 	items: many(items),
 }));
 
-export const itemsRelations = relations(items, ({ one }) => ({
+export const itemsRelations = relations(items, ({ one, many }) => ({
 	app: one(apps, {
 		fields: [items.source],
 		references: [apps.id],
+	}),
+	comments: many(comments),
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+	item: one(items, {
+		fields: [comments.itemId],
+		references: [items.id],
+	}),
+}));
+
+export const chatSessionsRelations = relations(chatSessions, ({ many }) => ({
+	messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+	session: one(chatSessions, {
+		fields: [chatMessages.sessionId],
+		references: [chatSessions.id],
 	}),
 }));
