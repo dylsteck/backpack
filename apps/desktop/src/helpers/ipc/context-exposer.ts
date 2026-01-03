@@ -6,6 +6,7 @@ import { exposeDeepLinkContext } from "./deeplink/deeplink-context";
 import { exposeServerContext } from "./server/server-context";
 import { exposeDatabaseContext } from "./database/database-context";
 import { exposeShellContext } from "./shell/shell-context";
+import { exposeObsidianContext } from "./obsidian/obsidian-context";
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -16,4 +17,5 @@ export default function exposeContexts() {
   exposeServerContext();
   exposeDatabaseContext();
   exposeShellContext();
+  exposeObsidianContext();
 }

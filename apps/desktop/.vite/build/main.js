@@ -569,6 +569,258 @@ function addShellEventListeners() {
     }
   });
 }
+const OBSIDIAN_SELECT_VAULT_CHANNEL = "obsidian:select-vault";
+const OBSIDIAN_READ_VAULT_CHANNEL = "obsidian:read-vault";
+const OBSIDIAN_READ_NOTE_CHANNEL = "obsidian:read-note";
+const OBSIDIAN_CREATE_NOTE_CHANNEL = "obsidian:create-note";
+const OBSIDIAN_UPDATE_NOTE_CHANNEL = "obsidian:update-note";
+const OBSIDIAN_SEARCH_NOTES_CHANNEL = "obsidian:search-notes";
+function extractTags(content) {
+  const tags = /* @__PURE__ */ new Set();
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (frontmatterMatch) {
+    const frontmatter = frontmatterMatch[1];
+    const tagsMatch = frontmatter.match(/tags:\s*\[(.*?)\]/);
+    if (tagsMatch) {
+      const tagList = tagsMatch[1].split(",").map((t) => t.trim().replace(/["']/g, ""));
+      tagList.forEach((t) => t && tags.add(t));
+    }
+    const yamlTagsMatch = frontmatter.match(/tags:\s*\n((?:\s*-\s*.+\n)+)/);
+    if (yamlTagsMatch) {
+      const lines = yamlTagsMatch[1].split("\n");
+      lines.forEach((line) => {
+        const tagMatch = line.match(/^\s*-\s*(.+)/);
+        if (tagMatch) tags.add(tagMatch[1].trim().replace(/["']/g, ""));
+      });
+    }
+  }
+  const inlineTags = content.match(/#[a-zA-Z][a-zA-Z0-9_-]*/g);
+  if (inlineTags) {
+    inlineTags.forEach((t) => tags.add(t.substring(1)));
+  }
+  return Array.from(tags);
+}
+function extractBacklinks(content) {
+  const links = /* @__PURE__ */ new Set();
+  const matches = content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g);
+  for (const match of matches) {
+    links.add(match[1]);
+  }
+  return Array.from(links);
+}
+function extractTitle(content, filePath) {
+  const headingMatch = content.match(/^#\s+(.+)$/m);
+  if (headingMatch) return headingMatch[1];
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (frontmatterMatch) {
+    const titleMatch = frontmatterMatch[1].match(/title:\s*["']?([^"'\n]+)["']?/);
+    if (titleMatch) return titleMatch[1];
+  }
+  return path__namespace.basename(filePath, ".md");
+}
+function readVaultNotes(vaultPath) {
+  const notes = [];
+  function walkDir(dir) {
+    try {
+      const entries = fs__namespace.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path__namespace.join(dir, entry.name);
+        if (entry.name.startsWith(".")) continue;
+        if (entry.isDirectory()) {
+          walkDir(fullPath);
+        } else if (entry.name.endsWith(".md")) {
+          try {
+            const content = fs__namespace.readFileSync(fullPath, "utf-8");
+            const stats = fs__namespace.statSync(fullPath);
+            let body = content;
+            const frontmatterMatch = content.match(/^---\n[\s\S]*?\n---\n?/);
+            if (frontmatterMatch) {
+              body = content.substring(frontmatterMatch[0].length);
+            }
+            notes.push({
+              path: fullPath,
+              title: extractTitle(content, fullPath),
+              body: body.trim().substring(0, 500),
+              // Preview only
+              mtime: stats.mtime.getTime(),
+              tags: extractTags(content),
+              backlinks: extractBacklinks(content)
+            });
+          } catch (error) {
+            console.error(`Failed to read note: ${fullPath}`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to read directory: ${dir}`, error);
+    }
+  }
+  walkDir(vaultPath);
+  notes.sort((a, b) => b.mtime - a.mtime);
+  return notes;
+}
+function searchNotes(vaultPath, query) {
+  const notes = readVaultNotes(vaultPath);
+  const lowerQuery = query.toLowerCase();
+  return notes.filter(
+    (note) => note.title.toLowerCase().includes(lowerQuery) || note.body.toLowerCase().includes(lowerQuery) || note.tags?.some((t) => t.toLowerCase().includes(lowerQuery))
+  );
+}
+function addObsidianEventListeners() {
+  require$$0.ipcMain.handle(OBSIDIAN_SELECT_VAULT_CHANNEL, async () => {
+    try {
+      const result = await require$$0.dialog.showOpenDialog({
+        properties: ["openDirectory"],
+        title: "Select Obsidian Vault",
+        buttonLabel: "Select Vault"
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, error: "No folder selected" };
+      }
+      const vaultPath = result.filePaths[0];
+      const hasObsidianFolder = fs__namespace.existsSync(path__namespace.join(vaultPath, ".obsidian"));
+      const mdFiles = fs__namespace.readdirSync(vaultPath).filter((f) => f.endsWith(".md"));
+      if (!hasObsidianFolder && mdFiles.length === 0) {
+        return {
+          success: false,
+          error: "This folder does not appear to be an Obsidian vault (no .md files found)"
+        };
+      }
+      const notes = readVaultNotes(vaultPath);
+      return {
+        success: true,
+        vaultPath,
+        noteCount: notes.length
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_READ_VAULT_CHANNEL, (_event, vaultPath) => {
+    try {
+      if (!fs__namespace.existsSync(vaultPath)) {
+        return { success: false, error: "Vault path does not exist" };
+      }
+      const notes = readVaultNotes(vaultPath);
+      return { success: true, notes, noteCount: notes.length };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_READ_NOTE_CHANNEL, (_event, notePath) => {
+    try {
+      if (!fs__namespace.existsSync(notePath)) {
+        return { success: false, error: "Note does not exist" };
+      }
+      const content = fs__namespace.readFileSync(notePath, "utf-8");
+      const stats = fs__namespace.statSync(notePath);
+      return {
+        success: true,
+        note: {
+          path: notePath,
+          title: extractTitle(content, notePath),
+          body: content,
+          // Full content
+          mtime: stats.mtime.getTime(),
+          tags: extractTags(content),
+          backlinks: extractBacklinks(content)
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_CREATE_NOTE_CHANNEL, (_event, vaultPath, title, content, frontmatter) => {
+    try {
+      const safeTitle = title.replace(/[<>:"/\\|?*]/g, "_");
+      const notePath = path__namespace.join(vaultPath, `${safeTitle}.md`);
+      if (fs__namespace.existsSync(notePath)) {
+        return { success: false, error: "A note with this title already exists" };
+      }
+      let fullContent = "";
+      if (frontmatter && Object.keys(frontmatter).length > 0) {
+        fullContent = "---\n";
+        for (const [key, value] of Object.entries(frontmatter)) {
+          if (Array.isArray(value)) {
+            fullContent += `${key}:
+`;
+            value.forEach((v) => fullContent += `  - ${v}
+`);
+          } else {
+            fullContent += `${key}: ${value}
+`;
+          }
+        }
+        fullContent += "---\n\n";
+      }
+      fullContent += content;
+      fs__namespace.writeFileSync(notePath, fullContent, "utf-8");
+      return {
+        success: true,
+        notePath,
+        note: {
+          path: notePath,
+          title,
+          body: content.substring(0, 500),
+          mtime: Date.now(),
+          tags: extractTags(fullContent),
+          backlinks: extractBacklinks(fullContent)
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_UPDATE_NOTE_CHANNEL, (_event, notePath, content, mode) => {
+    try {
+      if (!fs__namespace.existsSync(notePath)) {
+        return { success: false, error: "Note does not exist" };
+      }
+      let newContent;
+      if (mode === "replace") {
+        newContent = content;
+      } else {
+        const existingContent = fs__namespace.readFileSync(notePath, "utf-8");
+        if (mode === "append") {
+          newContent = existingContent + "\n\n" + content;
+        } else {
+          const frontmatterMatch = existingContent.match(/^(---\n[\s\S]*?\n---\n?)/);
+          if (frontmatterMatch) {
+            newContent = frontmatterMatch[1] + "\n" + content + "\n\n" + existingContent.substring(frontmatterMatch[0].length);
+          } else {
+            newContent = content + "\n\n" + existingContent;
+          }
+        }
+      }
+      fs__namespace.writeFileSync(notePath, newContent, "utf-8");
+      const stats = fs__namespace.statSync(notePath);
+      return {
+        success: true,
+        note: {
+          path: notePath,
+          title: extractTitle(newContent, notePath),
+          body: newContent.substring(0, 500),
+          mtime: stats.mtime.getTime(),
+          tags: extractTags(newContent),
+          backlinks: extractBacklinks(newContent)
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_SEARCH_NOTES_CHANNEL, (_event, vaultPath, query) => {
+    try {
+      if (!fs__namespace.existsSync(vaultPath)) {
+        return { success: false, error: "Vault path does not exist" };
+      }
+      const notes = searchNotes(vaultPath, query);
+      return { success: true, notes };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+}
 function registerListeners(mainWindow2) {
   addWindowEventListeners(mainWindow2);
   addThemeEventListeners();
@@ -576,6 +828,7 @@ function registerListeners(mainWindow2) {
   addBraveEventListeners();
   addDatabaseEventListeners();
   addShellEventListeners();
+  addObsidianEventListeners();
 }
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var dist$1 = {};

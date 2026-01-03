@@ -97,6 +97,16 @@ export const DEFAULT_APPS: Array<{
 		"connectionType": "mcp"
 	},
 	{
+		"id": "obsidian",
+		"name": "Obsidian",
+		"description": "Connect your Obsidian vault to see notes on your timeline and use AI to edit them.",
+		"transport": [],
+		"oauth": false,
+		"iconUrl": "https://obsidian.md/images/obsidian-logo-gradient.svg",
+		"config": {},
+		"connectionType": "local"
+	},
+	{
 		"id": "notion",
 		"name": "Notion",
 		"description": "All-in-one workspace for notes, docs, and project management.",

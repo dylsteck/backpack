@@ -103,6 +103,24 @@ function exposeShellContext() {
     }
   });
 }
+const OBSIDIAN_SELECT_VAULT_CHANNEL = "obsidian:select-vault";
+const OBSIDIAN_READ_VAULT_CHANNEL = "obsidian:read-vault";
+const OBSIDIAN_READ_NOTE_CHANNEL = "obsidian:read-note";
+const OBSIDIAN_CREATE_NOTE_CHANNEL = "obsidian:create-note";
+const OBSIDIAN_UPDATE_NOTE_CHANNEL = "obsidian:update-note";
+const OBSIDIAN_SEARCH_NOTES_CHANNEL = "obsidian:search-notes";
+function exposeObsidianContext() {
+  const electron2 = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron2;
+  contextBridge.exposeInMainWorld("obsidianVault", {
+    selectVault: () => ipcRenderer.invoke(OBSIDIAN_SELECT_VAULT_CHANNEL),
+    readVault: (vaultPath) => ipcRenderer.invoke(OBSIDIAN_READ_VAULT_CHANNEL, vaultPath),
+    readNote: (notePath) => ipcRenderer.invoke(OBSIDIAN_READ_NOTE_CHANNEL, notePath),
+    createNote: (vaultPath, title, content, frontmatter) => ipcRenderer.invoke(OBSIDIAN_CREATE_NOTE_CHANNEL, vaultPath, title, content, frontmatter),
+    updateNote: (notePath, content, mode) => ipcRenderer.invoke(OBSIDIAN_UPDATE_NOTE_CHANNEL, notePath, content, mode),
+    searchNotes: (vaultPath, query) => ipcRenderer.invoke(OBSIDIAN_SEARCH_NOTES_CHANNEL, vaultPath, query)
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
@@ -112,5 +130,6 @@ function exposeContexts() {
   exposeServerContext();
   exposeDatabaseContext();
   exposeShellContext();
+  exposeObsidianContext();
 }
 exposeContexts();

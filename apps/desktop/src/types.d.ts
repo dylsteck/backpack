@@ -88,10 +88,56 @@ interface ServerApiContext {
   onPortChange: (callback: (port: number) => void) => () => void;
 }
 
+interface ObsidianNote {
+  path: string;
+  title: string;
+  body: string;
+  mtime: number;
+  tags?: string[];
+  backlinks?: string[];
+}
+
+interface ObsidianVaultContext {
+  selectVault: () => Promise<{
+    success: boolean;
+    vaultPath?: string;
+    noteCount?: number;
+    error?: string;
+  }>;
+  readVault: (vaultPath: string) => Promise<{
+    success: boolean;
+    notes?: ObsidianNote[];
+    noteCount?: number;
+    error?: string;
+  }>;
+  readNote: (notePath: string) => Promise<{
+    success: boolean;
+    note?: ObsidianNote;
+    error?: string;
+  }>;
+  createNote: (vaultPath: string, title: string, content: string, frontmatter?: Record<string, unknown>) => Promise<{
+    success: boolean;
+    notePath?: string;
+    note?: ObsidianNote;
+    error?: string;
+  }>;
+  updateNote: (notePath: string, content: string, mode: 'replace' | 'append' | 'prepend') => Promise<{
+    success: boolean;
+    note?: ObsidianNote;
+    error?: string;
+  }>;
+  searchNotes: (vaultPath: string, query: string) => Promise<{
+    success: boolean;
+    notes?: ObsidianNote[];
+    error?: string;
+  }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   chromeHistory: ChromeHistoryContext;
   braveHistory: BraveHistoryContext;
   serverApi: ServerApiContext;
+  obsidianVault: ObsidianVaultContext;
 }

@@ -11,6 +11,7 @@ import type {
   TimelineItem,
   AppServer,
   BrowserHistoryEntry,
+  ObsidianNote,
 } from './types';
 
 type Listener<T> = (value: T, prevValue: T) => void;
@@ -126,6 +127,7 @@ export const store = {
   // UI State
   sidebarOpen: new Observable<boolean>(true),
   sidebarCollapsed: new Observable<boolean>(false),
+  chatSidebarOpen: new Observable<boolean>(false),
   expandedItemId: new Observable<string | null>(null),
   
   // Theme
@@ -150,6 +152,9 @@ export const store = {
   // Browser history (loaded via IPC)
   chromeHistory: new Observable<BrowserHistoryEntry[]>([]),
   braveHistory: new Observable<BrowserHistoryEntry[]>([]),
+  
+  // Obsidian notes (loaded via IPC)
+  obsidianNotes: new Observable<ObsidianNote[]>([]),
   
   // Onboarding
   hasSeenOnboarding: new Observable<boolean>(
@@ -281,6 +286,11 @@ export const actions = {
   
   setBraveHistory(entries: BrowserHistoryEntry[]): void {
     store.braveHistory.set(entries);
+  },
+  
+  // Obsidian notes
+  setObsidianNotes(notes: ObsidianNote[]): void {
+    store.obsidianNotes.set(notes);
   },
   
   // Database path

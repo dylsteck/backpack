@@ -1,15 +1,26 @@
 /**
  * Timeline Component
- * Main timeline view with infinite scroll and virtual scrolling for performance
- * Following the performance guide patterns
+ * Main timeline view with dual view modes (Timeline/Overview)
+ * Highly refined modern design inspired by iPad aesthetic
  */
 
 import { Component } from './Component';
 import { store, actions } from '../store';
 import { fetchTimeline, loadMoreTimeline, fetchAppsWithCache } from '../api';
-import { createElement, clearChildren, formatTime, formatDate, formatFullDate, groupByDate, escapeHtml } from '../utils/dom';
+import { createElement, clearChildren, formatTime, formatFullDate, groupByDate, escapeHtml } from '../utils/dom';
 import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 import { DetailModal } from './DetailModal';
+
+type ViewMode = 'timeline' | 'overview';
+
+interface DayGroup {
+  date: Date;
+  label: string;
+  items: TimelineItem[];
+  sources: Set<SourceType>;
+  previewImages: string[];
+  previewTexts: string[];
+}
 
 export class Timeline extends Component {
   private itemsContainer: HTMLElement | null = null;
@@ -18,310 +29,377 @@ export class Timeline extends Component {
   private isLoadingMore = false;
   private iconUrls: Record<string, string | undefined> = {};
   
-  // Pull-to-refresh state
-  private pullStartY = 0;
-  private pullCurrentY = 0;
-  private isPulling = false;
-  private lastRefreshTime = 0;
-  private pullThreshold = 60; // Minimum pull distance in pixels
-  private refreshDebounceMs = 500; // Minimum time between refreshes
+  // View mode state
+  private viewMode: ViewMode = 'overview';
+  private viewToggleContainer: HTMLElement | null = null;
   
-  // Bottom input bar state
-  private inputMode: 'note' | 'chat' = 'note';
-  private inputContainer: HTMLElement | null = null;
-  private chatPanelOpen = false;
-  private chatPanelContainer: HTMLElement | null = null;
   
   async init(): Promise<void> {
+    const savedViewMode = localStorage.getItem('cortex-view-mode') as ViewMode;
+    if (savedViewMode) this.viewMode = savedViewMode;
+    
     this.render();
-    
-    // Set up event delegation for clicks FIRST - before any async operations
-    // This ensures clicks work even if items render via subscriptions
     this.setupEventDelegation();
-    
-    // Load apps data for icon URLs
     await this.loadAppsData();
-    
-    // Load initial timeline data
     await this.loadInitialData();
-    
-    // Set up infinite scroll
     this.setupInfiniteScroll();
     
-    // Set up pull-to-refresh
-    this.setupPullToRefresh();
-    
-    // Subscribe to store changes
-    this.subscribe(store.timelineItems, () => {
-      // Always render items when timeline items change
-      // This will clear skeleton and show actual items
-      this.renderItems();
-    });
-    this.subscribe(store.expandedItemId, () => this.updateExpandedStates());
+    // Subscriptions
+    this.subscribe(store.timelineItems, () => this.renderItems());
     this.subscribe(store.selectedSources, () => this.renderItems());
-    this.subscribe(store.timelineLoading, (loading, prevLoading) => {
-      if (loading && store.timelineItems.get().length === 0) {
-        // Show skeleton only if we have no items yet and we're loading
-        this.renderSkeleton();
-      } else if (!loading) {
-        // When loading completes, ensure we render items
-        // This handles the case where items were added while loading was true
-        if (store.timelineItems.get().length > 0) {
-          this.renderItems();
-        } else if (prevLoading) {
-          // If we were loading and now we're not, but still have no items, render empty state
-          this.renderItems();
-        }
-      }
+    this.subscribe(store.obsidianNotes, () => this.renderItems());
+    this.subscribe(store.timelineLoading, (loading) => {
+      if (loading && store.timelineItems.get().length === 0) this.renderSkeleton();
+      else if (!loading) this.renderItems();
     });
     
-    // Load browser history via IPC
     this.loadBrowserHistory();
   }
   
   render(): void {
     this.container.innerHTML = '';
-    // Don't override container className - it has overflow-y-auto from Layout
     
-    // Main layout container - flex column to position input at bottom
     const mainContainer = createElement('div', {
-      className: 'flex flex-col h-full relative',
+      className: 'flex flex-col h-full relative bg-gradient-soft',
     });
     
-    // Scrollable timeline area
+    // Header
+    const header = this.createHeader();
+    mainContainer.appendChild(header);
+    
+    // Scroll area
     const scrollArea = createElement('div', {
-      className: 'flex-1 overflow-y-auto min-h-0',
+      className: 'flex-1 overflow-y-auto min-h-0 pt-4',
     });
     
-    // Create inner wrapper for timeline content
+    // Content wrapper
     const wrapper = createElement('div', {
-      className: 'max-w-3xl mx-auto pb-24 px-3 space-y-6 relative w-full',
+      className: 'max-w-5xl mx-auto pb-32 px-6 md:px-10 relative w-full',
     });
     
-    // Vertical timeline line
-    const timelineLine = createElement('div', {
-      className: 'timeline-line absolute left-[calc(0.75rem+9.5px)] top-[calc(0.25rem+0.375rem+0.25rem+9.5px)] bottom-0 w-0.5 bg-border z-0 hidden',
-    });
-    wrapper.appendChild(timelineLine);
-    
-    // Items container (with small top padding)
     this.itemsContainer = createElement('div', {
-      className: 'timeline-items space-y-6 pt-2',
+      className: 'timeline-items relative',
     });
     wrapper.appendChild(this.itemsContainer);
     
-    // Load more trigger element
-    this.loadMoreRef = createElement('div', {
-      className: 'h-4',
-    });
+    // Load more trigger
+    this.loadMoreRef = createElement('div', { className: 'h-8' });
     wrapper.appendChild(this.loadMoreRef);
-    
-    // Loading indicator
-    const loadingIndicator = createElement('div', {
-      className: 'loading-more hidden text-sm text-muted-foreground text-center py-4 font-mono uppercase tracking-wider',
-      textContent: 'Loading more...',
-    });
-    wrapper.appendChild(loadingIndicator);
     
     scrollArea.appendChild(wrapper);
     mainContainer.appendChild(scrollArea);
     
-    // Chat panel container (for slide-up panel)
-    this.chatPanelContainer = createElement('div', {
-      className: 'chat-panel-container absolute inset-0 pointer-events-none z-40',
-    });
-    mainContainer.appendChild(this.chatPanelContainer);
-    
-    // Bottom input bar
-    this.inputContainer = this.createBottomInputBar();
-    mainContainer.appendChild(this.inputContainer);
-    
     this.container.appendChild(mainContainer);
   }
   
-  private createBottomInputBar(): HTMLElement {
-    const inputBar = createElement('div', {
-      className: 'bottom-input-bar absolute bottom-0 left-0 right-0 bg-background border-t border-border z-30',
+  private createHeader(): HTMLElement {
+    const header = createElement('header', {
+      className: 'flex items-center justify-between px-8 py-6 z-20',
     });
     
-    const innerWrapper = createElement('div', {
-      className: 'max-w-3xl mx-auto px-3 py-3',
+    const leftSide = createElement('div', { className: 'flex flex-col gap-1' });
+    
+    const greeting = createElement('h1', {
+      className: 'text-3xl font-semibold tracking-tight text-foreground/90',
+      textContent: this.getGreeting(),
+    });
+    leftSide.appendChild(greeting);
+    
+    const subGreeting = createElement('p', {
+      className: 'text-sm text-muted-foreground font-medium',
+      textContent: 'What would you like to explore today?',
+    });
+    leftSide.appendChild(subGreeting);
+    
+    header.appendChild(leftSide);
+    
+    // View Toggle
+    this.viewToggleContainer = createElement('div', {
+      className: 'flex items-center gap-1.5 p-1.5 bg-secondary/50 backdrop-blur-md rounded-2xl border border-border/40',
     });
     
-    const inputWrapper = createElement('div', {
-      className: 'flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2',
-    });
-    
-    // Mode toggle buttons
-    const toggleContainer = createElement('div', {
-      className: 'flex items-center gap-1 border-r border-border pr-2',
-    });
-    
-    // Chat toggle button
-    const chatToggle = createElement('button', {
-      className: `mode-toggle p-1.5 rounded transition-colors ${this.inputMode === 'chat' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`,
-      innerHTML: `
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
-        </svg>
-      `,
-      attributes: { title: 'Ask AI' },
-    });
-    this.addListener(chatToggle, 'click', () => this.setInputMode('chat'));
-    toggleContainer.appendChild(chatToggle);
-    
-    // Note toggle button
-    const noteToggle = createElement('button', {
-      className: `mode-toggle p-1.5 rounded transition-colors ${this.inputMode === 'note' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`,
-      innerHTML: `
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-          <path d="m15 5 4 4"/>
-        </svg>
-      `,
-      attributes: { title: 'Write a note' },
-    });
-    this.addListener(noteToggle, 'click', () => this.setInputMode('note'));
-    toggleContainer.appendChild(noteToggle);
-    
-    inputWrapper.appendChild(toggleContainer);
-    
-    // Input field - refined textarea
-    const input = createElement('textarea', {
-      className: 'flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground font-mono text-sm resize-none py-1 min-h-[24px] max-h-32 custom-scrollbar',
-      attributes: {
-        placeholder: this.inputMode === 'note' ? 'Write something new...' : 'Ask a question...',
-        id: 'timeline-input',
-        rows: '1',
+    const modes: Array<{ id: ViewMode; icon: string }> = [
+      { 
+        id: 'overview', 
+        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>` 
       },
-    }) as HTMLTextAreaElement;
-    
-    // Auto-resize textarea
-    this.addListener(input, 'input', () => {
-      input.style.height = 'auto';
-      input.style.height = (input.scrollHeight) + 'px';
-    });
-    
-    this.addListener(input, 'keydown', (e: KeyboardEvent) => {
-      // Enter without Option/Alt submits
-      if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
-        e.preventDefault();
-        this.handleInputSubmit(input.value);
-        input.value = '';
-        input.style.height = 'auto'; // Reset height
+      { 
+        id: 'timeline', 
+        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>` 
       }
-      // Option + Enter (Alt+Enter) adds a newline by default in textarea
-    });
+    ];
     
-    inputWrapper.appendChild(input);
-    
-    // Hint text
-    const hint = createElement('span', {
-      className: 'text-xs text-muted-foreground/50 font-mono whitespace-nowrap',
-      textContent: 'Option + ⏎ for newline',
-    });
-    inputWrapper.appendChild(hint);
-    
-    innerWrapper.appendChild(inputWrapper);
-    inputBar.appendChild(innerWrapper);
-    
-    return inputBar;
-  }
-  
-  private setInputMode(mode: 'note' | 'chat'): void {
-    this.inputMode = mode;
-    
-    // Update toggle button states
-    const toggles = this.inputContainer?.querySelectorAll('.mode-toggle');
-    toggles?.forEach((toggle, index) => {
-      const isActive = (index === 0 && mode === 'chat') || (index === 1 && mode === 'note');
-      toggle.className = `mode-toggle p-1.5 rounded transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`;
-    });
-    
-    // Update placeholder
-    const input = this.inputContainer?.querySelector('#timeline-input') as HTMLInputElement;
-    if (input) {
-      input.placeholder = mode === 'note' ? 'Write something new...' : 'Ask a question...';
-    }
-    
-    // If switching to chat mode, just update the UI
-    // The panel will only open once a message is sent
-  }
-  
-  private async handleInputSubmit(value: string): Promise<void> {
-    if (!value.trim()) return;
-    
-    if (this.inputMode === 'note') {
-      await this.createNote(value.trim());
-    } else {
-      // Chat mode - open panel and send message
-      this.openChatPanel(value.trim());
-    }
-  }
-  
-  private async createNote(body: string): Promise<void> {
-    try {
-      const { api } = await import('../api');
-      const result = await api.notes.create.mutate({ body });
-      
-      if (result.success && result.note) {
-        // Add the note to timeline
-        const noteItem: TimelineItem = {
-          id: result.note.id,
-          timestamp: new Date(result.note.timestamp),
-          source: 'user' as SourceType,
-          type: 'note',
-          data: result.note.data,
-        };
-        
-        // Prepend to timeline items
-        const currentItems = store.timelineItems.get();
-        actions.setTimelineItems([noteItem, ...currentItems]);
-      }
-    } catch (error) {
-      console.error('Failed to create note:', error);
-    }
-  }
-  
-  private openChatPanel(initialMessage?: string): void {
-    if (this.chatPanelOpen) return;
-    this.chatPanelOpen = true;
-    
-    // Hide timeline content and input bar to "replace" the view
-    const scrollArea = this.container.querySelector('.flex-1.overflow-y-auto');
-    if (scrollArea) (scrollArea as HTMLElement).style.display = 'none';
-    if (this.inputContainer) this.inputContainer.style.display = 'none';
-    
-    // Import and render ChatPanel dynamically
-    import('./ChatPanel').then(({ ChatPanel }) => {
-      if (!this.chatPanelContainer) return;
-      
-      this.chatPanelContainer.innerHTML = '';
-      this.chatPanelContainer.className = 'chat-panel-container absolute inset-0 z-40';
-      
-      const panel = new ChatPanel(this.chatPanelContainer, {
-        onClose: () => this.closeChatPanel(),
-        initialMessage,
+    for (const mode of modes) {
+      const btn = createElement('button', {
+        className: `p-2.5 rounded-xl transition-all duration-300 ${this.viewMode === mode.id ? 'bg-card shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`,
+        innerHTML: mode.icon,
+        attributes: { 'data-view': mode.id },
       });
-      panel.init();
-    });
-  }
-  
-  private closeChatPanel(): void {
-    this.chatPanelOpen = false;
-    
-    // Show timeline content and input bar again
-    const scrollArea = this.container.querySelector('.flex-1.overflow-y-auto');
-    if (scrollArea) (scrollArea as HTMLElement).style.display = 'block';
-    if (this.inputContainer) this.inputContainer.style.display = 'block';
-    
-    if (this.chatPanelContainer) {
-      this.chatPanelContainer.innerHTML = '';
-      this.chatPanelContainer.className = 'chat-panel-container absolute inset-0 pointer-events-none z-40';
+      this.addListener(btn, 'click', () => this.setViewMode(mode.id));
+      this.viewToggleContainer.appendChild(btn);
     }
     
-    // Reset to note mode
-    this.setInputMode('note');
+    header.appendChild(this.viewToggleContainer);
+    return header;
+  }
+  
+  private getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+  
+  private setViewMode(mode: ViewMode): void {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+    localStorage.setItem('cortex-view-mode', mode);
+    
+    this.viewToggleContainer?.querySelectorAll('[data-view]').forEach(btn => {
+      const isMatch = (btn as HTMLElement).dataset.view === mode;
+      btn.className = `p-2.5 rounded-xl transition-all duration-300 ${isMatch ? 'bg-card shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`;
+    });
+    
+    this.renderItems();
+  }
+  
+  private renderItems(): void {
+    if (!this.itemsContainer) return;
+    
+    const allItems = this.getAllItems();
+    const selectedSources = store.selectedSources.get();
+    const filteredItems = selectedSources.includes('all') 
+      ? allItems 
+      : allItems.filter(i => selectedSources.includes(i.source));
+    
+    clearChildren(this.itemsContainer);
+    
+    if (filteredItems.length === 0) {
+      this.renderEmptyState();
+      return;
+    }
+    
+    if (this.viewMode === 'overview') {
+      this.renderOverview(filteredItems);
+    } else {
+      this.renderTimeline(filteredItems);
+    }
+  }
+  
+  // ============================================
+  // OVERVIEW RENDERING
+  // ============================================
+  
+  private renderOverview(items: TimelineItem[]): void {
+    const groups = this.groupItemsByDay(items);
+    const container = createElement('div', { className: 'space-y-12' });
+    
+    for (const group of groups) {
+      const section = createElement('div', { className: 'overview-section' });
+      
+      const header = createElement('div', {
+        className: 'flex items-center gap-2 mb-6 group cursor-pointer w-fit',
+      });
+      header.innerHTML = `
+        <h2 class="text-2xl font-semibold text-foreground/80">${group.label}</h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/60 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">
+          <path d="M7 7h10v10"/><path d="M7 17 17 7"/>
+        </svg>
+      `;
+      section.appendChild(header);
+      
+      const grid = createElement('div', {
+        className: 'grid grid-cols-1 md:grid-cols-2 gap-6',
+      });
+      
+      const mainCard = this.renderOverviewCard(group);
+      grid.appendChild(mainCard);
+      
+      if (group.items.length > 2) {
+        const secondaryCard = this.renderItemsOverviewCard(group);
+        grid.appendChild(secondaryCard);
+      }
+      
+      section.appendChild(grid);
+      container.appendChild(section);
+    }
+    
+    this.itemsContainer?.appendChild(container);
+  }
+  
+  private renderOverviewCard(group: DayGroup): HTMLElement {
+    const card = createElement('div', {
+      className: 'card-modern card-elevated flex flex-col gap-4 min-h-[320px] cursor-pointer',
+    });
+    
+    const content = createElement('div', { className: 'flex-1' });
+    
+    if (group.previewImages.length > 0) {
+      const stack = this.renderImageStack(group.previewImages);
+      content.appendChild(stack);
+    } else {
+      const textPreview = createElement('div', {
+        className: 'bg-secondary/30 rounded-2xl p-5 space-y-3',
+      });
+      group.previewTexts.slice(0, 3).forEach(text => {
+        textPreview.appendChild(createElement('p', {
+          className: 'text-sm text-muted-foreground line-clamp-2',
+          textContent: text,
+        }));
+      });
+      content.appendChild(textPreview);
+    }
+    
+    card.appendChild(content);
+    
+    const footer = createElement('div', { className: 'mt-auto' });
+    footer.innerHTML = `
+      <h3 class="text-lg font-semibold mb-1">${this.generateDayTitle(group)}</h3>
+      <div class="flex items-center gap-3 mt-4 pt-4 border-t border-border/40">
+        <div class="flex -space-x-2">
+          ${Array.from(group.sources).map(s => this.getSourceIconSmall(s)).join('')}
+        </div>
+        <span class="text-xs text-muted-foreground font-medium">${group.items.length} items from ${this.formatSourceNames(group.sources)}</span>
+      </div>
+    `;
+    
+    card.appendChild(footer);
+    this.addListener(card, 'click', () => this.openItemDetail(group.items[0]));
+    
+    return card;
+  }
+  
+  private renderItemsOverviewCard(group: DayGroup): HTMLElement {
+    const card = createElement('div', {
+      className: 'card-modern bg-secondary/20 border-transparent p-0 overflow-hidden flex flex-col',
+    });
+    
+    const header = createElement('div', {
+      className: 'p-6 pb-2 flex items-center justify-between',
+    });
+    header.innerHTML = `
+      <h3 class="text-sm font-semibold uppercase tracking-widest text-muted-foreground/70">Recent Activity</h3>
+      <span class="text-xs font-mono text-muted-foreground/50">${group.items.length} items</span>
+    `;
+    card.appendChild(header);
+    
+    const scroll = createElement('div', {
+      className: 'flex overflow-x-auto p-6 pt-2 gap-4 scrollbar-hide',
+    });
+    
+    group.items.slice(1, 6).forEach(item => {
+      const itemCard = createElement('div', {
+        className: 'min-w-[200px] bg-card border border-border/40 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer',
+      });
+      
+      const title = this.extractPreviewText(item) || 'Untitled';
+      itemCard.innerHTML = `
+        <div class="flex items-center gap-2 mb-3">
+          ${this.getSourceIconSmall(item.source)}
+          <span class="text-[10px] uppercase font-bold text-muted-foreground/60">${item.type}</span>
+        </div>
+        <p class="text-sm font-medium line-clamp-3 leading-relaxed">${escapeHtml(title)}</p>
+        <p class="text-[10px] text-muted-foreground mt-3">${formatTime(item.timestamp)}</p>
+      `;
+      
+      this.addListener(itemCard, 'click', (e) => {
+        e.stopPropagation();
+        this.openItemDetail(item);
+      });
+      scroll.appendChild(itemCard);
+    });
+    
+    card.appendChild(scroll);
+    return card;
+  }
+  
+  // ============================================
+  // TIMELINE RENDERING
+  // ============================================
+  
+  private renderTimeline(items: TimelineItem[]): void {
+    const grouped = groupByDate(items);
+    const container = createElement('div', { className: 'space-y-10' });
+    
+    for (const [dateKey, dayItems] of grouped) {
+      const dayWrapper = createElement('div', { className: 'relative' });
+      
+      const dateHeader = createElement('div', {
+        className: 'flex items-center gap-4 mb-8',
+      });
+      dateHeader.innerHTML = `
+        <span class="text-sm font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">${formatFullDate(new Date(dateKey))}</span>
+        <div class="flex-1 h-[1.5px] bg-border/30"></div>
+      `;
+      dayWrapper.appendChild(dateHeader);
+      
+      const itemsList = createElement('div', { className: 'space-y-12 relative' });
+      
+      dayItems.forEach((item, index) => {
+        const entry = createElement('div', {
+          className: 'timeline-entry relative pl-16 min-h-[80px]',
+          dataset: { entryId: item.id },
+        });
+        
+        if (index < dayItems.length - 1) {
+          const line = createElement('div', { className: 'timeline-line' });
+          entry.appendChild(line);
+        }
+        
+        const dot = createElement('div', { className: 'timeline-dot' });
+        dot.innerHTML = this.getSourceIconLarge(item.source);
+        entry.appendChild(dot);
+        
+        const card = createElement('div', {
+          className: 'card-modern card-elevated group cursor-pointer',
+          dataset: { clickable: 'true' },
+        });
+        
+        const header = createElement('div', { className: 'flex items-center justify-between mb-4' });
+        header.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-primary uppercase tracking-wider">${item.type}</span>
+            <span class="text-muted-foreground/30">•</span>
+            <span class="text-xs font-medium text-muted-foreground">${formatTime(item.timestamp)}</span>
+          </div>
+          <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </div>
+        `;
+        card.appendChild(header);
+        
+        const content = this.renderItemContent(item);
+        card.appendChild(content);
+        
+        entry.appendChild(card);
+        itemsList.appendChild(entry);
+      });
+      
+      dayWrapper.appendChild(itemsList);
+      container.appendChild(dayWrapper);
+    }
+    
+    this.itemsContainer?.appendChild(container);
+  }
+  
+  // ============================================
+  // HELPERS
+  // ============================================
+  
+  private getSourceIconSmall(source: SourceType): string {
+    const url = this.iconUrls[source];
+    return url ? `<img src="${url}" class="w-5 h-5 rounded-md" />` : `<div class="w-5 h-5 bg-muted rounded-md"></div>`;
+  }
+  
+  private getSourceIconLarge(source: SourceType): string {
+    const url = this.iconUrls[source];
+    return url ? `<img src="${url}" class="w-6 h-6 rounded-lg" />` : `<div class="w-6 h-6 bg-muted rounded-lg"></div>`;
+  }
+  
+  private formatSourceNames(sources: Set<SourceType>): string {
+    const names = Array.from(sources).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+    if (names.length <= 2) return names.join(' and ');
+    return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
   }
   
   private async loadAppsData(): Promise<void> {
@@ -332,1072 +410,201 @@ export class Timeline extends Component {
         chrome: apps.find(a => a.id === 'chrome')?.iconUrl,
         brave: apps.find(a => a.id === 'brave')?.iconUrl,
         teller: apps.find(a => a.id === 'teller')?.iconUrl,
+        obsidian: apps.find(a => a.id === 'obsidian')?.iconUrl,
       };
-    } catch (error) {
-      console.error('Failed to load apps data:', error);
+    } catch {
+      // Ignore
     }
   }
   
   private async loadInitialData(): Promise<void> {
-    // Show skeleton loading state
-    if (this.itemsContainer) {
-      this.renderSkeleton();
-    }
-    
     try {
       const result = await fetchTimeline(25);
       actions.appendTimelineItems(result.items);
       actions.setTimelineCursor(result.nextCursor || null);
-      // Always render items after loading - this will show empty state if no items
       this.renderItems();
     } catch {
-      if (this.itemsContainer) {
-        this.itemsContainer.innerHTML = `
-          <div class="flex items-center justify-center py-12">
-            <div class="text-status-error font-mono uppercase tracking-wider text-sm">Failed to load timeline</div>
-          </div>
-        `;
+      // Ignore
+    }
+  }
+  
+  private getAllItems(): TimelineItem[] {
+    const server = store.timelineItems.get();
+    const chrome = (store.chromeHistory.get() || []) as BrowserHistoryEntry[];
+    const brave = (store.braveHistory.get() || []) as BrowserHistoryEntry[];
+    const obsidian = store.obsidianNotes.get() || [];
+    
+    const chromeItems: TimelineItem[] = chrome.map(e => ({
+      id: `chrome-${e.url}-${e.timestamp}`,
+      timestamp: new Date(e.timestamp),
+      source: 'chrome' as SourceType,
+      type: 'browser-history',
+      data: e,
+    }));
+    
+    const braveItems: TimelineItem[] = brave.map(e => ({
+      id: `brave-${e.url}-${e.timestamp}`,
+      timestamp: new Date(e.timestamp),
+      source: 'brave' as SourceType,
+      type: 'browser-history',
+      data: e,
+    }));
+    
+    const obsidianItems: TimelineItem[] = obsidian.map(n => ({
+      id: `obsidian-${n.path}`,
+      timestamp: new Date(n.mtime),
+      source: 'obsidian' as SourceType,
+      type: 'obsidian-note',
+      data: n,
+    }));
+    
+    return [...server, ...chromeItems, ...braveItems, ...obsidianItems].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+  
+  private groupItemsByDay(items: TimelineItem[]): DayGroup[] {
+    const groups = new Map<string, DayGroup>();
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    
+    for (const item of items) {
+      const date = new Date(item.timestamp);
+      const key = date.toDateString();
+      if (!groups.has(key)) {
+        const labelText = key === today ? 'Today' : key === yesterday ? 'Yesterday' : date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        groups.set(key, { date, label: labelText, items: [], sources: new Set(), previewImages: [], previewTexts: [] });
+      }
+      const g = groups.get(key)!;
+      g.items.push(item);
+      g.sources.add(item.source);
+      if (g.previewImages.length < 3) {
+        const img = this.extractImageUrl(item);
+        if (img) g.previewImages.push(img);
+      }
+      if (g.previewTexts.length < 3) {
+        const text = this.extractPreviewText(item);
+        if (text) g.previewTexts.push(text);
       }
     }
+    return Array.from(groups.values());
+  }
+  
+  private extractImageUrl(item: TimelineItem): string | null {
+    if (item.type === 'cast') return (item.data as FarcasterCast).author.pfp_url || null;
+    return null;
+  }
+  
+  private extractPreviewText(item: TimelineItem): string | null {
+    if (item.type === 'cast') return (item.data as FarcasterCast).text.slice(0, 100);
+    if (item.type === 'browser-history') return (item.data as BrowserHistoryEntry).title || (item.data as BrowserHistoryEntry).url;
+    if (item.type === 'transaction') return (item.data as TellerTransaction).description;
+    if (item.type === 'obsidian-note') return (item.data as { title: string; body: string }).body.slice(0, 100);
+    return null;
+  }
+  
+  private renderImageStack(images: string[]): HTMLElement {
+    const stack = createElement('div', { className: 'h-40 relative w-full overflow-hidden rounded-2xl bg-secondary/30' });
+    images.slice(0, 3).forEach((url, i) => {
+      const img = createElement('img', {
+        className: 'absolute rounded-xl shadow-lg border border-border/40 object-cover w-32 h-40 transition-transform duration-500 hover:scale-105',
+        attributes: { src: url, style: `left: ${i * 40 + 20}px; top: ${i * 10 + 10}px; transform: rotate(${i * 3 - 3}deg); z-index: ${3-i};` },
+      });
+      stack.appendChild(img);
+    });
+    return stack;
+  }
+  
+  private generateDayTitle(group: DayGroup): string {
+    const counts: Record<string, number> = {};
+    group.items.forEach(i => counts[i.type] = (counts[i.type] || 0) + 1);
+    const parts = [];
+    if (counts['cast']) parts.push(`${counts['cast']} post${counts['cast'] !== 1 ? 's' : ''}`);
+    if (counts['transaction']) parts.push(`${counts['transaction']} tx`);
+    if (counts['obsidian-note']) parts.push(`${counts['obsidian-note']} note${counts['obsidian-note'] !== 1 ? 's' : ''}`);
+    return parts.length ? parts.slice(0, 2).join(', ') : `${group.items.length} items`;
+  }
+  
+  private renderItemContent(item: TimelineItem): HTMLElement {
+    const wrapper = createElement('div', { className: 'text-sm leading-relaxed' });
+    const text = this.extractPreviewText(item) || 'No preview available';
+    wrapper.textContent = text;
+    return wrapper;
   }
   
   private renderSkeleton(): void {
     if (!this.itemsContainer) return;
-    
     clearChildren(this.itemsContainer);
-    
-    // Render 5 skeleton items
-    for (let i = 0; i < 5; i++) {
-      const skeletonEntry = createElement('div', {
-        className: 'timeline-entry relative pl-8',
-      });
-      
-      // Timeline dot skeleton
-      const dotSkeleton = createElement('div', {
-        className: 'absolute left-0 top-1 w-5 h-5 bg-muted skeleton rounded-full',
-      });
-      skeletonEntry.appendChild(dotSkeleton);
-      
-      // Time label skeleton
-      const timeSkeleton = createElement('div', {
-        className: 'skeleton h-3 w-24 mb-2 rounded',
-      });
-      skeletonEntry.appendChild(timeSkeleton);
-      
-      // Content skeleton
-      const contentSkeleton = createElement('div', {
-        className: 'p-3 bg-card border',
-      });
-      
-      // Author row skeleton
-      const authorSkeleton = createElement('div', {
-        className: 'flex items-center gap-2 mb-2',
-      });
-      authorSkeleton.innerHTML = `
-        <div class="skeleton w-6 h-6 rounded-full"></div>
-        <div class="skeleton h-4 w-32 rounded"></div>
-        <div class="skeleton h-4 w-24 rounded"></div>
-      `;
-      contentSkeleton.appendChild(authorSkeleton);
-      
-      // Text lines skeleton
-      const textSkeleton1 = createElement('div', {
-        className: 'skeleton h-4 w-full mb-2 rounded',
-      });
-      const textSkeleton2 = createElement('div', {
-        className: 'skeleton h-4 w-3/4 rounded',
-      });
-      contentSkeleton.appendChild(textSkeleton1);
-      contentSkeleton.appendChild(textSkeleton2);
-      
-      skeletonEntry.appendChild(contentSkeleton);
-      this.itemsContainer.appendChild(skeletonEntry);
+    for (let i = 0; i < 3; i++) {
+      const s = createElement('div', { className: 'mb-10 space-y-4' });
+      s.innerHTML = `<div class="skeleton h-8 w-40 rounded-xl"></div><div class="card-modern skeleton h-64 w-full"></div>`;
+      this.itemsContainer.appendChild(s);
     }
   }
   
-  private loadBrowserHistory(): void {
-    // Chrome history
-    const chromeApp = store.apps.get().find(a => a.id === 'chrome');
-    if (chromeApp?.connection?.status === 'connected' && chromeApp.connection.connectionMetadata?.localPath) {
-      this.loadHistoryWithRetry('chrome', chromeApp.connection.connectionMetadata.localPath);
-    }
-    
-    // Brave history
-    const braveApp = store.apps.get().find(a => a.id === 'brave');
-    if (braveApp?.connection?.status === 'connected' && braveApp.connection.connectionMetadata?.localPath) {
-      this.loadHistoryWithRetry('brave', braveApp.connection.connectionMetadata.localPath);
-    }
+  private renderEmptyState(): void {
+    if (!this.itemsContainer) return;
+    this.itemsContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-32 text-center opacity-50">
+        <div class="w-24 h-24 rounded-full bg-secondary mb-6 flex items-center justify-center">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold">Your timeline is quiet</h3>
+        <p class="text-sm mt-2 max-w-xs">Connect more apps to see your day unfold here.</p>
+      </div>
+    `;
   }
   
-  private async loadHistoryWithRetry(browser: 'chrome' | 'brave', localPath: string): Promise<void> {
-    const api = browser === 'chrome' ? window.chromeHistory : window.braveHistory;
-    
-    if (!api || typeof api.readHistory !== 'function') {
-      // Retry with polling
-      let attempts = 0;
-      const maxAttempts = 15;
-      
-      this.registerInterval(() => {
-        attempts++;
-        const currentApi = browser === 'chrome' ? window.chromeHistory : window.braveHistory;
-        
-        if (currentApi && typeof currentApi.readHistory === 'function') {
-          this.readBrowserHistory(browser, localPath);
-        } else if (attempts >= maxAttempts) {
-          console.warn(`[Timeline] ${browser} history API not available after ${maxAttempts} attempts`);
-        }
-      }, 2000);
-      
-      return;
-    }
-    
-    await this.readBrowserHistory(browser, localPath);
+  private openItemDetail(item: TimelineItem): void {
+    const modalContainer = createElement('div', { attributes: { id: 'detail-modal-portal' } });
+    document.body.appendChild(modalContainer);
+    const modal = new DetailModal(modalContainer, item, () => {
+      modal.destroy();
+      modalContainer.remove();
+    });
+    modal.init();
   }
   
-  private async readBrowserHistory(browser: 'chrome' | 'brave', localPath: string): Promise<void> {
-    try {
-      const api = browser === 'chrome' ? window.chromeHistory : window.braveHistory;
-      const result = await api.readHistory(localPath);
-      
-      if (result.success && result.data) {
-        if (browser === 'chrome') {
-          actions.setChromeHistory(result.data);
-        } else {
-          actions.setBraveHistory(result.data);
-        }
-        this.renderItems();
-      }
-    } catch (error) {
-      console.error(`Error reading ${browser} history:`, error);
+  private async loadBrowserHistory(): Promise<void> {
+    const apps = store.apps.get();
+    const chrome = apps.find(a => a.id === 'chrome');
+    if (chrome?.connection?.status === 'connected' && chrome.connection.connectionMetadata?.localPath) {
+      const res = await window.chromeHistory.readHistory(chrome.connection.connectionMetadata.localPath);
+      if (res.success && res.data) actions.setChromeHistory(res.data);
+    }
+    const brave = apps.find(a => a.id === 'brave');
+    if (brave?.connection?.status === 'connected' && brave.connection.connectionMetadata?.localPath) {
+      const res = await window.braveHistory.readHistory(brave.connection.connectionMetadata.localPath);
+      if (res.success && res.data) actions.setBraveHistory(res.data);
+    }
+    
+    // Load Obsidian notes if connected
+    const obsidian = apps.find(a => a.id === 'obsidian');
+    if (obsidian?.connection?.status === 'connected' && obsidian.connection.connectionMetadata?.localPath) {
+      const res = await window.obsidianVault.readVault(obsidian.connection.connectionMetadata.localPath);
+      if (res.success && res.notes) actions.setObsidianNotes(res.notes);
     }
   }
   
   private setupInfiniteScroll(): void {
     if (!this.loadMoreRef) return;
-    
-    this.observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (first?.isIntersecting && !this.isLoadingMore) {
-          this.loadMore();
-        }
-      },
-      {
-        root: null,
-        rootMargin: '200px',
+    this.observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !this.isLoadingMore && store.timelineCursor.get()) {
+        this.isLoadingMore = true;
+        loadMoreTimeline().finally(() => this.isLoadingMore = false);
       }
-    );
-    
+    }, { rootMargin: '400px' });
     this.observer.observe(this.loadMoreRef);
-    
-    this.registerCleanup(() => {
-      this.observer?.disconnect();
-    });
+    this.registerCleanup(() => this.observer?.disconnect());
   }
   
-  private setupPullToRefresh(): void {
-    if (!this.container) return;
-    
-    // Create refresh indicator
-    const refreshIndicator = createElement('div', {
-      className: 'pull-to-refresh-indicator fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity',
-      innerHTML: `
-        <div class="flex flex-col items-center gap-2 py-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pull-refresh-icon">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>
-          </svg>
-          <span class="text-xs font-mono uppercase tracking-wider text-muted-foreground pull-refresh-text">Pull to refresh</span>
-        </div>
-      `,
-    });
-    document.body.appendChild(refreshIndicator);
-    
-    // Touch events for mobile
-    let touchStartY = 0;
-    let touchStartX = 0;
-    
-    const handleTouchStart = (e: TouchEvent) => {
-      if (this.container && this.container.scrollTop === 0 && !store.timelineLoading.get()) {
-        touchStartY = e.touches[0].clientY;
-        touchStartX = e.touches[0].clientX;
-        this.pullStartY = touchStartY;
-        this.isPulling = true;
-      }
-    };
-    
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!this.isPulling || store.timelineLoading.get()) return;
-      
-      const currentY = e.touches[0].clientY;
-      const currentX = e.touches[0].clientX;
-      const deltaY = currentY - touchStartY;
-      const deltaX = Math.abs(currentX - touchStartX);
-      
-      // Don't trigger if scrolling horizontally
-      if (deltaX > Math.abs(deltaY)) {
-        this.isPulling = false;
-        return;
-      }
-      
-      // Only allow pulling down when at top
-      if (this.container && this.container.scrollTop === 0 && deltaY > 0) {
-        e.preventDefault();
-        this.pullCurrentY = deltaY;
-        this.updatePullIndicator(refreshIndicator, deltaY);
-      } else {
-        this.isPulling = false;
-        this.hidePullIndicator(refreshIndicator);
-      }
-    };
-    
-    const handleTouchEnd = () => {
-      if (!this.isPulling) return;
-      
-      if (this.pullCurrentY >= this.pullThreshold) {
-        this.triggerRefresh(refreshIndicator);
-      } else {
-        this.hidePullIndicator(refreshIndicator);
-      }
-      
-      this.isPulling = false;
-      this.pullCurrentY = 0;
-      this.pullStartY = 0;
-    };
-    
-    // Mouse events for desktop trackpad
-    let mouseStartY = 0;
-    let mouseStartX = 0;
-    let isMouseDown = false;
-    
-    const handleMouseDown = (e: MouseEvent) => {
-      if (this.container && this.container.scrollTop === 0 && !store.timelineLoading.get()) {
-        mouseStartY = e.clientY;
-        mouseStartX = e.clientX;
-        this.pullStartY = mouseStartY;
-        isMouseDown = true;
-      }
-    };
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isMouseDown || store.timelineLoading.get()) return;
-      
-      const deltaY = e.clientY - mouseStartY;
-      const deltaX = Math.abs(e.clientX - mouseStartX);
-      
-      // Don't trigger if scrolling horizontally
-      if (deltaX > Math.abs(deltaY)) {
-        isMouseDown = false;
-        return;
-      }
-      
-      // Only allow pulling down when at top
-      if (this.container && this.container.scrollTop === 0 && deltaY > 0) {
-        e.preventDefault();
-        this.pullCurrentY = deltaY;
-        this.isPulling = true;
-        this.updatePullIndicator(refreshIndicator, deltaY);
-      } else {
-        isMouseDown = false;
-        this.isPulling = false;
-        this.hidePullIndicator(refreshIndicator);
-      }
-    };
-    
-    const handleMouseUp = () => {
-      if (!isMouseDown) return;
-      
-      if (this.isPulling && this.pullCurrentY >= this.pullThreshold) {
-        this.triggerRefresh(refreshIndicator);
-      } else {
-        this.hidePullIndicator(refreshIndicator);
-      }
-      
-      isMouseDown = false;
-      this.isPulling = false;
-      this.pullCurrentY = 0;
-      this.pullStartY = 0;
-    };
-    
-    // Add event listeners
-    this.container.addEventListener('touchstart', handleTouchStart, { passive: false });
-    this.container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    this.container.addEventListener('touchend', handleTouchEnd);
-    this.container.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    this.registerCleanup(() => {
-      this.container?.removeEventListener('touchstart', handleTouchStart);
-      this.container?.removeEventListener('touchmove', handleTouchMove);
-      this.container?.removeEventListener('touchend', handleTouchEnd);
-      this.container?.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      refreshIndicator.remove();
-    });
-  }
-  
-  private updatePullIndicator(indicator: HTMLElement, pullDistance: number): void {
-    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
-    const text = indicator.querySelector('.pull-refresh-text') as HTMLElement;
-    
-    if (!icon || !text) return;
-    
-    indicator.style.opacity = '1';
-    indicator.style.transform = `translateX(-50%) translateY(${Math.min(pullDistance, this.pullThreshold)}px)`;
-    
-    // Rotate icon based on pull distance
-    const rotation = Math.min((pullDistance / this.pullThreshold) * 180, 180);
-    icon.style.transform = `rotate(${rotation}deg)`;
-    
-    // Update text
-    if (pullDistance >= this.pullThreshold) {
-      text.textContent = 'Release to refresh';
-      text.classList.remove('text-muted-foreground');
-      text.classList.add('text-primary');
-    } else {
-      text.textContent = 'Pull to refresh';
-      text.classList.remove('text-primary');
-      text.classList.add('text-muted-foreground');
-    }
-  }
-  
-  private hidePullIndicator(indicator: HTMLElement): void {
-    indicator.style.opacity = '0';
-    indicator.style.transform = 'translateX(-50%) translateY(0px)';
-    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
-    if (icon) {
-      icon.style.transform = 'rotate(0deg)';
-    }
-  }
-  
-  private async triggerRefresh(indicator: HTMLElement): Promise<void> {
-    // Debounce rapid refreshes
-    const now = Date.now();
-    if (now - this.lastRefreshTime < this.refreshDebounceMs) {
-      this.hidePullIndicator(indicator);
-      return;
-    }
-    this.lastRefreshTime = now;
-    
-    // Show loading state
-    const icon = indicator.querySelector('.pull-refresh-icon') as HTMLElement;
-    const text = indicator.querySelector('.pull-refresh-text') as HTMLElement;
-    if (icon) {
-      icon.style.animation = 'spin 1s linear infinite';
-    }
-    if (text) {
-      text.textContent = 'Refreshing...';
-    }
-    
-    try {
-      // Clear existing items and fetch fresh data
-      store.timelineItems.set([]);
-      actions.setTimelineCursor(null);
-      store.timelineLoading.set(true);
-      
-      const result = await fetchTimeline(25);
-      actions.appendTimelineItems(result.items);
-      actions.setTimelineCursor(result.nextCursor || null);
-    } catch (error) {
-      console.error('[Timeline] Error refreshing:', error);
-      if (text) {
-        text.textContent = 'Refresh failed';
-        text.classList.add('text-status-error');
-      }
-    } finally {
-      store.timelineLoading.set(false);
-      // Hide indicator after a short delay
-      setTimeout(() => {
-        this.hidePullIndicator(indicator);
-        if (icon) {
-          icon.style.animation = '';
-        }
-        if (text) {
-          text.textContent = 'Pull to refresh';
-          text.classList.remove('text-status-error');
-        }
-      }, 500);
-    }
-  }
-  
-  private async loadMore(): Promise<void> {
-    if (this.isLoadingMore || !store.timelineCursor.get()) return;
-    
-    this.isLoadingMore = true;
-    this.showLoadingMore(true);
-    
-    try {
-      await loadMoreTimeline();
-    } finally {
-      this.isLoadingMore = false;
-      this.showLoadingMore(false);
-    }
-  }
-  
-  private showLoadingMore(show: boolean): void {
-    const indicator = this.container.querySelector('.loading-more');
-    if (indicator) {
-      indicator.classList.toggle('hidden', !show);
-    }
-  }
-  
-  private renderItems(): void {
-    if (!this.itemsContainer) return;
-    
-    // Get all items including browser history
-    const allItems = this.getAllItems();
-    const selectedSources = store.selectedSources.get();
-    
-    // Filter by selected sources
-    const filteredItems = selectedSources.includes('all')
-      ? allItems
-      : allItems.filter(item => selectedSources.includes(item.source));
-    
-    // Show/hide timeline line
-    const timelineLine = this.container.querySelector('.timeline-line');
-    if (timelineLine) {
-      timelineLine.classList.toggle('hidden', filteredItems.length === 0);
-    }
-    
-    // Clear and re-render
-    clearChildren(this.itemsContainer);
-    
-    if (filteredItems.length === 0) {
-      this.renderEmptyState(allItems.length > 0);
-      return;
-    }
-    
-    // Group by date
-    const groupedItems = groupByDate(filteredItems);
-    
-    // Render each date group
-    for (const [dateKey, items] of groupedItems) {
-      const dateSection = this.renderDateSection(new Date(dateKey), items);
-      this.itemsContainer.appendChild(dateSection);
-    }
-  }
-  
-  private getAllItems(): TimelineItem[] {
-    const serverItems = store.timelineItems.get();
-    const chromeHistory = store.chromeHistory.get();
-    const braveHistory = store.braveHistory.get();
-    
-    // Convert browser history to timeline items
-    const chromeItems: TimelineItem[] = chromeHistory.map(entry => ({
-      id: `chrome-${entry.url}-${entry.timestamp}`,
-      timestamp: new Date(entry.timestamp),
-      source: 'chrome' as SourceType,
-      type: 'browser-history',
-      data: entry,
-    }));
-    
-    const braveItems: TimelineItem[] = braveHistory.map(entry => ({
-      id: `brave-${entry.url}-${entry.timestamp}`,
-      timestamp: new Date(entry.timestamp),
-      source: 'brave' as SourceType,
-      type: 'browser-history',
-      data: entry,
-    }));
-    
-    // Combine and sort by timestamp descending
-    return [...serverItems, ...chromeItems, ...braveItems].sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-    );
-  }
-  
-  private renderEmptyState(hasFiltered: boolean): void {
-    if (!this.itemsContainer) return;
-    
-    if (hasFiltered) {
-      this.itemsContainer.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-12 min-h-[60vh]">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40 mb-4">
-            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-          </svg>
-          <p class="text-muted-foreground font-mono uppercase tracking-wider text-sm">No items match the selected filters</p>
-        </div>
-      `;
-    } else {
-      this.itemsContainer.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-12 min-h-[60vh]">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40 mb-6">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 6v6l4 2"/>
-          </svg>
-          <h3 class="text-lg font-mono uppercase tracking-wider mb-2 text-foreground">Your timeline is empty</h3>
-          <p class="text-muted-foreground text-sm text-center max-w-md mb-6">
-            Connect your apps to start seeing your activity here.
-          </p>
-          <a href="/apps" class="px-6 py-2.5 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs hover:opacity-90 transition-opacity" data-link>
-            Connect Apps
-          </a>
-        </div>
-      `;
-      
-      // Set up link handler
-      const link = this.itemsContainer.querySelector('[data-link]');
-      if (link) {
-        this.addListener(link as HTMLElement, 'click', (e) => {
-          e.preventDefault();
-          import('../router').then(({ router }) => {
-            router.navigate('/apps');
-          });
-        });
-      }
-    }
-  }
-  
-  private renderDateSection(date: Date, items: TimelineItem[]): HTMLElement {
-    const section = createElement('div');
-    
-    // Date separator (text only, no lines)
-    const dateSeparator = createElement('div', {
-      className: 'flex items-center justify-center py-2',
-    });
-    
-    const dateLabel = createElement('span', {
-      className: 'text-xs font-mono text-muted-foreground uppercase tracking-wider',
-      textContent: formatFullDate(date),
-    });
-    
-    dateSeparator.appendChild(dateLabel);
-    section.appendChild(dateSeparator);
-    
-    // Items container
-    const itemsWrapper = createElement('div', {
-      className: 'space-y-6 mt-4',
-    });
-    
-    for (const item of items) {
-      const entry = this.renderTimelineEntry(item);
-      itemsWrapper.appendChild(entry);
-    }
-    
-    section.appendChild(itemsWrapper);
-    return section;
-  }
-  
-  private renderTimelineEntry(item: TimelineItem): HTMLElement {
-    const isExpanded = store.expandedItemId.get() === item.id;
-    const time = formatTime(item.timestamp);
-    const date = formatDate(item.timestamp);
-    const iconUrl = this.iconUrls[item.source];
-    
-    const entry = createElement('div', {
-      className: 'timeline-entry relative pl-8',
-      dataset: { entryId: item.id },
-    });
-    
-    // Timeline dot with icon
-    const dot = createElement('div', {
-      className: 'absolute left-0 top-1 w-5 h-5 bg-background border-2 border-border flex items-center justify-center z-10',
-    });
-    
-    if (item.source === 'user') {
-      dot.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-          <path d="m15 5 4 4"/>
-        </svg>
-      `;
-    } else if (iconUrl) {
-      dot.innerHTML = `<img src="${iconUrl}" alt="" class="w-3 h-3" />`;
-    }
-    entry.appendChild(dot);
-    
-    // Time label
-    const timeLabel = createElement('div', {
-      className: 'text-xs text-muted-foreground mb-1 font-mono',
-      textContent: `${time} · ${date}`,
-    });
-    entry.appendChild(timeLabel);
-    
-    // Content based on type
-    const content = this.renderItemContent(item);
-    content.classList.add('cursor-pointer');
-    
-    // Click handler for expansion (using event delegation pattern)
-    content.dataset.clickable = 'true';
-    
-    entry.appendChild(content);
-    
-    // Expanded view
-    if (isExpanded) {
-      const expandedView = this.renderExpandedView(item);
-      entry.appendChild(expandedView);
-    }
-    
-    return entry;
-  }
-  
-  private renderItemContent(item: TimelineItem): HTMLElement {
-    switch (item.type) {
-      case 'cast':
-        return this.renderCastContent(item.data as FarcasterCast);
-      case 'browser-history':
-        return this.renderBrowserHistoryContent(item.data as BrowserHistoryEntry);
-      case 'transaction':
-        return this.renderTransactionContent(item.data as TellerTransaction);
-      case 'note':
-        return this.renderNoteContent(item.data as { body: string });
-      default:
-        return createElement('div', {
-          className: 'text-sm p-3 bg-card border font-mono',
-          textContent: JSON.stringify(item.data),
-        });
-    }
-  }
-  
-  private renderNoteContent(note: { body: string }): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-lg',
-    });
-    
-    // Note header with icon
-    const header = createElement('div', {
-      className: 'flex items-center gap-2 mb-2',
-    });
-    header.innerHTML = `
-      <div class="w-5 h-5 flex items-center justify-center bg-amber-500/20 rounded">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-          <path d="m15 5 4 4"/>
-        </svg>
-      </div>
-      <span class="text-xs font-mono uppercase tracking-wider text-amber-500/70">Note</span>
-    `;
-    wrapper.appendChild(header);
-    
-    // Note body
-    const body = createElement('p', {
-      className: 'text-sm text-foreground whitespace-pre-wrap',
-      textContent: note.body,
-    });
-    wrapper.appendChild(body);
-    
-    return wrapper;
-  }
-  
-  private renderCastContent(cast: FarcasterCast): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'p-3 bg-card border hover:bg-accent transition-colors',
-    });
-    
-    // Author row
-    const authorRow = createElement('div', {
-      className: 'flex items-center gap-2 mb-2',
-    });
-    
-    if (cast.author.pfp_url) {
-      authorRow.innerHTML = `
-        <img src="${cast.author.pfp_url}" alt="" class="w-6 h-6" />
-        <span class="font-medium text-sm">${escapeHtml(cast.author.display_name)}</span>
-        <span class="text-muted-foreground text-sm font-mono">@${escapeHtml(cast.author.username)}</span>
-      `;
-    } else {
-      authorRow.innerHTML = `
-        <div class="w-6 h-6 bg-muted"></div>
-        <span class="font-medium text-sm">${escapeHtml(cast.author.display_name)}</span>
-        <span class="text-muted-foreground text-sm font-mono">@${escapeHtml(cast.author.username)}</span>
-      `;
-    }
-    wrapper.appendChild(authorRow);
-    
-    // Text content
-    const text = createElement('p', {
-      className: 'text-sm',
-      textContent: cast.text,
-    });
-    wrapper.appendChild(text);
-    
-    // Reactions
-    if (cast.reactions) {
-      const reactions = createElement('div', {
-        className: 'flex items-center gap-4 mt-2 text-xs text-muted-foreground font-mono',
-      });
-      reactions.innerHTML = `
-        <span>❤️ ${cast.reactions.likes_count}</span>
-        <span>🔁 ${cast.reactions.recasts_count}</span>
-        ${cast.replies ? `<span>💬 ${cast.replies.count}</span>` : ''}
-      `;
-      wrapper.appendChild(reactions);
-    }
-    
-    return wrapper;
-  }
-  
-  private renderBrowserHistoryContent(entry: BrowserHistoryEntry): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'p-3 bg-card border hover:bg-accent transition-colors',
-    });
-    
-    // Get favicon
-    let faviconUrl = '';
-    try {
-      const url = new URL(entry.url);
-      faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
-    } catch {
-      // Invalid URL
-    }
-    
-    wrapper.innerHTML = `
-      <div class="flex items-start gap-3">
-        ${faviconUrl ? `<img src="${faviconUrl}" alt="" class="w-4 h-4 mt-0.5" />` : '<div class="w-4 h-4 mt-0.5 bg-muted"></div>'}
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">${escapeHtml(entry.title || 'Untitled')}</p>
-          <p class="text-xs text-muted-foreground truncate font-mono">${escapeHtml(entry.url)}</p>
-        </div>
-      </div>
-    `;
-    
-    return wrapper;
-  }
-  
-  private renderTransactionContent(transaction: TellerTransaction): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'p-3 bg-card border hover:bg-accent transition-colors',
-    });
-    
-    const amount = parseFloat(transaction.amount);
-    const isPositive = amount > 0;
-    
-    wrapper.innerHTML = `
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium">${escapeHtml(transaction.description)}</p>
-          <p class="text-xs text-muted-foreground font-mono uppercase">${escapeHtml(transaction.details.category || 'Uncategorized')}</p>
-        </div>
-        <span class="font-mono text-sm ${isPositive ? 'text-status-connected' : 'text-foreground'}">
-          ${isPositive ? '+' : ''}$${Math.abs(amount).toFixed(2)}
-        </span>
-      </div>
-    `;
-    
-    return wrapper;
-  }
-  
-  private renderExpandedView(item: TimelineItem): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'mt-3 p-4 bg-card border border-border relative',
-    });
-    
-    // Close button in top right
-    const closeButton = createElement('button', {
-      className: 'absolute top-2 right-2 p-1.5 hover:bg-accent transition-colors z-10',
-      attributes: {
-        'aria-label': 'Close',
-        style: 'cursor: pointer;',
-      },
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
-    });
-    closeButton.dataset.closeExpanded = 'true';
-    wrapper.appendChild(closeButton);
-    
-    // Content based on item type
-    switch (item.type) {
-      case 'cast':
-        return this.renderCastExpanded(item.data as FarcasterCast, wrapper);
-      case 'browser-history':
-        return this.renderBrowserHistoryExpanded(item.data as BrowserHistoryEntry, wrapper);
-      case 'transaction':
-        return this.renderTransactionExpanded(item.data as TellerTransaction, wrapper);
-      case 'note':
-        return this.renderNoteExpanded(item.data as { body: string }, wrapper);
-      default:
-        return this.renderDefaultExpanded(item, wrapper);
-    }
-  }
-  
-  private renderCastExpanded(cast: FarcasterCast, wrapper: HTMLElement): HTMLElement {
-    // Clear only the content, keep the close button
-    const existingContent = wrapper.querySelector('.expanded-content');
-    if (existingContent) {
-      existingContent.remove();
-    }
-    
-    const content = createElement('div', {
-      className: 'expanded-content space-y-3 text-sm',
-    });
-    
-    // Author info
-    const authorSection = createElement('div', {
-      className: 'flex items-center gap-3 pb-3 border-b border-border',
-    });
-    
-    if (cast.author.pfp_url) {
-      authorSection.innerHTML = `
-        <img src="${escapeHtml(cast.author.pfp_url)}" alt="" class="w-10 h-10" />
-        <div>
-          <div class="font-medium">${escapeHtml(cast.author.display_name)}</div>
-          <div class="text-xs text-muted-foreground font-mono">@${escapeHtml(cast.author.username)}</div>
-        </div>
-      `;
-    } else {
-      authorSection.innerHTML = `
-        <div class="w-10 h-10 bg-muted"></div>
-        <div>
-          <div class="font-medium">${escapeHtml(cast.author.display_name)}</div>
-          <div class="text-xs text-muted-foreground font-mono">@${escapeHtml(cast.author.username)}</div>
-        </div>
-      `;
-    }
-    content.appendChild(authorSection);
-    
-    // Full text
-    const textSection = createElement('div', {
-      className: 'text-sm leading-relaxed',
-      textContent: cast.text,
-    });
-    content.appendChild(textSection);
-    
-    // Metadata
-    if (cast.reactions || cast.replies) {
-      const metaSection = createElement('div', {
-        className: 'flex items-center gap-4 pt-2 text-xs text-muted-foreground font-mono',
-      });
-      
-      const metaItems: string[] = [];
-      if (cast.reactions?.likes_count) metaItems.push(`❤️ ${cast.reactions.likes_count}`);
-      if (cast.reactions?.recasts_count) metaItems.push(`🔁 ${cast.reactions.recasts_count}`);
-      if (cast.replies?.count) metaItems.push(`💬 ${cast.replies.count}`);
-      
-      metaSection.textContent = metaItems.join(' · ');
-      content.appendChild(metaSection);
-    }
-    
-    wrapper.appendChild(content);
-    return wrapper;
-  }
-  
-  private renderBrowserHistoryExpanded(entry: BrowserHistoryEntry, wrapper: HTMLElement): HTMLElement {
-    // Clear only the content, keep the close button
-    const existingContent = wrapper.querySelector('.expanded-content');
-    if (existingContent) {
-      existingContent.remove();
-    }
-    
-    const content = createElement('div', {
-      className: 'expanded-content space-y-3 text-sm',
-    });
-    
-    // Title
-    const title = createElement('div', {
-      className: 'font-medium text-base pb-2',
-      textContent: entry.title || 'Untitled',
-    });
-    content.appendChild(title);
-    
-    // URL
-    const urlSection = createElement('div', {
-      className: 'text-xs text-muted-foreground break-all font-mono',
-    });
-    
-    try {
-      const url = new URL(entry.url);
-      urlSection.innerHTML = `
-        <div class="mb-1">${escapeHtml(url.protocol)}//${escapeHtml(url.hostname)}</div>
-        <div class="text-muted-foreground/70">${escapeHtml(entry.url)}</div>
-      `;
-    } catch {
-      urlSection.textContent = entry.url;
-    }
-    content.appendChild(urlSection);
-    
-    // Visit count if available
-    if (entry.visitCount) {
-      const visitCountEl = createElement('div', {
-        className: 'text-xs text-muted-foreground pt-2 border-t border-border font-mono',
-        textContent: `Visited ${entry.visitCount} time${entry.visitCount !== 1 ? 's' : ''}`,
-      });
-      content.appendChild(visitCountEl);
-    }
-    
-    wrapper.appendChild(content);
-    return wrapper;
-  }
-  
-  private renderTransactionExpanded(transaction: TellerTransaction, wrapper: HTMLElement): HTMLElement {
-    // Clear only the content, keep the close button
-    const existingContent = wrapper.querySelector('.expanded-content');
-    if (existingContent) {
-      existingContent.remove();
-    }
-    
-    const content = createElement('div', {
-      className: 'expanded-content space-y-3 text-sm',
-    });
-    
-    // Description
-    const description = createElement('div', {
-      className: 'font-medium text-base pb-2',
-      textContent: transaction.description,
-    });
-    content.appendChild(description);
-    
-    // Amount
-    const amount = parseFloat(transaction.amount);
-    const isPositive = amount > 0;
-    const amountSection = createElement('div', {
-      className: `text-lg font-mono ${isPositive ? 'text-status-connected' : 'text-foreground'}`,
-      textContent: `${isPositive ? '+' : ''}$${Math.abs(amount).toFixed(2)}`,
-    });
-    content.appendChild(amountSection);
-    
-    // Details grid
-    const detailsGrid = createElement('div', {
-      className: 'grid grid-cols-2 gap-3 pt-2 border-t border-border text-xs',
-    });
-    
-    if (transaction.details?.category) {
-      const categoryRow = createElement('div');
-      categoryRow.innerHTML = `
-        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Category</div>
-        <div>${escapeHtml(transaction.details.category)}</div>
-      `;
-      detailsGrid.appendChild(categoryRow);
-    }
-    
-    if (transaction.details?.counterparty?.name) {
-      const counterpartyRow = createElement('div');
-      counterpartyRow.innerHTML = `
-        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Counterparty</div>
-        <div>${escapeHtml(transaction.details.counterparty.name)}</div>
-      `;
-      detailsGrid.appendChild(counterpartyRow);
-    }
-    
-    if (transaction.account_id) {
-      const accountRow = createElement('div');
-      accountRow.innerHTML = `
-        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Account</div>
-        <div class="font-mono text-xs">${escapeHtml(transaction.account_id.slice(0, 8))}...</div>
-      `;
-      detailsGrid.appendChild(accountRow);
-    }
-    
-    if (transaction.status) {
-      const statusRow = createElement('div');
-      statusRow.innerHTML = `
-        <div class="text-muted-foreground mb-1 font-mono uppercase tracking-wider">Status</div>
-        <div class="uppercase">${escapeHtml(transaction.status)}</div>
-      `;
-      detailsGrid.appendChild(statusRow);
-    }
-    
-    if (detailsGrid.children.length > 0) {
-      content.appendChild(detailsGrid);
-    }
-    
-    wrapper.appendChild(content);
-    return wrapper;
-  }
-  
-  private renderNoteExpanded(note: { body: string }, wrapper: HTMLElement): HTMLElement {
-    // Clear only the content, keep the close button
-    const existingContent = wrapper.querySelector('.expanded-content');
-    if (existingContent) {
-      existingContent.remove();
-    }
-    
-    // Style wrapper with amber theme
-    wrapper.className = 'mt-3 p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-lg relative';
-    
-    const content = createElement('div', {
-      className: 'expanded-content space-y-3',
-    });
-    
-    // Header
-    const header = createElement('div', {
-      className: 'flex items-center gap-2 pb-3 border-b border-amber-500/20',
-    });
-    header.innerHTML = `
-      <div class="w-6 h-6 flex items-center justify-center bg-amber-500/20 rounded">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-          <path d="m15 5 4 4"/>
-        </svg>
-      </div>
-      <span class="text-sm font-mono uppercase tracking-wider text-amber-500">Note</span>
-    `;
-    content.appendChild(header);
-    
-    // Note body
-    const body = createElement('div', {
-      className: 'text-sm text-foreground whitespace-pre-wrap',
-      textContent: note.body,
-    });
-    content.appendChild(body);
-    
-    wrapper.appendChild(content);
-    return wrapper;
-  }
-  
-  private renderDefaultExpanded(item: TimelineItem, wrapper: HTMLElement): HTMLElement {
-    // Clear only the content, keep the close button
-    const existingContent = wrapper.querySelector('.expanded-content');
-    if (existingContent) {
-      existingContent.remove();
-    }
-    
-    const content = createElement('div', {
-      className: 'expanded-content text-sm',
-    });
-    
-    content.innerHTML = `
-      <div class="font-mono uppercase tracking-wider mb-2">Details</div>
-      <pre class="text-xs bg-background p-3 overflow-auto max-h-64 border border-border font-mono">${escapeHtml(JSON.stringify(item.data, null, 2))}</pre>
-    `;
-    
-    wrapper.appendChild(content);
-    return wrapper;
-  }
-  
-  private updateExpandedStates(): void {
-    // This is called when expandedItemId changes
-    // Re-render to update expanded states
-    this.renderItems();
-  }
-  
-  /**
-   * Handle clicks via event delegation
-   */
   protected setupEventDelegation(): void {
-    // Use capture phase to ensure we catch events even if they're stopped
     this.addListener(this.container, 'click', (e) => {
       const target = e.target as HTMLElement;
-      
-      // Check for close button
-      if (target.closest('[data-close-expanded]')) {
-        e.preventDefault();
-        e.stopPropagation();
-        actions.setExpandedItem(null);
-        return;
-      }
-      
-      // Check for clickable content
       const clickable = target.closest('[data-clickable]');
       if (clickable) {
         const entry = clickable.closest('[data-entry-id]') as HTMLElement;
         if (entry?.dataset.entryId) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const itemId = entry.dataset.entryId;
-          const allItems = this.getAllItems();
-          const item = allItems.find(i => i.id === itemId);
-          
-          if (item) {
-            const modalContainer = createElement('div', { id: 'detail-modal-portal' });
-            document.body.appendChild(modalContainer);
-            
-            const modal = new DetailModal(modalContainer, item, () => {
-              modal.destroy();
-              modalContainer.remove();
-            });
-            modal.init();
-          }
+          const item = this.getAllItems().find(i => i.id === entry.dataset.entryId);
+          if (item) this.openItemDetail(item);
         }
       }
     }, { capture: true });
@@ -1405,4 +612,3 @@ export class Timeline extends Component {
 }
 
 export default Timeline;
-

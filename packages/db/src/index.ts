@@ -98,23 +98,15 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 				"created_at" integer NOT NULL
 			);
 			
-			CREATE TABLE IF NOT EXISTS "comments" (
-				"id" text PRIMARY KEY NOT NULL,
-				"item_id" text NOT NULL,
-				"content" text NOT NULL,
-				"created_at" integer NOT NULL
-			);
-			
 			CREATE INDEX IF NOT EXISTS "items_source_idx" ON "items"("source");
 			CREATE INDEX IF NOT EXISTS "items_timestamp_idx" ON "items"("timestamp");
 			CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
 			CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
 			CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
-			CREATE INDEX IF NOT EXISTS "comments_item_id_idx" ON "comments"("item_id");
 		`);
 	}
 	
-	// Always ensure chat and comment tables exist (for existing databases)
+	// Always ensure chat tables exist (for existing databases)
 	sqliteDb.exec(`
 		CREATE TABLE IF NOT EXISTS "chat_sessions" (
 			"id" text PRIMARY KEY NOT NULL,
@@ -131,16 +123,31 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			"created_at" integer NOT NULL
 		);
 		
-		CREATE TABLE IF NOT EXISTS "comments" (
-			"id" text PRIMARY KEY NOT NULL,
-			"item_id" text NOT NULL,
-			"content" text NOT NULL,
-			"created_at" integer NOT NULL
-		);
-		
 		CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
-		CREATE INDEX IF NOT EXISTS "comments_item_id_idx" ON "comments"("item_id");
 	`);
+	
+	// Ensure Obsidian exists in apps table (migration for existing DBs)
+	const obsidianExists = sqliteDb.query('SELECT 1 FROM apps WHERE id = ?').get('obsidian');
+	if (!obsidianExists) {
+		const now = Date.now();
+		sqliteDb.run(
+			`INSERT INTO apps (id, name, description, transport, oauth, icon_url, config, connection_type, created_at, updated_at) 
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				'obsidian',
+				'Obsidian',
+				'Connect your Obsidian vault to see notes on your timeline and use AI to edit them.',
+				'[]',
+				0,
+				'https://obsidian.md/images/obsidian-logo-gradient.svg',
+				'{}',
+				'local',
+				now,
+				now
+			]
+		);
+		console.log('[Database] Added Obsidian to existing database');
+	}
 
 	return { db, isNew };
 }

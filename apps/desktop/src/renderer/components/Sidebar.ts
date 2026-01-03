@@ -1,6 +1,6 @@
 /**
  * Sidebar Component
- * Navigation sidebar with collapsible state
+ * Navigation sidebar with modern rounded design
  */
 
 import { Component } from './Component';
@@ -21,17 +21,17 @@ const navItems: NavItem[] = [
   {
     title: 'Home',
     url: '/',
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
   },
   {
     title: 'Apps',
     url: '/apps',
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>`,
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>`,
   },
   {
     title: 'Chat',
     url: '/chat',
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   },
 ];
 
@@ -49,38 +49,32 @@ export class Sidebar extends Component {
   render(): void {
     const collapsed = store.sidebarCollapsed.get();
     this.container.innerHTML = '';
-    // Don't use dynamic Tailwind classes - they won't be generated
-    this.container.className = 'h-full border-r bg-sidebar flex-shrink-0 flex flex-col transition-all duration-200 overflow-hidden';
+    this.container.className = 'h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden';
     
-    // Fixed toggle button - always visible, positioned well after traffic lights
-    // Using inline styles to ensure -webkit-app-region works and button is clickable
+    // Fixed toggle button
     const toggleButton = document.createElement('button');
-    toggleButton.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 hover:bg-sidebar-accent transition-colors';
+    toggleButton.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary transition-colors';
     toggleButton.style.cssText = 'left: 90px; -webkit-app-region: no-drag; z-index: 9999; cursor: pointer;';
     toggleButton.setAttribute('aria-label', 'Toggle sidebar');
     toggleButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground">
         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
         <line x1="9" x2="9" y1="3" y2="21"/>
       </svg>
     `;
     
-    // Direct event listener to ensure it works
     toggleButton.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       store.sidebarCollapsed.update(c => !c);
     });
     
-    // Append to body instead of sidebar to avoid any container issues
     document.body.appendChild(toggleButton);
     
-    // Clean up on destroy
     this.registerCleanup(() => {
       toggleButton.remove();
     });
     
-    // Don't render sidebar content when collapsed
     if (collapsed) {
       return;
     }
@@ -90,23 +84,22 @@ export class Sidebar extends Component {
       className: 'relative flex h-[44px] items-center draglayer',
     });
     
-    // Space for traffic lights on macOS + toggle button
     const trafficLightsSpace = createElement('div', { className: 'w-[130px] flex-shrink-0' });
     topBar.appendChild(trafficLightsSpace);
     this.container.appendChild(topBar);
     
     // Header with logo
     const header = createElement('header', {
-      className: 'pt-3 px-2',
+      className: 'pt-2 px-3',
     });
     
-    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-2 py-2 hover:bg-sidebar-accent transition-colors');
+    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/50 transition-colors');
     header.appendChild(logoLink);
     this.container.appendChild(header);
     
     // Navigation
     this.navContainer = createElement('nav', {
-      className: 'flex-1 px-2 py-4',
+      className: 'flex-1 px-3 py-4',
     });
     
     const navList = createElement('ul', {
@@ -123,7 +116,7 @@ export class Sidebar extends Component {
     
     // Footer with theme toggle
     const footer = createElement('footer', {
-      className: 'p-4 border-t border-sidebar-border',
+      className: 'p-4 border-t border-border/50',
     });
     
     if (!collapsed) {
@@ -139,11 +132,11 @@ export class Sidebar extends Component {
     });
     
     const iconWrapper = createElement('div', {
-      className: 'flex aspect-square size-8 items-center justify-center',
+      className: 'flex aspect-square size-9 items-center justify-center rounded-xl bg-secondary/50',
     });
     
     const icon = createElement('img', {
-      className: 'size-8',
+      className: 'size-7',
       attributes: {
         src: iconImage,
         alt: 'Cortex',
@@ -155,17 +148,17 @@ export class Sidebar extends Component {
     
     if (!collapsed) {
       const textWrapper = createElement('div', {
-        className: 'grid flex-1 text-left text-sm leading-tight',
+        className: 'grid flex-1 text-left leading-tight',
       });
       
       const title = createElement('span', {
-        className: 'truncate font-semibold font-mono uppercase tracking-wider',
+        className: 'truncate font-semibold text-sm',
         textContent: 'Cortex',
       });
       
       const subtitle = createElement('span', {
-        className: 'truncate text-xs text-sidebar-foreground/70 font-mono',
-        textContent: 'Your life in one app',
+        className: 'truncate text-xs text-muted-foreground',
+        textContent: 'Your personal timeline',
       });
       
       textWrapper.appendChild(title);
@@ -192,7 +185,7 @@ export class Sidebar extends Component {
     
     if (!collapsed) {
       const text = createElement('span', {
-        className: 'font-mono uppercase tracking-wider text-sm',
+        className: 'text-sm font-medium',
         textContent: item.title,
       });
       linkContent.appendChild(text);
@@ -201,10 +194,10 @@ export class Sidebar extends Component {
     const link = createLink(
       item.url,
       linkContent,
-      `flex items-center gap-3 px-3 py-2 transition-colors border-l-2 ${
+      `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
         active 
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-primary' 
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 border-transparent'
+          ? 'bg-primary/10 text-primary font-medium' 
+          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
       }`
     );
     
@@ -220,39 +213,39 @@ export class Sidebar extends Component {
     });
     
     const label = createElement('span', {
-      className: 'text-sm font-mono uppercase tracking-wider text-sidebar-foreground',
+      className: 'text-sm text-muted-foreground',
       textContent: 'Theme',
     });
     wrapper.appendChild(label);
     
     const toggleGroup = createElement('div', {
-      className: 'flex items-center gap-1 border border-border p-1',
+      className: 'flex items-center gap-1 bg-secondary rounded-xl p-1',
     });
     
     const themes: Array<{ value: 'light' | 'dark' | 'system'; icon: string; label: string }> = [
       {
         value: 'light',
         label: 'Light',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
       },
       {
         value: 'dark',
         label: 'Dark',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
       },
       {
         value: 'system',
         label: 'System',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>`,
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>`,
       },
     ];
     
     for (const theme of themes) {
       const button = createElement('button', {
-        className: `p-1.5 transition-colors ${
+        className: `p-2 rounded-lg transition-all ${
           store.theme.get() === theme.value
-            ? 'bg-accent text-foreground'
-            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground'
+            ? 'bg-card text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
         }`,
         attributes: {
           'aria-label': theme.label,
@@ -263,7 +256,7 @@ export class Sidebar extends Component {
       
       this.addListener(button, 'click', () => {
         actions.setTheme(theme.value);
-        this.render(); // Re-render to update active state
+        this.render();
       });
       
       toggleGroup.appendChild(button);
@@ -282,14 +275,13 @@ export class Sidebar extends Component {
       const url = (link as HTMLElement).dataset.navItem || '';
       const active = isActive(url);
       
-      link.className = `flex items-center gap-3 px-3 py-2 transition-colors border-l-2 ${
+      link.className = `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
         active 
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-primary' 
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 border-transparent'
+          ? 'bg-primary/10 text-primary font-medium' 
+          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
       }`;
     });
   }
 }
 
 export default Sidebar;
-

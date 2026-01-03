@@ -89,30 +89,14 @@ export const chatMessages = sqliteTable("chat_messages", {
 	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
-// Comments for timeline items
-export const comments = sqliteTable("comments", {
-	id: text("id").primaryKey(),
-	itemId: text("item_id").notNull(), // References items.id, but kept as text for flexibility
-	content: text("content").notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
 export const appsRelations = relations(apps, ({ many }) => ({
 	items: many(items),
 }));
 
-export const itemsRelations = relations(items, ({ one, many }) => ({
+export const itemsRelations = relations(items, ({ one }) => ({
 	app: one(apps, {
 		fields: [items.source],
 		references: [apps.id],
-	}),
-	comments: many(comments),
-}));
-
-export const commentsRelations = relations(comments, ({ one }) => ({
-	item: one(items, {
-		fields: [comments.itemId],
-		references: [items.id],
 	}),
 }));
 

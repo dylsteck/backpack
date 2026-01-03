@@ -32,46 +32,46 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
-  /* Status colors for terminal UI */
-  --color-status-connected: hsl(var(--status-connected, 120 70% 45%));
-  --color-status-warning: hsl(var(--status-warning, 50 100% 50%));
-  --color-status-error: hsl(var(--status-error, 0 70% 50%));
+  /* Status colors */
+  --color-status-connected: hsl(var(--status-connected));
+  --color-status-warning: hsl(var(--status-warning));
+  --color-status-error: hsl(var(--status-error));
 
-  --font-sans: Geist, sans-serif;
-  --font-mono: Geist Mono, monospace;
-  --font-tomorrow: Tomorrow, sans-serif;
+  /* Modern system font stack */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-spin: spin 1s linear infinite;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
 
   @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
   }
   @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
   }
   @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 
@@ -87,126 +87,82 @@
 }
 
 @layer base {
-  @font-face {
-    font-family: "Geist";
-
-    src: url("../assets/fonts/geist/geist.ttf") format("truetype");
-  }
-  @font-face {
-    font-family: "Geist Mono";
-    font-display: swap;
-
-    src: url("../assets/fonts/geist-mono/geist-mono.ttf") format("truetype");
-  }
-
-  @font-face {
-    font-family: "Tomorrow";
-    font-weight: 400;
-    font-style: normal;
-
-    src: url("../assets/fonts/tomorrow/tomorrow-regular.ttf") format("truetype");
-  }
-  @font-face {
-    font-family: "Tomorrow";
-    font-weight: 400;
-    font-style: italic;
-
-    src: url("../assets/fonts/tomorrow/tomorrow-italic.ttf") format("truetype");
-  }
-  @font-face {
-    font-family: "Tomorrow";
-    font-weight: 700;
-    font-style: normal;
-
-    src: url("../assets/fonts/tomorrow/tomorrow-bold.ttf") format("truetype");
-  }
-  @font-face {
-    font-family: "Tomorrow";
-    font-weight: 700;
-    font-style: italic;
-
-    src: url("../assets/fonts/tomorrow/tomorrow-bold-italic.ttf")
-      format("truetype");
-  }
-}
-
-@layer base {
   :root {
-    /* Terminal Mono Theme - Light Mode - Dark Amber on Light */
-    --background: 0 0% 98%;
-    --foreground: 45 100% 30%;
+    /* Modern Light Theme - Soft, clean, spacious */
+    --background: 240 5% 96%;
+    --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 45 100% 30%;
+    --card-foreground: 240 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 45 100% 30%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 45 100% 30%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 220 90% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 45 100% 30%;
+    --secondary: 240 5% 92%;
+    --secondary-foreground: 240 10% 30%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 45 50% 25%;
+    --muted: 240 5% 92%;
+    --muted-foreground: 240 5% 46%;
 
-    --accent: 45 100% 90%;
-    --accent-foreground: 45 100% 30%;
+    --accent: 220 90% 96%;
+    --accent-foreground: 220 90% 40%;
 
-    --destructive: 0 70% 45%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 45 100% 60%;
-    --input: 45 100% 60%;
-    --ring: 45 100% 30%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 220 90% 50%;
 
-    /* Status colors for light mode */
-    --status-connected: 120 50% 35%;
-    --status-warning: 50 80% 40%;
-    --status-error: 0 60% 40%;
+    /* Status colors */
+    --status-connected: 142 71% 45%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 72% 51%;
 
-    /* Sharp corners for terminal look */
-    --radius: 0px;
+    /* Modern rounded corners */
+    --radius: 16px;
   }
 
   .dark {
-    /* Terminal Mono Theme - Amber on Dark */
-    --background: 0 0% 4%;
-    --foreground: 45 100% 50%;
+    /* Modern Dark Theme - Deep, soft, comfortable */
+    --background: 240 10% 8%;
+    --foreground: 240 5% 96%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 45 100% 50%;
+    --card: 240 10% 12%;
+    --card-foreground: 240 5% 96%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 45 100% 50%;
+    --popover: 240 10% 12%;
+    --popover-foreground: 240 5% 96%;
 
-    --primary: 45 100% 50%;
-    --primary-foreground: 0 0% 4%;
+    --primary: 220 90% 56%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 45 100% 50%;
+    --secondary: 240 10% 16%;
+    --secondary-foreground: 240 5% 80%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 45 50% 40%;
+    --muted: 240 10% 16%;
+    --muted-foreground: 240 5% 55%;
 
-    --accent: 45 100% 12%;
-    --accent-foreground: 45 100% 50%;
+    --accent: 220 60% 20%;
+    --accent-foreground: 220 90% 70%;
 
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 45 100% 25%;
-    --input: 45 100% 25%;
-    --ring: 45 100% 50%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 220 90% 56%;
 
     /* Status colors */
-    --status-connected: 120 70% 45%;
-    --status-warning: 50 100% 50%;
-    --status-error: 0 70% 50%;
+    --status-connected: 142 71% 45%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 62% 50%;
 
-    /* Sharp corners for terminal look */
-    --radius: 0px;
+    /* Keep rounded corners in dark mode */
+    --radius: 16px;
   }
 }
 
@@ -215,7 +171,7 @@
     @apply h-full;
   }
   body {
-    @apply overflow-hidden;
+    @apply overflow-hidden font-sans antialiased;
   }
   .draglayer {
     @apply bg-background;
@@ -237,37 +193,69 @@
 
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari, Opera */
+    display: none;
   }
 
-  /* Terminal styling utilities */
-  .terminal-header {
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.875rem;
+  /* Modern card styles */
+  .card-modern {
+    @apply bg-card rounded-[24px] p-6 transition-all duration-300 border border-border/40 shadow-sm;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.01),
+      0 12px 24px rgba(0, 0, 0, 0.02);
   }
-  .terminal-panel {
-    border-width: 1px;
-    background-color: hsl(var(--card));
-    padding: 1rem;
+  
+  .dark .card-modern {
+    @apply border-border/20;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 12px 24px rgba(0, 0, 0, 0.15);
   }
-  .terminal-text {
-    font-family: var(--font-mono);
+  
+  .card-elevated:hover {
+    @apply border-border/60;
+    transform: translateY(-2px);
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.02),
+      0 20px 40px rgba(0, 0, 0, 0.04);
+  }
+  
+  .dark .card-elevated:hover {
+    @apply border-border/40;
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-soft {
+    background: radial-gradient(circle at top left, hsl(var(--background)) 0%, hsl(var(--secondary) / 0.3) 100%);
+  }
+  
+  .dark .bg-gradient-soft {
+    background: radial-gradient(circle at top left, hsl(var(--background)) 0%, hsl(240 10% 5%) 100%);
+  }
+
+  /* Timeline specific */
+  .timeline-line {
+    @apply absolute left-[21px] top-8 bottom-0 w-[1.5px] bg-border/30 z-0;
+  }
+
+  .timeline-dot {
+    @apply absolute left-0 top-1.5 w-11 h-11 bg-card border border-border/50 rounded-full flex items-center justify-center z-10 shadow-sm transition-transform duration-200;
+  }
+
+  .timeline-entry:hover .timeline-dot {
+    @apply border-primary/30 scale-105;
   }
 
   /* Skeleton loading animation */
   @keyframes shimmer {
-    0% {
-      background-position: -1000px 0;
-    }
-    100% {
-      background-position: 1000px 0;
-    }
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
   }
   
   .skeleton {
@@ -279,41 +267,66 @@
     );
     background-size: 1000px 100%;
     animation: shimmer 2s infinite;
+    border-radius: var(--radius);
+  }
+
+  /* Source badges */
+  .source-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    @apply bg-muted text-muted-foreground;
   }
   
-  .dark .skeleton {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted) / 0.3) 50%,
-      hsl(var(--muted)) 100%
-    );
-    background-size: 1000px 100%;
+  .source-badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+
+  /* Day headers */
+  .day-header {
+    @apply text-xl font-semibold tracking-tight flex items-center gap-2;
+  }
+  
+  .day-subheader {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* Image stacks for overview cards */
+  .image-stack {
+    @apply relative;
+  }
+  
+  .image-stack-item {
+    @apply absolute rounded-lg shadow-md border border-border/50 bg-card overflow-hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .image-stack:hover .image-stack-item {
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.1),
+      0 8px 24px rgba(0, 0, 0, 0.08);
   }
 }
 
+/* Sidebar styles */
 :root {
-  /* Terminal sidebar - Light Mode */
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(45 100% 30%);
-  --sidebar-primary: hsl(45 100% 30%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(45 100% 90%);
-  --sidebar-accent-foreground: hsl(45 100% 30%);
-  --sidebar-border: hsl(45 100% 60%);
-  --sidebar-ring: hsl(45 100% 30%);
+  --sidebar: hsl(240 5% 98%);
+  --sidebar-foreground: hsl(240 10% 10%);
+  --sidebar-primary: hsl(220 90% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(220 90% 96%);
+  --sidebar-accent-foreground: hsl(220 90% 40%);
+  --sidebar-border: hsl(240 6% 92%);
+  --sidebar-ring: hsl(220 90% 50%);
 }
 
 .dark {
-  /* Terminal sidebar - matches main theme */
-  --sidebar: hsl(0 0% 4%);
-  --sidebar-foreground: hsl(45 100% 50%);
-  --sidebar-primary: hsl(45 100% 50%);
-  --sidebar-primary-foreground: hsl(0 0% 4%);
-  --sidebar-accent: hsl(45 100% 12%);
-  --sidebar-accent-foreground: hsl(45 100% 50%);
-  --sidebar-border: hsl(45 100% 25%);
-  --sidebar-ring: hsl(45 100% 50%);
+  --sidebar: hsl(240 10% 10%);
+  --sidebar-foreground: hsl(240 5% 96%);
+  --sidebar-primary: hsl(220 90% 56%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(220 60% 20%);
+  --sidebar-accent-foreground: hsl(220 90% 70%);
+  --sidebar-border: hsl(240 10% 16%);
+  --sidebar-ring: hsl(220 90% 56%);
 }
 
 @theme inline {

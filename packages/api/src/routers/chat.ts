@@ -40,12 +40,14 @@ export const chatRouter = router({
 		}),
 
 	// Add a message to a session
+	// Content can be plain text or JSON (for storing tool calls/results from AI SDK)
 	addMessage: publicProcedure
 		.input(
 			z.object({
 				sessionId: z.string(),
-				role: z.enum(["user", "assistant"]),
-				content: z.string(),
+				role: z.enum(["user", "assistant", "tool"]),
+				content: z.string(), // Can be plain text or JSON-stringified AI SDK message content
+				metadata: z.record(z.unknown()).optional(), // Optional metadata for tool calls, etc.
 			})
 		)
 		.mutation(async ({ input }) => {
@@ -54,12 +56,25 @@ export const chatRouter = router({
 				const now = new Date();
 				const messageId = `msg_${crypto.randomUUID()}`;
 
+				// If metadata is provided, merge it into content as JSON
+				let finalContent = input.content;
+				if (input.metadata && Object.keys(input.metadata).length > 0) {
+					try {
+						// Try to parse content as JSON and merge with metadata
+						const parsed = JSON.parse(input.content);
+						finalContent = JSON.stringify({ ...parsed, _metadata: input.metadata });
+					} catch {
+						// Content is plain text, wrap it with metadata
+						finalContent = JSON.stringify({ text: input.content, _metadata: input.metadata });
+					}
+				}
+
 				// Insert the message
 				await db.insert(chatMessages).values({
 					id: messageId,
 					sessionId: input.sessionId,
 					role: input.role,
-					content: input.content,
+					content: finalContent,
 					createdAt: now,
 				});
 
@@ -72,11 +87,11 @@ export const chatRouter = router({
 						.limit(1);
 
 					if (session[0] && !session[0].title) {
-						// Set title to first 50 chars of first user message
-						const title = input.content.slice(0, 50) + (input.content.length > 50 ? "..." : "");
+						// Set title to first 50 chars of first user message (use plain text)
+						const titleText = input.content.slice(0, 50) + (input.content.length > 50 ? "..." : "");
 						await db
 							.update(chatSessions)
-							.set({ title, updatedAt: now })
+							.set({ title: titleText, updatedAt: now })
 							.where(eq(chatSessions.id, input.sessionId));
 					} else {
 						// Just update the timestamp
@@ -93,7 +108,7 @@ export const chatRouter = router({
 						id: messageId,
 						sessionId: input.sessionId,
 						role: input.role,
-						content: input.content,
+						content: finalContent,
 						createdAt: now,
 					},
 				};
@@ -170,7 +185,7 @@ export const chatRouter = router({
 					},
 					messages: messages.map((m) => ({
 						id: m.id,
-						role: m.role as "user" | "assistant",
+						role: m.role as "user" | "assistant" | "tool",
 						content: m.content,
 						createdAt: m.createdAt,
 					})),

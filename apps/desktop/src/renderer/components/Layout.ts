@@ -1,6 +1,6 @@
 /**
  * Main Layout Component
- * Manages sidebar, topbar, and content area
+ * Manages sidebar, topbar, and content area with modern design
  */
 
 import { Component } from './Component';
@@ -14,15 +14,18 @@ import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
 import { Chat } from './Chat';
 import { TopbarTitle } from './TopbarTitle';
+import { ChatSidebar } from './ChatSidebar';
 
 type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'chat';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
+  private chatSidebar: ChatSidebar | null = null;
   private topbar: TopbarTitle | null = null;
   private currentView: Component | null = null;
   private contentContainer: HTMLElement | null = null;
   private sidebarContainer: HTMLElement | null = null;
+  private chatSidebarContainer: HTMLElement | null = null;
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
   private lastViewWasOnboarding: boolean = false;
@@ -30,25 +33,24 @@ export class Layout extends Component {
   async init(): Promise<void> {
     this.render();
     
-    // Subscribe to sidebar state
+    // Subscribe to sidebar states
     this.subscribe(store.sidebarCollapsed, () => this.updateSidebarState());
+    this.subscribe(store.chatSidebarOpen, () => this.updateChatSidebarState());
   }
   
   render(): void {
     const isOnboarding = router.getCurrentPath() === '/onboarding' || this.lastViewWasOnboarding;
     
     if (isOnboarding && this.lastViewWasOnboarding) {
-      // We're transitioning OUT of onboarding, update the flag
       this.lastViewWasOnboarding = false;
     }
     
     if (router.getCurrentPath() === '/onboarding') {
-      // Track that we're in onboarding
       this.lastViewWasOnboarding = true;
       
       // Onboarding has its own full-screen layout
       this.container.innerHTML = '';
-      this.container.className = 'h-full w-full';
+      this.container.className = 'h-full w-full bg-gradient-soft';
       
       this.contentContainer = createElement('div', {
         className: 'h-full w-full',
@@ -59,17 +61,17 @@ export class Layout extends Component {
     
     // Main layout with sidebar
     this.container.innerHTML = '';
-    this.container.className = 'relative flex h-screen w-full';
+    this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden';
     
-    // Full-width border line under topbar
+    // Subtle border line under topbar
     const borderLine = createElement('div', {
-      className: 'fixed top-[44px] left-0 right-0 h-px bg-border z-50',
+      className: 'fixed top-[44px] left-0 right-0 h-px bg-border/50 z-50',
     });
     this.container.appendChild(borderLine);
     
     // Topbar background (covers content area)
     this.topbarContainer = createElement('div', {
-      className: 'fixed top-0 h-[44px] z-40 bg-background',
+      className: 'fixed top-0 h-[44px] z-40 bg-background/80 backdrop-blur-sm transition-all duration-300',
       attributes: {
         style: 'left: calc(16rem + 0.5rem); right: 0;',
       },
@@ -78,7 +80,7 @@ export class Layout extends Component {
     
     // Topbar title
     this.topbarTitleEl = createElement('div', {
-      className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-normal text-foreground select-none pointer-events-none',
+      className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-medium text-foreground select-none pointer-events-none',
       attributes: {
         style: 'left: calc(16rem + 0.5rem);',
       },
@@ -86,10 +88,31 @@ export class Layout extends Component {
     this.container.appendChild(this.topbarTitleEl);
     this.topbar = new TopbarTitle(this.topbarTitleEl);
     this.topbar.init();
+
+    // Chat Toggle (Top Right)
+    const chatToggle = document.createElement('button');
+    chatToggle.className = 'fixed top-[6px] right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors z-[9999] cursor-pointer';
+    chatToggle.style.cssText = '-webkit-app-region: no-drag; cursor: pointer;';
+    chatToggle.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+        <line x1="15" x2="15" y1="3" y2="21"/>
+      </svg>
+    `;
+    chatToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      store.chatSidebarOpen.update(v => !v);
+    });
+    document.body.appendChild(chatToggle);
     
-    // Sidebar
+    this.registerCleanup(() => {
+      chatToggle.remove();
+    });
+    
+    // Sidebar (Left)
     this.sidebarContainer = createElement('aside', {
-      className: 'w-64 h-full border-r bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-200',
+      className: 'w-64 h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-300',
       dataset: { state: 'expanded', sidebar: 'true' },
     });
     this.container.appendChild(this.sidebarContainer);
@@ -98,29 +121,43 @@ export class Layout extends Component {
     
     // Main content area
     const mainWrapper = createElement('div', {
-      className: 'flex flex-col h-screen overflow-hidden flex-1',
+      className: 'flex flex-row h-screen overflow-hidden flex-1 bg-gradient-soft',
     });
     
-    // Drag region for window movement
+    const contentStack = createElement('div', {
+      className: 'flex flex-col flex-1 min-w-0',
+    });
+
+    // Drag region
     const dragRegion = createElement('div', {
       className: 'draglayer h-[44px] shrink-0',
     });
-    mainWrapper.appendChild(dragRegion);
+    contentStack.appendChild(dragRegion);
     
-    // Content container - ensure it always has scroll capability
+    // Content container
     this.contentContainer = createElement('div', {
       className: 'w-full flex-1 overflow-y-auto min-h-0',
     });
-    // Set inline styles as backup to ensure scrolling always works
     this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
-    mainWrapper.appendChild(this.contentContainer);
+    contentStack.appendChild(this.contentContainer);
+    
+    mainWrapper.appendChild(contentStack);
+
+    // Chat Sidebar (Right)
+    this.chatSidebarContainer = createElement('aside', {
+      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden',
+    });
+    mainWrapper.appendChild(this.chatSidebarContainer);
     
     this.container.appendChild(mainWrapper);
+    
+    // Update initial state
+    this.updateChatSidebarState();
   }
   
   private updateSidebarState(): void {
     const collapsed = store.sidebarCollapsed.get();
-    const collapsedLeft = '130px';  // 90px (after traffic lights) + 40px toggle button
+    const collapsedLeft = '130px';
     const expandedLeft = 'calc(16rem + 0.5rem)';
     
     if (this.sidebarContainer) {
@@ -135,6 +172,23 @@ export class Layout extends Component {
     
     if (this.topbarTitleEl) {
       this.topbarTitleEl.style.left = collapsed ? collapsedLeft : expandedLeft;
+    }
+  }
+
+  private updateChatSidebarState(): void {
+    const open = store.chatSidebarOpen.get();
+    if (this.chatSidebarContainer) {
+      this.chatSidebarContainer.style.width = open ? '360px' : '0';
+      
+      if (open && !this.chatSidebar) {
+        this.chatSidebar = new ChatSidebar(this.chatSidebarContainer);
+        this.chatSidebar.init();
+      }
+    }
+
+    if (this.topbarContainer) {
+      const right = open ? '360px' : '0';
+      this.topbarContainer.style.right = right;
     }
   }
   
@@ -152,11 +206,8 @@ export class Layout extends Component {
     const isOnboarding = view === 'onboarding';
     const wasOnboarding = this.lastViewWasOnboarding && view !== 'onboarding';
     
-    // Track if current view is onboarding for next transition
     this.lastViewWasOnboarding = isOnboarding;
     
-    // Re-render layout when transitioning to/from onboarding
-    // or if contentContainer doesn't exist
     if (!this.contentContainer || isOnboarding || wasOnboarding) {
       this.render();
     }
@@ -166,9 +217,7 @@ export class Layout extends Component {
     // Clear content
     clearChildren(this.contentContainer);
     
-    // CRITICAL: Always restore scroll styles after clearing
-    // Components should never override this container's className
-    // Use both className and inline styles to ensure scrolling always works
+    // Restore scroll styles
     this.contentContainer.className = 'w-full flex-1 overflow-y-auto min-h-0';
     this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
     
@@ -199,6 +248,7 @@ export class Layout extends Component {
   
   destroy(): void {
     this.sidebar?.destroy();
+    this.chatSidebar?.destroy();
     this.topbar?.destroy();
     this.currentView?.destroy();
     super.destroy();
@@ -206,4 +256,3 @@ export class Layout extends Component {
 }
 
 export default Layout;
-

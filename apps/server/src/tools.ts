@@ -6,6 +6,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { ItemsService } from "@cortex/api/services/items/service";
+import { obsidianTools } from "./tools/obsidian";
 
 // Define the input schema
 const searchItemsSchema = z.object({
@@ -82,4 +83,5 @@ export const searchItemsTool = tool({
 
 export const tools = {
     searchItems: searchItemsTool,
+    ...obsidianTools,
 };

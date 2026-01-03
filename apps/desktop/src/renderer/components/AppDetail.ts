@@ -107,6 +107,15 @@ export class AppDetail extends Component {
       });
     }
     
+    // Subscribe to obsidian notes changes
+    if (this.appId === 'obsidian') {
+      this.subscribe(store.obsidianNotes, () => {
+        if (this.currentTab === 'data' && this.contentContainer) {
+          this.renderTabContent();
+        }
+      });
+    }
+    
     // Subscribe to backfill status changes
     this.subscribe(store.backfillStatus, () => {
       if (this.currentTab === 'settings' && this.contentContainer && this.app) {
@@ -615,6 +624,16 @@ export class AppDetail extends Component {
         data: entry,
       }));
       appItems = [...appItems, ...braveItems];
+    } else if (this.app.id === 'obsidian') {
+      const obsidianNotes = store.obsidianNotes.get();
+      const obsidianItems: TimelineItem[] = obsidianNotes.map(note => ({
+        id: `obsidian-${note.path}`,
+        timestamp: new Date(note.mtime),
+        source: 'obsidian' as SourceType,
+        type: 'obsidian-note',
+        data: note,
+      }));
+      appItems = [...appItems, ...obsidianItems];
     }
     
     if (appItems.length === 0 && totalCount === 0) {
@@ -737,12 +756,42 @@ export class AppDetail extends Component {
         return this.renderBrowserHistoryContent(item.data as BrowserHistoryEntry);
       case 'transaction':
         return this.renderTransactionContent(item.data as TellerTransaction);
+      case 'obsidian-note':
+        return this.renderObsidianNoteContent(item.data as { title: string; body: string; path: string; tags?: string[] });
       default:
         return createElement('div', {
           className: 'text-sm p-3 bg-card border font-mono',
           textContent: JSON.stringify(item.data),
         });
     }
+  }
+  
+  private renderObsidianNoteContent(note: { title: string; body: string; path: string; tags?: string[] }): HTMLElement {
+    const wrapper = createElement('div', {
+      className: 'p-3 bg-card border hover:bg-accent transition-colors',
+    });
+    
+    wrapper.innerHTML = `
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-500">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium">${escapeHtml(note.title)}</p>
+          <p class="text-xs text-muted-foreground truncate font-mono mt-1">${escapeHtml(note.body.substring(0, 100))}</p>
+          ${note.tags?.length ? `
+            <div class="flex flex-wrap gap-1 mt-2">
+              ${note.tags.slice(0, 3).map(t => `<span class="px-2 py-0.5 bg-purple-500/10 text-purple-500 text-xs rounded">#${escapeHtml(t)}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    
+    return wrapper;
   }
   
   private renderCastContent(cast: FarcasterCast): HTMLElement {
@@ -868,6 +917,8 @@ export class AppDetail extends Component {
         return this.renderBrowserHistoryExpanded(item.data as BrowserHistoryEntry, wrapper);
       case 'transaction':
         return this.renderTransactionExpanded(item.data as TellerTransaction, wrapper);
+      case 'obsidian-note':
+        return this.renderObsidianNoteExpanded(item.data as { title: string; body: string; path: string; tags?: string[]; backlinks?: string[] }, wrapper);
       default:
         return this.renderDefaultExpanded(item, wrapper);
     }
@@ -999,6 +1050,71 @@ export class AppDetail extends Component {
         ${transaction.details?.processing_status ? `<div class="text-xs text-muted-foreground font-mono uppercase mt-1">Status: ${escapeHtml(transaction.details.processing_status)}</div>` : ''}
       </div>
     `;
+    
+    wrapper.appendChild(content);
+    return wrapper;
+  }
+  
+  private renderObsidianNoteExpanded(note: { title: string; body: string; path: string; tags?: string[]; backlinks?: string[] }, wrapper: HTMLElement): HTMLElement {
+    // Clear only the content, keep the close button
+    const existingContent = wrapper.querySelector('.expanded-content');
+    if (existingContent) {
+      existingContent.remove();
+    }
+    
+    const content = createElement('div', {
+      className: 'expanded-content space-y-3 text-sm',
+    });
+    
+    // Title
+    const title = createElement('div', {
+      className: 'flex items-center gap-3 pb-3 border-b border-border',
+    });
+    title.innerHTML = `
+      <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-500">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <div>
+        <div class="font-medium text-base">${escapeHtml(note.title)}</div>
+        <div class="text-xs text-muted-foreground font-mono">${escapeHtml(note.path)}</div>
+      </div>
+    `;
+    content.appendChild(title);
+    
+    // Body preview
+    const bodySection = createElement('div', {
+      className: 'text-sm leading-relaxed whitespace-pre-wrap',
+      textContent: note.body.substring(0, 500) + (note.body.length > 500 ? '...' : ''),
+    });
+    content.appendChild(bodySection);
+    
+    // Tags
+    if (note.tags?.length) {
+      const tagsSection = createElement('div', {
+        className: 'flex flex-wrap gap-2 pt-3 border-t border-border',
+      });
+      note.tags.forEach(tag => {
+        tagsSection.innerHTML += `<span class="px-2 py-1 bg-purple-500/10 text-purple-500 text-xs rounded font-mono">#${escapeHtml(tag)}</span>`;
+      });
+      content.appendChild(tagsSection);
+    }
+    
+    // Backlinks
+    if (note.backlinks?.length) {
+      const linksSection = createElement('div', {
+        className: 'pt-2',
+      });
+      linksSection.innerHTML = `
+        <div class="text-xs text-muted-foreground font-mono uppercase mb-2">Backlinks (${note.backlinks.length})</div>
+        <div class="flex flex-wrap gap-1">
+          ${note.backlinks.map(link => `<span class="px-2 py-0.5 bg-muted text-xs rounded font-mono">[[${escapeHtml(link)}]]</span>`).join('')}
+        </div>
+      `;
+      content.appendChild(linksSection);
+    }
     
     wrapper.appendChild(content);
     return wrapper;
@@ -1176,6 +1292,30 @@ export class AppDetail extends Component {
             (connectButton as HTMLButtonElement).disabled = false;
           }
         }
+      } else if (this.app.connectionType === 'local' || this.app.connectionType === 'file') {
+        // Handle local file/folder connections (Chrome, Brave, Obsidian, etc.)
+        if (this.app.id === 'obsidian') {
+          await this.handleObsidianConnect(connectButton, originalButtonText);
+        } else {
+          // For Chrome/Brave browser history
+          const historyApi = this.app.id === 'chrome' ? window.chromeHistory : window.braveHistory;
+          if (historyApi) {
+            const pathResult = await historyApi.detectHistoryPath();
+            if (pathResult.success && pathResult.defaultPath) {
+              await api.apps.connectChrome.mutate({
+                appId: this.app.id,
+                localPath: pathResult.defaultPath,
+              });
+              
+              appsCache.clear();
+              await fetchApps();
+              this.app = getAppById(this.app.id) || null;
+              this.render();
+            } else {
+              throw new Error(pathResult.error || 'Failed to detect history path');
+            }
+          }
+        }
       } else {
         console.log('Unknown connection type:', this.app.connectionType);
         if (connectButton) {
@@ -1193,6 +1333,62 @@ export class AppDetail extends Component {
       // Set backfill status to error
       if (this.app) {
         this.setBackfillStatus('error', errorMessage);
+      }
+      
+      if (connectButton) {
+        connectButton.textContent = originalButtonText;
+        connectButton.removeAttribute('disabled');
+        (connectButton as HTMLButtonElement).disabled = false;
+      }
+    }
+  }
+  
+  private async handleObsidianConnect(connectButton: HTMLElement | null, originalButtonText: string): Promise<void> {
+    if (!this.app) return;
+    
+    if (connectButton) {
+      connectButton.textContent = 'Selecting vault...';
+    }
+    
+    try {
+      // Use IPC to open folder picker and validate vault
+      const result = await window.obsidianVault.selectVault();
+      
+      if (!result.success || !result.vaultPath) {
+        throw new Error(result.error || 'No vault selected');
+      }
+      
+      if (connectButton) {
+        connectButton.textContent = 'Connecting...';
+      }
+      
+      // Save the connection with vault path
+      await api.apps.connectChrome.mutate({
+        appId: 'obsidian',
+        localPath: result.vaultPath,
+      });
+      
+      // Refresh apps to get updated connection status
+      appsCache.clear();
+      await fetchApps();
+      this.app = getAppById(this.app.id) || null;
+      
+      // Load notes into store
+      if (result.vaultPath) {
+        const vaultResult = await window.obsidianVault.readVault(result.vaultPath);
+        if (vaultResult.success && vaultResult.notes) {
+          actions.setObsidianNotes(vaultResult.notes);
+        }
+      }
+      
+      // Re-render
+      this.render();
+    } catch (error) {
+      console.error('[AppDetail] Obsidian connection error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage !== 'No folder selected') {
+        alert(`Failed to connect Obsidian vault: ${errorMessage}`);
       }
       
       if (connectButton) {

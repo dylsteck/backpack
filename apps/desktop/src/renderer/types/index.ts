@@ -1,6 +1,6 @@
 // Shared types for the vanilla TS renderer
 
-export type SourceType = 'all' | 'farcaster' | 'chrome' | 'brave' | 'teller' | 'user';
+export type SourceType = 'all' | 'farcaster' | 'chrome' | 'brave' | 'teller' | 'obsidian';
 
 export type ConnectionType = 'oauth' | 'local' | 'api';
 export type ConnectionStatus = 'all' | 'connected' | 'disconnected';
@@ -121,11 +121,13 @@ export interface TellerTransaction {
   type: string;
 }
 
-export interface Comment {
-  id: string;
-  itemId: string;
-  content: string;
-  createdAt: string | Date;
+export interface ObsidianNote {
+  path: string;
+  title: string;
+  body: string;
+  mtime: number;
+  tags?: string[];
+  backlinks?: string[];
 }
 
 export interface ChatSession {
