@@ -6,15 +6,19 @@
 import { Component } from './Component';
 import { createElement, clearChildren, escapeHtml } from '../utils/dom';
 import { api } from '../api';
-import { hasApiKeyForProvider, decryptApiKeyForProvider } from '../utils/crypto';
-import { router } from '../router';
+import { 
+  hasApiKeyForProvider, 
+  decryptApiKeyForProvider,
+  encryptApiKeyForProvider,
+  clearApiKeyForProvider 
+} from '../utils/crypto';
 import { store } from '../store';
 import { parseMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
 import { 
   type Provider, 
-  PROVIDERS, 
   getProviderIds,
-  getProviderConfig 
+  getProviderConfig,
+  validateApiKey 
 } from '../utils/providers';
 import { getChatStateManager, type ChatStateManager } from '../utils/chat-state';
 
@@ -41,9 +45,10 @@ export class ChatSidebar extends Component {
   private apiKeyMissing = false;
   private sessions: ChatSession[] = [];
   private historyDropdownOpen = false;
+  private settingsModal: HTMLElement | null = null;
   
   // Multi-provider state
-  private stateManager: ChatStateManager;
+  private stateManager!: ChatStateManager;
   private currentProvider: Provider = 'openrouter';
   
   async init(): Promise<void> {
@@ -57,7 +62,7 @@ export class ChatSidebar extends Component {
   private async loadSessions(): Promise<void> {
     try {
       const result = await api.chat.getSessions.query({ limit: 20 });
-      this.sessions = result.sessions.map(s => ({
+      this.sessions = result.sessions.map((s: { id: string; title: string | null; createdAt: string | Date; updatedAt: string | Date }) => ({
         ...s,
         createdAt: new Date(s.createdAt),
         updatedAt: new Date(s.updatedAt),
@@ -300,6 +305,15 @@ export class ChatSidebar extends Component {
     modelWrapper.appendChild(modelSelect);
     controlsRow.appendChild(modelWrapper);
 
+    // Settings button
+    const settingsBtn = createElement('button', {
+      className: 'p-1.5 hover:bg-secondary/80 rounded-lg text-muted-foreground/60 hover:text-foreground transition-all duration-200 active:scale-90',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+      attributes: { title: 'AI Settings' }
+    });
+    this.addListener(settingsBtn, 'click', () => this.showSettingsModal());
+    controlsRow.appendChild(settingsBtn);
+
     return controlsRow;
   }
 
@@ -340,10 +354,243 @@ export class ChatSidebar extends Component {
     const goToChatBtn = this.messagesContainer.querySelector('#go-to-chat-btn') as HTMLElement | null;
     if (goToChatBtn) {
       this.addListener(goToChatBtn, 'click', () => {
-        store.chatSidebarOpen.set(false);
-        router.navigate('/chat');
+        this.showSettingsModal();
       });
     }
+  }
+
+  private showSettingsModal(): void {
+    // Remove existing modal if any
+    this.settingsModal?.remove();
+
+    // Create modal backdrop
+    const backdrop = createElement('div', {
+      className: 'fixed inset-0 bg-background/60 backdrop-blur-2xl flex items-center justify-center z-[10000] p-6 animate-in fade-in duration-300',
+    });
+
+    // Modal container
+    const modal = createElement('div', {
+      className: 'glass-panel bg-card border border-border/50 rounded-[2rem] p-8 w-full max-w-lg space-y-6 shadow-2xl modal-enter relative overflow-hidden',
+    });
+
+    // Close button
+    const closeBtn = createElement('button', {
+      className: 'absolute top-6 right-6 p-2 hover:bg-secondary rounded-full transition-colors text-muted-foreground hover:text-foreground',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+    });
+    this.addListener(closeBtn, 'click', () => {
+      backdrop.remove();
+      this.settingsModal = null;
+    });
+    modal.appendChild(closeBtn);
+
+    // Title
+    const titleSection = createElement('div', { className: 'space-y-1' });
+    const title = createElement('h3', {
+      className: 'text-xl font-bold text-foreground',
+      textContent: 'AI Settings',
+    });
+    const subtitle = createElement('p', {
+      className: 'text-xs text-muted-foreground font-medium uppercase tracking-wider',
+      textContent: 'Manage Providers & API Keys',
+    });
+    titleSection.appendChild(subtitle);
+    titleSection.appendChild(title);
+    modal.appendChild(titleSection);
+
+    // Provider Tabs
+    const tabContainer = createElement('div', {
+      className: 'flex gap-1 bg-secondary/30 p-1 rounded-xl border border-border/30',
+    });
+
+    const providers = getProviderIds();
+    let activeTab: Provider = this.currentProvider;
+
+    const tabContent = createElement('div', {
+      className: 'pt-2',
+    });
+
+    const renderTabContent = () => {
+      clearChildren(tabContent);
+      const config = getProviderConfig(activeTab);
+      const hasKey = hasApiKeyForProvider(activeTab);
+      
+      // API Key section
+      const keySection = createElement('div', { className: 'space-y-3' });
+
+      const keyLabel = createElement('label', {
+        className: 'block text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] mb-1',
+        textContent: `${config.displayName} API Key`,
+      });
+      keySection.appendChild(keyLabel);
+
+      const inputWrapper = createElement('div', { className: 'relative' });
+      const keyInput = createElement('input', {
+        className: 'w-full px-4 py-3 bg-secondary/20 border border-border/50 rounded-xl text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all',
+        attributes: {
+          type: 'password',
+          placeholder: hasKey ? '••••••••••••••••' : (config.keyPrefix ? `${config.keyPrefix}...` : 'Enter API key...'),
+          autocomplete: 'off',
+        },
+      }) as HTMLInputElement;
+      inputWrapper.appendChild(keyInput);
+      keySection.appendChild(inputWrapper);
+
+      const hintRow = createElement('div', { className: 'flex justify-between items-start gap-4' });
+      const keyHint = createElement('p', {
+        className: 'text-[11px] text-muted-foreground/70 leading-relaxed flex-1',
+        textContent: config.keyHint,
+      });
+      hintRow.appendChild(keyHint);
+
+      if (hasKey) {
+        const clearBtn = createElement('button', {
+          className: 'text-[10px] font-bold text-destructive/70 hover:text-destructive uppercase tracking-wider transition-colors shrink-0',
+          textContent: 'Clear Key',
+        });
+        clearBtn.addEventListener('click', () => {
+          if (confirm(`Are you sure you want to clear the ${config.displayName} API key?`)) {
+            clearApiKeyForProvider(activeTab);
+            if (activeTab === this.currentProvider) {
+              this.apiKeyMissing = true;
+            }
+            renderTabContent();
+          }
+        });
+        hintRow.appendChild(clearBtn);
+      }
+      keySection.appendChild(hintRow);
+
+      const validationMsg = createElement('p', {
+        className: 'text-xs text-status-error font-medium hidden',
+      });
+      keySection.appendChild(validationMsg);
+
+      tabContent.appendChild(keySection);
+
+      // Model section
+      const modelSection = createElement('div', { className: 'space-y-3 mt-6' });
+      const modelLabel = createElement('label', {
+        className: 'block text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]',
+        textContent: 'Default Model',
+      });
+      modelSection.appendChild(modelLabel);
+
+      const modelSelect = createElement('select', {
+        className: 'w-full px-4 py-3 bg-secondary/20 border border-border/50 rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all cursor-pointer appearance-none',
+      }) as HTMLSelectElement;
+
+      const currentModel = this.stateManager.getModel(activeTab);
+      config.models.forEach(model => {
+        const option = createElement('option', {
+          attributes: { value: model.id },
+          textContent: model.name,
+        }) as HTMLOptionElement;
+        if (model.id === currentModel) option.selected = true;
+        modelSelect.appendChild(option);
+      });
+      modelSection.appendChild(modelSelect);
+      tabContent.appendChild(modelSection);
+
+      // Save button
+      const saveBtn = createElement('button', {
+        className: 'w-full mt-8 py-3.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50',
+        textContent: hasKey ? 'Update Configuration' : 'Save Connection',
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const newKey = keyInput.value.trim();
+        
+        // If updating model but not key
+        if (!newKey && hasKey) {
+          this.stateManager.setModel(activeTab, modelSelect.value);
+          backdrop.remove();
+          this.settingsModal = null;
+          this.render();
+          return;
+        }
+
+        if (!newKey) {
+          validationMsg.textContent = 'Please enter an API key';
+          validationMsg.classList.remove('hidden');
+          return;
+        }
+
+        // Validate
+        const validation = validateApiKey(newKey, activeTab);
+        if (!validation.valid) {
+          validationMsg.textContent = validation.error || 'Invalid API key format';
+          validationMsg.classList.remove('hidden');
+          return;
+        }
+
+        validationMsg.classList.add('hidden');
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
+        try {
+          await encryptApiKeyForProvider(newKey, activeTab);
+          this.stateManager.setModel(activeTab, modelSelect.value);
+          
+          if (activeTab === this.currentProvider) {
+            this.apiKeyMissing = false;
+          }
+          
+          backdrop.remove();
+          this.settingsModal = null;
+          this.render();
+        } catch (error) {
+          console.error('Failed to save API key:', error);
+          validationMsg.textContent = 'Failed to encrypt and save key';
+          validationMsg.classList.remove('hidden');
+          saveBtn.textContent = hasKey ? 'Update Configuration' : 'Save Connection';
+          saveBtn.disabled = false;
+        }
+      });
+      tabContent.appendChild(saveBtn);
+    };
+
+    // Create tabs
+    providers.forEach(providerId => {
+      const config = getProviderConfig(providerId);
+      const tab = createElement('button', {
+        className: `flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+          activeTab === providerId
+            ? 'bg-background text-primary shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        }`,
+        textContent: config.name,
+      });
+
+      tab.addEventListener('click', () => {
+        activeTab = providerId;
+        tabContainer.querySelectorAll('button').forEach((btn, idx) => {
+          const isActive = providers[idx] === activeTab;
+          btn.className = `flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+            isActive ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`;
+        });
+        renderTabContent();
+      });
+      tabContainer.appendChild(tab);
+    });
+
+    modal.appendChild(tabContainer);
+    modal.appendChild(tabContent);
+
+    renderTabContent();
+
+    // Close on backdrop click
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        backdrop.remove();
+        this.settingsModal = null;
+      }
+    });
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    this.settingsModal = backdrop;
   }
   
   private renderWelcomeState(): void {
@@ -582,8 +829,14 @@ export class ChatSidebar extends Component {
         className: 'p-4 rounded-2xl rounded-bl-sm bg-surface-2 border border-border/50 text-sm leading-relaxed font-body markdown-content shadow-sm',
       });
 
-      bubble.innerHTML = parseMarkdown(message.content);
-      setupMarkdownInteractivity(bubble);
+      // Check for tool usage indicators and render them
+      if (message.content.includes('[Using tool:')) {
+        this.renderMessageWithTools(bubble, message.content);
+      } else {
+        bubble.innerHTML = parseMarkdown(message.content);
+        setupMarkdownInteractivity(bubble);
+      }
+
       contentWrapper.appendChild(bubble);
       messageContainer.appendChild(contentWrapper);
 
@@ -591,6 +844,75 @@ export class ChatSidebar extends Component {
     }
 
     return wrapper;
+  }
+
+  private renderMessageWithTools(bubble: HTMLElement, content: string): void {
+    // Split content by tool usage indicators
+    const parts = content.split(/(\[Using tool: [^\]]+\])/g);
+
+    for (const part of parts) {
+      if (part.startsWith('[Using tool:')) {
+        // Extract tool name
+        const toolName = part.match(/\[Using tool: ([^\]]+)\]/)?.[1];
+        if (toolName) {
+          const toolIndicator = this.createToolIndicator(toolName);
+          bubble.appendChild(toolIndicator);
+        }
+      } else if (part.trim()) {
+        // Regular text content - parse as markdown
+        const textDiv = createElement('div', {
+          className: 'markdown-content',
+        });
+        textDiv.innerHTML = parseMarkdown(part);
+        setupMarkdownInteractivity(textDiv);
+        bubble.appendChild(textDiv);
+      }
+    }
+  }
+
+  private createToolIndicator(toolName: string): HTMLElement {
+    const indicator = createElement('div', {
+      className: 'flex items-center gap-2 px-3 py-2 my-2 bg-primary/5 border border-primary/20 rounded-lg text-xs',
+    });
+
+    // Icon and label based on tool name
+    let icon = '🔧';
+    let label = toolName;
+    let badgeColor = 'bg-blue-500/10 text-blue-400';
+
+    if (toolName === 'searchItems') {
+      icon = '🔍';
+      label = 'Searching data';
+      badgeColor = 'bg-purple-500/10 text-purple-400';
+    } else if (toolName.startsWith('obsidian_')) {
+      icon = '📝';
+      if (toolName === 'obsidian_list_notes') label = 'Listing notes';
+      else if (toolName === 'obsidian_read_note') label = 'Reading note';
+      else if (toolName === 'obsidian_create_note') label = 'Creating note';
+      else if (toolName === 'obsidian_update_note') label = 'Updating note';
+      else if (toolName === 'obsidian_search') label = 'Searching notes';
+      else label = 'Obsidian';
+      badgeColor = 'bg-green-500/10 text-green-400';
+    }
+
+    const iconSpan = createElement('span', {
+      textContent: icon,
+    });
+    indicator.appendChild(iconSpan);
+
+    const labelSpan = createElement('span', {
+      className: 'flex-1 font-medium',
+      textContent: label,
+    });
+    indicator.appendChild(labelSpan);
+
+    const badge = createElement('span', {
+      className: `px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`,
+      textContent: 'Tool',
+    });
+    indicator.appendChild(badge);
+
+    return indicator;
   }
   
   private renderLoadingMessage(): void {
@@ -713,7 +1035,7 @@ export class ChatSidebar extends Component {
     try {
       const result = await api.chat.getSession.query({ sessionId });
       this.sessionId = sessionId;
-      this.messages = result.messages.map(m => ({
+      this.messages = result.messages.map((m: { id: string; role: string; content: string; createdAt: string | Date }) => ({
         id: m.id,
         role: m.role as 'user' | 'assistant',
         content: m.content,

@@ -24,7 +24,8 @@
     "dotenv": "catalog:",
     "drizzle-orm": "^0.44.7",
     "elysia": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.6",

@@ -262,7 +262,7 @@ export class Chat extends Component {
 
     // Messages area
     this.messagesContainer = createElement('div', {
-      className: 'flex-1 p-6 overflow-y-auto space-y-4',
+      className: 'flex-1 p-6 overflow-y-auto',
     });
 
     // Welcome message if no messages
@@ -488,32 +488,131 @@ export class Chat extends Component {
     const isUser = message.role === 'user';
 
     const wrapper = createElement('div', {
-      className: `flex ${isUser ? 'justify-end' : 'justify-start'}`,
+      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`,
     });
 
-    const bubble = createElement('div', {
-      className: `max-w-[80%] px-4 py-3 border border-border rounded-2xl ${isUser
-        ? 'bg-primary text-primary-foreground'
-        : 'glass-panel bg-card text-foreground'
-        }`,
-    });
+    if (isUser) {
+      // User messages: clean, right-aligned
+      const bubble = createElement('div', {
+        className: 'max-w-[75%] px-4 py-3 rounded-2xl rounded-tr-md bg-primary text-primary-foreground shadow-sm',
+      });
 
-    // Role label
-    const roleLabel = createElement('div', {
-      className: `text-xs font-mono uppercase tracking-wider mb-1 ${isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`,
-      textContent: isUser ? 'You' : 'Cortex',
-    });
-    bubble.appendChild(roleLabel);
+      const content = createElement('div', {
+        className: 'text-sm leading-relaxed',
+        textContent: message.content,
+      });
+      bubble.appendChild(content);
+      wrapper.appendChild(bubble);
+    } else {
+      // Assistant messages: left-aligned with subtle styling
+      const messageContainer = createElement('div', {
+        className: 'max-w-[75%] flex gap-2 items-start',
+      });
 
-    const content = createElement('div', {
-      className: 'text-sm whitespace-pre-wrap break-words font-mono',
-      textContent: message.content,
-    });
+      // Avatar
+      const avatar = createElement('div', {
+        className: 'w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1',
+        innerHTML: `<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>`,
+      });
+      messageContainer.appendChild(avatar);
 
-    bubble.appendChild(content);
-    wrapper.appendChild(bubble);
+      // Content
+      const contentWrapper = createElement('div', {
+        className: 'flex-1',
+      });
+
+      const bubble = createElement('div', {
+        className: 'px-4 py-3 rounded-2xl rounded-tl-md bg-secondary/50 border border-border/50 shadow-sm',
+      });
+
+      // Parse content for tool usage indicators
+      if (message.content.includes('[Using tool:')) {
+        this.renderMessageWithTools(bubble, message.content);
+      } else {
+        const content = createElement('div', {
+          className: 'text-sm leading-relaxed',
+          textContent: message.content,
+        });
+        bubble.appendChild(content);
+      }
+
+      contentWrapper.appendChild(bubble);
+      messageContainer.appendChild(contentWrapper);
+      wrapper.appendChild(messageContainer);
+    }
 
     return wrapper;
+  }
+
+  private renderMessageWithTools(bubble: HTMLElement, content: string): void {
+    // Split content by tool usage indicators
+    const parts = content.split(/(\[Using tool: [^\]]+\])/g);
+
+    for (const part of parts) {
+      if (part.startsWith('[Using tool:')) {
+        // Extract tool name
+        const toolName = part.match(/\[Using tool: ([^\]]+)\]/)?.[1];
+        if (toolName) {
+          const toolIndicator = this.createToolIndicator(toolName);
+          bubble.appendChild(toolIndicator);
+        }
+      } else if (part.trim()) {
+        // Regular text content
+        const textContent = createElement('div', {
+          className: 'text-sm leading-relaxed',
+          textContent: part,
+        });
+        bubble.appendChild(textContent);
+      }
+    }
+  }
+
+  private createToolIndicator(toolName: string): HTMLElement {
+    // Icon and label based on tool name
+    let icon = '🔧';
+    let label = toolName;
+    let bgColor = 'bg-blue-500/5';
+    let borderColor = 'border-blue-500/20';
+    let textColor = 'text-blue-600';
+
+    if (toolName === 'searchItems') {
+      icon = '🔍';
+      label = 'Searching your data';
+      bgColor = 'bg-purple-500/5';
+      borderColor = 'border-purple-500/20';
+      textColor = 'text-purple-600';
+    } else if (toolName.startsWith('obsidian_')) {
+      icon = '📝';
+      if (toolName === 'obsidian_list_notes') label = 'Listing notes';
+      else if (toolName === 'obsidian_read_note') label = 'Reading note';
+      else if (toolName === 'obsidian_create_note') label = 'Creating note';
+      else if (toolName === 'obsidian_update_note') label = 'Updating note';
+      else if (toolName === 'obsidian_search') label = 'Searching notes';
+      else label = 'Obsidian';
+      bgColor = 'bg-green-500/5';
+      borderColor = 'border-green-500/20';
+      textColor = 'text-green-600';
+    }
+
+    const indicator = createElement('div', {
+      className: `flex items-center gap-2 px-3 py-2 my-2 rounded-lg border ${bgColor} ${borderColor}`,
+    });
+
+    const iconSpan = createElement('span', {
+      className: 'text-base',
+      textContent: icon,
+    });
+    indicator.appendChild(iconSpan);
+
+    const labelSpan = createElement('span', {
+      className: `text-xs font-medium ${textColor}`,
+      textContent: label,
+    });
+    indicator.appendChild(labelSpan);
+
+    return indicator;
   }
 
   private async sendMessage(): Promise<void> {
