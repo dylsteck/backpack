@@ -9,6 +9,7 @@ import { router } from '../router';
 import { fetchAppsWithCache, fetchApps, getAppById, api, appsCache, fetchTimeline } from '../api';
 import { createElement, clearChildren, escapeHtml, formatTime, formatDate } from '../utils/dom';
 import type { AppServer, TimelineItem, SourceType, FarcasterCast, BrowserHistoryEntry, TellerTransaction } from '../types';
+import { parseMarkdown, markdownToPlainText, setupMarkdownInteractivity } from '../utils/markdown';
 
 // Declare window interfaces for Electron APIs
 declare global {
@@ -367,7 +368,7 @@ export class AppDetail extends Component {
     
     // Connection status card
     const statusCard = createElement('div', {
-      className: 'p-6 border bg-card',
+      className: 'glass-panel p-6 border bg-card',
     });
     
     statusCard.innerHTML = `
@@ -394,7 +395,7 @@ export class AppDetail extends Component {
     
     // Connect/Disconnect button
     const actionCard = createElement('div', {
-      className: 'mt-6 p-6 border bg-card',
+      className: 'glass-panel mt-6 p-6 border bg-card',
     });
     
     if (!isConnected) {
@@ -559,7 +560,7 @@ export class AppDetail extends Component {
     // Additional settings
     if (this.app.connection?.connectionMetadata?.localPath) {
       const settingsCard = createElement('div', {
-        className: 'mt-6 p-6 border bg-card',
+        className: 'glass-panel mt-6 p-6 border bg-card',
       });
       
       settingsCard.innerHTML = `
@@ -781,7 +782,7 @@ export class AppDetail extends Component {
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium">${escapeHtml(note.title)}</p>
-          <p class="text-xs text-muted-foreground truncate font-mono mt-1">${escapeHtml(note.body.substring(0, 100))}</p>
+          <p class="text-xs text-muted-foreground truncate font-mono mt-1">${escapeHtml(markdownToPlainText(note.body).substring(0, 100))}</p>
           ${note.tags?.length ? `
             <div class="flex flex-wrap gap-1 mt-2">
               ${note.tags.slice(0, 3).map(t => `<span class="px-2 py-0.5 bg-purple-500/10 text-purple-500 text-xs rounded">#${escapeHtml(t)}</span>`).join('')}
@@ -1083,12 +1084,16 @@ export class AppDetail extends Component {
       </div>
     `;
     content.appendChild(title);
-    
-    // Body preview
+
+    // Body preview with markdown rendering
     const bodySection = createElement('div', {
-      className: 'text-sm leading-relaxed whitespace-pre-wrap',
-      textContent: note.body.substring(0, 500) + (note.body.length > 500 ? '...' : ''),
+      className: 'markdown-content text-sm leading-relaxed',
     });
+    const truncatedBody = note.body.length > 500
+      ? note.body.substring(0, 500) + '...'
+      : note.body;
+    bodySection.innerHTML = parseMarkdown(truncatedBody);
+    setupMarkdownInteractivity(bodySection);
     content.appendChild(bodySection);
     
     // Tags

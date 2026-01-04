@@ -317,9 +317,9 @@ export class Chat extends Component {
     });
 
     const bubble = createElement('div', {
-      className: `max-w-[80%] px-4 py-3 border border-border ${isUser
+      className: `max-w-[80%] px-4 py-3 border border-border rounded-2xl ${isUser
         ? 'bg-primary text-primary-foreground'
-        : 'bg-card text-foreground'
+        : 'glass-panel bg-card text-foreground'
         }`,
     });
 
@@ -438,12 +438,12 @@ export class Chat extends Component {
 
     // Create modal backdrop
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-50',
+      className: 'fixed inset-0 bg-black/50 backdrop-blur-2xl flex items-center justify-center z-50',
     });
 
     // Modal container
     const modal = createElement('div', {
-      className: 'bg-background border border-border p-6 w-full max-w-md space-y-4',
+      className: 'glass-panel bg-background border border-border rounded-3xl p-6 w-full max-w-md space-y-4 elevation-3',
     });
 
     // Title

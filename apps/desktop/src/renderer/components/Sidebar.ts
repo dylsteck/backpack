@@ -244,8 +244,8 @@ export class Sidebar extends Component {
       const button = createElement('button', {
         className: `p-2 rounded-lg transition-all ${
           store.theme.get() === theme.value
-            ? 'bg-card text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
+            ? 'bg-card text-foreground shadow-sm glow-primary'
+            : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
         }`,
         attributes: {
           'aria-label': theme.label,

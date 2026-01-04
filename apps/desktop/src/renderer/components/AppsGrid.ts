@@ -89,16 +89,16 @@ export class AppsGrid extends Component {
   
   private createAppCard(app: AppServer): HTMLElement {
     const isConnected = app.connection?.status === 'connected';
-    
+
     const card = createElement('div', {
-      className: 'group relative flex flex-col items-center p-6 border bg-card hover:bg-accent transition-all cursor-pointer',
+      className: 'glass-panel group relative flex flex-col items-center p-6 border bg-card hover:bg-accent transition-all cursor-pointer hover-lift rounded-2xl',
       dataset: { appId: app.id },
     });
-    
+
     // Connection status indicator
     const statusDot = createElement('div', {
-      className: `absolute top-3 right-3 w-2 h-2 ${
-        isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'
+      className: `absolute top-3 right-3 w-2 h-2 rounded-full ${
+        isConnected ? 'bg-status-connected pulse-slow' : 'bg-muted-foreground/30'
       }`,
     });
     card.appendChild(statusDot);

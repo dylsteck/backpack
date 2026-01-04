@@ -10,6 +10,7 @@ import { fetchTimeline, loadMoreTimeline, fetchAppsWithCache } from '../api';
 import { createElement, clearChildren, formatTime, formatFullDate, groupByDate, escapeHtml } from '../utils/dom';
 import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 import { DetailModal } from './DetailModal';
+import { parseMarkdown, isMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
 
 type ViewMode = 'timeline' | 'overview';
 
@@ -113,9 +114,9 @@ export class Timeline extends Component {
     
     header.appendChild(leftSide);
     
-    // View Toggle
+    // View Toggle with glass morphism
     this.viewToggleContainer = createElement('div', {
-      className: 'flex items-center gap-1.5 p-1.5 bg-secondary/50 backdrop-blur-md rounded-2xl border border-border/40',
+      className: 'glass-panel flex items-center gap-1.5 p-1.5 rounded-2xl',
     });
     
     const modes: Array<{ id: ViewMode; icon: string }> = [
@@ -229,7 +230,7 @@ export class Timeline extends Component {
   
   private renderOverviewCard(group: DayGroup): HTMLElement {
     const card = createElement('div', {
-      className: 'card-modern card-elevated flex flex-col gap-4 min-h-[320px] cursor-pointer',
+      className: 'card-modern card-elevated hover-float flex flex-col gap-4 min-h-[360px] cursor-pointer',
     });
     
     const content = createElement('div', { className: 'flex-1' });
@@ -346,12 +347,12 @@ export class Timeline extends Component {
           entry.appendChild(line);
         }
         
-        const dot = createElement('div', { className: 'timeline-dot' });
+        const dot = createElement('div', { className: 'timeline-dot hover:glow-primary transition-all' });
         dot.innerHTML = this.getSourceIconLarge(item.source);
         entry.appendChild(dot);
-        
+
         const card = createElement('div', {
-          className: 'card-modern card-elevated group cursor-pointer',
+          className: 'card-modern card-elevated hover-lift group cursor-pointer transition-smooth',
           dataset: { clickable: 'true' },
         });
         
@@ -524,8 +525,21 @@ export class Timeline extends Component {
   }
   
   private renderItemContent(item: TimelineItem): HTMLElement {
-    const wrapper = createElement('div', { className: 'text-sm leading-relaxed' });
     const text = this.extractPreviewText(item) || 'No preview available';
+
+    // Check if content is markdown (for Obsidian notes)
+    if (item.type === 'obsidian-note' && isMarkdown(text)) {
+      const wrapper = createElement('div', { className: 'markdown-content text-sm leading-relaxed' });
+      // Limit to first 200 chars for preview
+      const preview = text.length > 200 ? text.substring(0, 200) + '...' : text;
+      wrapper.innerHTML = parseMarkdown(preview);
+      // Setup interactivity for wikilinks and hashtags
+      setupMarkdownInteractivity(wrapper);
+      return wrapper;
+    }
+
+    // Regular text content
+    const wrapper = createElement('div', { className: 'text-sm leading-relaxed' });
     wrapper.textContent = text;
     return wrapper;
   }

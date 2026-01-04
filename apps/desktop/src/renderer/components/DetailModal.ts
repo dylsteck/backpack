@@ -8,6 +8,7 @@ import { createElement, formatFullDate, formatTime, escapeHtml } from '../utils/
 import type { TimelineItem, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 import { api } from '../api';
 import { store } from '../store';
+import { parseMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
 
 export class DetailModal extends Component {
   private actionsOpen = false;
@@ -31,9 +32,9 @@ export class DetailModal extends Component {
     const appSidebar = document.querySelector('[data-sidebar]');
     if (appSidebar) appSidebar.classList.add('hidden');
     
-    // Backdrop
+    // Backdrop with enhanced blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-xl z-[100] flex items-center justify-center p-6 md:p-12 animate-in fade-in duration-300',
+      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 md:p-12 animate-in fade-in duration-300',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -43,9 +44,9 @@ export class DetailModal extends Component {
       }
     });
     
-    // Modal container
+    // Modal container with glass morphism
     const modal = createElement('div', {
-      className: 'bg-card border border-border/50 w-full max-w-5xl h-full max-h-[85vh] flex flex-col md:flex-row overflow-hidden shadow-2xl rounded-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative',
+      className: 'glass-panel bg-card border border-border/50 w-full max-w-5xl h-full max-h-[85vh] flex flex-col md:flex-row overflow-hidden elevation-3 rounded-3xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative',
     });
     
     // Close button
@@ -296,33 +297,43 @@ export class DetailModal extends Component {
       case 'obsidian-note': {
         const note = this.item.data as { title: string; body: string; path: string; tags?: string[] };
         wrapper.className = 'w-full max-w-2xl';
-        wrapper.innerHTML = `
-          <div class="space-y-6 card-modern p-8">
-            <div class="flex items-center gap-4">
-              <div class="p-3 bg-purple-500/10 rounded-xl">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-purple-500">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                  <polyline points="10 9 9 9 8 9"/>
-                </svg>
-              </div>
-              <div>
-                <div class="font-semibold text-lg">${escapeHtml(note.title)}</div>
-                <div class="text-muted-foreground text-sm">${escapeHtml(note.path)}</div>
-              </div>
-            </div>
-            <div class="prose prose-sm max-w-none">
-              <p class="text-foreground/80 whitespace-pre-wrap leading-relaxed">${escapeHtml(note.body)}</p>
-            </div>
-            ${note.tags?.length ? `
-              <div class="flex flex-wrap gap-2 pt-4 border-t border-border/50">
-                ${note.tags.map(t => `<span class="px-3 py-1 bg-purple-500/10 text-purple-500 text-xs rounded-full">#${escapeHtml(t)}</span>`).join('')}
-              </div>
-            ` : ''}
+
+        // Create card structure
+        const card = createElement('div', { className: 'space-y-6 card-modern p-8' });
+
+        // Header with icon and title
+        const header = createElement('div', { className: 'flex items-center gap-4' });
+        header.innerHTML = `
+          <div class="p-3 bg-purple-500/10 rounded-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-purple-500">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-lg">${escapeHtml(note.title)}</div>
+            <div class="text-muted-foreground text-sm">${escapeHtml(note.path)}</div>
           </div>
         `;
+        card.appendChild(header);
+
+        // Body with markdown rendering
+        const bodyContainer = createElement('div', { className: 'markdown-content prose prose-sm max-w-none' });
+        bodyContainer.innerHTML = parseMarkdown(note.body);
+        setupMarkdownInteractivity(bodyContainer);
+        card.appendChild(bodyContainer);
+
+        // Tags
+        if (note.tags?.length) {
+          const tagsContainer = createElement('div', { className: 'flex flex-wrap gap-2 pt-4 border-t border-border/50' });
+          tagsContainer.innerHTML = note.tags.map(t => `<span class="px-3 py-1 bg-purple-500/10 text-purple-500 text-xs rounded-full">#${escapeHtml(t)}</span>`).join('');
+          card.appendChild(tagsContainer);
+        }
+
+        wrapper.appendChild(card);
         break;
       }
         
