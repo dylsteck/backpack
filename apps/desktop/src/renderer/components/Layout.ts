@@ -9,14 +9,13 @@ import { router } from '../router';
 import { createElement, clearChildren } from '../utils/dom';
 import { Sidebar } from './Sidebar';
 import { Timeline } from './Timeline';
-import { AppsGrid } from './AppsGrid';
+import { VaultGrid } from './VaultGrid';
 import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
-import { Chat } from './Chat';
 import { TopbarTitle } from './TopbarTitle';
 import { ChatSidebar } from './ChatSidebar';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'chat';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -108,6 +107,12 @@ export class Layout extends Component {
     
     this.registerCleanup(() => {
       chatToggle.remove();
+    });
+
+    // Subscribe to chat sidebar state to hide this toggle when sidebar is open
+    // (Sidebar has its own integrated close button to avoid overlap)
+    this.subscribe(store.chatSidebarOpen, (open) => {
+      chatToggle.style.display = open ? 'none' : 'flex';
     });
     
     // Sidebar (Left)
@@ -227,16 +232,13 @@ export class Layout extends Component {
         this.currentView = new Timeline(this.contentContainer);
         break;
       case 'apps':
-        this.currentView = new AppsGrid(this.contentContainer);
+        this.currentView = new VaultGrid(this.contentContainer);
         break;
       case 'app-detail':
         this.currentView = new AppDetail(this.contentContainer, params?.appId);
         break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);
-        break;
-      case 'chat':
-        this.currentView = new Chat(this.contentContainer);
         break;
     }
     

@@ -123,10 +123,6 @@ class App {
         render: (params) => this.layout?.showRoute('app-detail', params),
       },
       {
-        path: '/chat',
-        render: () => this.layout?.showRoute('chat'),
-      },
-      {
         path: '/onboarding',
         render: () => this.layout?.showRoute('onboarding'),
       },

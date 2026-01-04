@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/mcp": "^0.0.1",
     "@ai-sdk/openai": "^2.0.53",
+    "@anthropic-ai/sdk": "^0.71.2",
     "@cortex/api": "workspace:*",
     "@cortex/db": "workspace:*",
     "@elysiajs/cors": "^1.4.0",

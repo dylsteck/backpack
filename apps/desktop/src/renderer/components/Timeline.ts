@@ -230,86 +230,108 @@ export class Timeline extends Component {
   
   private renderOverviewCard(group: DayGroup): HTMLElement {
     const card = createElement('div', {
-      className: 'card-modern card-elevated hover-float flex flex-col gap-4 min-h-[360px] cursor-pointer',
+      className: 'card-modern card-elevated hover-float flex flex-col gap-6 min-h-[400px] cursor-pointer border-l-4 border-l-primary/30 relative overflow-hidden',
     });
-    
-    const content = createElement('div', { className: 'flex-1' });
-    
+
+    // Subtle gradient overlay
+    const gradientOverlay = createElement('div', {
+      className: 'absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none',
+    });
+    card.appendChild(gradientOverlay);
+
+    const content = createElement('div', { className: 'flex-1 relative z-10' });
+
     if (group.previewImages.length > 0) {
       const stack = this.renderImageStack(group.previewImages);
       content.appendChild(stack);
     } else {
       const textPreview = createElement('div', {
-        className: 'bg-secondary/30 rounded-2xl p-5 space-y-3',
+        className: 'bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-6 space-y-4 border border-border/30',
       });
-      group.previewTexts.slice(0, 3).forEach(text => {
+      group.previewTexts.slice(0, 3).forEach((text, index) => {
         textPreview.appendChild(createElement('p', {
-          className: 'text-sm text-muted-foreground line-clamp-2',
+          className: `text-sm ${index === 0 ? 'text-foreground/90 font-medium' : 'text-muted-foreground'} line-clamp-2 leading-relaxed`,
           textContent: text,
         }));
       });
       content.appendChild(textPreview);
     }
-    
+
     card.appendChild(content);
-    
-    const footer = createElement('div', { className: 'mt-auto' });
+
+    const footer = createElement('div', { className: 'mt-auto relative z-10' });
     footer.innerHTML = `
-      <h3 class="text-lg font-semibold mb-1">${this.generateDayTitle(group)}</h3>
-      <div class="flex items-center gap-3 mt-4 pt-4 border-t border-border/40">
-        <div class="flex -space-x-2">
-          ${Array.from(group.sources).map(s => this.getSourceIconSmall(s)).join('')}
+      <h3 class="text-xl font-semibold mb-2 tracking-tight">${this.generateDayTitle(group)}</h3>
+      <div class="flex items-center gap-3 mt-5 pt-5 border-t border-border/50">
+        <div class="flex -space-x-2.5">
+          ${Array.from(group.sources).map(s => `<div class="w-7 h-7 rounded-lg border-2 border-card overflow-hidden shadow-sm">${this.getSourceIconSmall(s)}</div>`).join('')}
         </div>
-        <span class="text-xs text-muted-foreground font-medium">${group.items.length} items from ${this.formatSourceNames(group.sources)}</span>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-xs font-semibold text-foreground">${group.items.length} items</span>
+          <span class="text-[10px] text-muted-foreground/70 uppercase tracking-wider">${this.formatSourceNames(group.sources)}</span>
+        </div>
       </div>
     `;
-    
+
     card.appendChild(footer);
     this.addListener(card, 'click', () => this.openItemDetail(group.items[0]));
-    
+
     return card;
   }
   
   private renderItemsOverviewCard(group: DayGroup): HTMLElement {
     const card = createElement('div', {
-      className: 'card-modern bg-secondary/20 border-transparent p-0 overflow-hidden flex flex-col',
+      className: 'card-modern bg-gradient-to-br from-secondary/30 to-secondary/10 border border-border/40 p-0 overflow-hidden flex flex-col relative',
     });
-    
+
+    // Subtle accent line
+    const accentLine = createElement('div', {
+      className: 'absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/40 via-primary/20 to-transparent',
+    });
+    card.appendChild(accentLine);
+
     const header = createElement('div', {
-      className: 'p-6 pb-2 flex items-center justify-between',
+      className: 'p-6 pb-3 flex items-center justify-between relative z-10',
     });
     header.innerHTML = `
-      <h3 class="text-sm font-semibold uppercase tracking-widest text-muted-foreground/70">Recent Activity</h3>
-      <span class="text-xs font-mono text-muted-foreground/50">${group.items.length} items</span>
+      <h3 class="text-xs font-bold uppercase tracking-[0.15em] text-foreground/70">Recent Activity</h3>
+      <div class="px-2 py-1 bg-primary/10 rounded-lg">
+        <span class="text-[10px] font-bold text-primary">${group.items.length}</span>
+      </div>
     `;
     card.appendChild(header);
-    
+
     const scroll = createElement('div', {
-      className: 'flex overflow-x-auto p-6 pt-2 gap-4 scrollbar-hide',
+      className: 'flex overflow-x-auto p-6 pt-3 gap-4 scrollbar-hide relative z-10',
     });
-    
+
     group.items.slice(1, 6).forEach(item => {
       const itemCard = createElement('div', {
-        className: 'min-w-[200px] bg-card border border-border/40 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer',
+        className: 'min-w-[220px] bg-card border border-border/60 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:scale-[1.03] hover:border-primary/30 transition-all cursor-pointer group',
       });
-      
+
       const title = this.extractPreviewText(item) || 'Untitled';
       itemCard.innerHTML = `
-        <div class="flex items-center gap-2 mb-3">
-          ${this.getSourceIconSmall(item.source)}
-          <span class="text-[10px] uppercase font-bold text-muted-foreground/60">${item.type}</span>
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="w-6 h-6 rounded-lg overflow-hidden shadow-sm ring-1 ring-border/50">
+            ${this.getSourceIconSmall(item.source)}
+          </div>
+          <span class="text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 bg-muted/50 px-2 py-1 rounded-md">${item.type}</span>
         </div>
-        <p class="text-sm font-medium line-clamp-3 leading-relaxed">${escapeHtml(title)}</p>
-        <p class="text-[10px] text-muted-foreground mt-3">${formatTime(item.timestamp)}</p>
+        <p class="text-sm font-semibold line-clamp-3 leading-relaxed mb-3 group-hover:text-primary transition-colors">${escapeHtml(title)}</p>
+        <div class="flex items-center gap-1.5">
+          <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+          <p class="text-[10px] text-muted-foreground/80 font-medium">${formatTime(item.timestamp)}</p>
+        </div>
       `;
-      
+
       this.addListener(itemCard, 'click', (e) => {
         e.stopPropagation();
         this.openItemDetail(item);
       });
       scroll.appendChild(itemCard);
     });
-    
+
     card.appendChild(scroll);
     return card;
   }
@@ -326,52 +348,76 @@ export class Timeline extends Component {
       const dayWrapper = createElement('div', { className: 'relative' });
       
       const dateHeader = createElement('div', {
-        className: 'flex items-center gap-4 mb-8',
+        className: 'flex flex-col gap-3 mb-10',
       });
       dateHeader.innerHTML = `
-        <span class="text-sm font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">${formatFullDate(new Date(dateKey))}</span>
-        <div class="flex-1 h-[1.5px] bg-border/30"></div>
+        <h2 style="font-family: var(--font-display); font-weight: 700; font-size: 2.5rem; letter-spacing: -0.02em; line-height: 1.1;" class="text-foreground">${formatFullDate(new Date(dateKey))}</h2>
+        <div class="flex items-center gap-4">
+          <div class="flex-1 h-[2px] bg-gradient-to-r from-primary/40 via-primary/20 to-transparent"></div>
+          <span class="text-xs uppercase tracking-[0.15em] text-muted-foreground/50 font-medium" style="font-family: var(--font-sans);">${dayItems.length} ${dayItems.length === 1 ? 'item' : 'items'}</span>
+        </div>
       `;
       dayWrapper.appendChild(dateHeader);
       
       const itemsList = createElement('div', { className: 'space-y-12 relative' });
       
       dayItems.forEach((item, index) => {
+        // Determine pattern variation (cycle through 3 patterns)
+        const patternIndex = index % 3;
+        const patternClass = `timeline-entry-pattern-${['a', 'b', 'c'][patternIndex]}`;
+
+        // Determine source type for contextual styling
+        const sourceType = item.source === 'farcaster' ? 'social' :
+                          item.source === 'obsidian' ? 'notes' :
+                          item.source === 'teller' ? 'financial' : 'browser';
+
         const entry = createElement('div', {
-          className: 'timeline-entry relative pl-16 min-h-[80px]',
-          dataset: { entryId: item.id },
+          className: `timeline-entry relative pl-16 min-h-[80px] ${patternClass} stagger-item`,
+          dataset: {
+            entryId: item.id,
+            index: index.toString(),
+            sourceType: sourceType
+          },
         });
-        
+
+        // Timeline connecting line with gradient fade
         if (index < dayItems.length - 1) {
           const line = createElement('div', { className: 'timeline-line' });
           entry.appendChild(line);
         }
-        
-        const dot = createElement('div', { className: 'timeline-dot hover:glow-primary transition-all' });
+
+        // Enhanced timeline dot with contextual styling
+        const dotClasses = `timeline-dot timeline-dot-${sourceType} hover:glow-primary transition-all shadow-lg shadow-primary/20 relative ring-pulse`;
+        const dot = createElement('div', { className: dotClasses });
         dot.innerHTML = this.getSourceIconLarge(item.source);
         entry.appendChild(dot);
 
+        // Timeline card with editorial lift effect
         const card = createElement('div', {
-          className: 'card-modern card-elevated hover-lift group cursor-pointer transition-smooth',
+          className: 'card-modern card-elevated hover-editorial group cursor-pointer transition-smooth relative texture-noise',
           dataset: { clickable: 'true' },
         });
-        
-        const header = createElement('div', { className: 'flex items-center justify-between mb-4' });
+
+        // Card header with enhanced typography
+        const header = createElement('div', { className: 'flex items-center justify-between mb-5' });
         header.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-primary uppercase tracking-wider">${item.type}</span>
-            <span class="text-muted-foreground/30">•</span>
-            <span class="text-xs font-medium text-muted-foreground">${formatTime(item.timestamp)}</span>
+          <div class="flex items-center gap-3">
+            <span class="font-body text-xs font-bold text-primary uppercase tracking-[0.12em] px-2 py-1 bg-primary/10 rounded-lg">${item.type}</span>
+            <span class="text-muted-foreground/40">•</span>
+            <span class="font-body text-xs font-medium text-muted-foreground">${formatTime(item.timestamp)}</span>
           </div>
           <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </div>
         `;
         card.appendChild(header);
-        
+
+        // Content with pattern-specific layout
+        const contentWrapper = createElement('div', { className: 'timeline-content' });
         const content = this.renderItemContent(item);
-        card.appendChild(content);
-        
+        contentWrapper.appendChild(content);
+        card.appendChild(contentWrapper);
+
         entry.appendChild(card);
         itemsList.appendChild(entry);
       });

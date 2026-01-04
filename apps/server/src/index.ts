@@ -8,6 +8,7 @@ import { mcpRoutes } from "./routes/mcp";
 import { chatRoutes } from "./routes/chat";
 import { tellerRoutes } from "./routes/teller";
 import { openrouterRoutes } from "./routes/openrouter";
+import { anthropicRoutes } from "./routes/anthropic";
 import { SyncService } from "@cortex/api/services/sync/service";
 import { initDatabase, databaseExists, seedDatabase } from "@cortex/db";
 import path from "path";
@@ -82,6 +83,7 @@ const app = new Elysia()
 	.use(chatRoutes)
 	.use(tellerRoutes)
 	.use(openrouterRoutes)
+	.use(anthropicRoutes)
 	.all("/trpc/*", async (context) => {
 		// Check if database is ready for tRPC calls
 		if (!dbReady) {

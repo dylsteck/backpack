@@ -1,12 +1,25 @@
 /**
  * Chat Component
- * OpenRouter-powered chat with API key management and session history
+ * Multi-provider chat with API key management and session history
  */
 
 import { Component } from './Component';
 import { createElement, clearChildren } from '../utils/dom';
-import { hasApiKey, encryptApiKey, decryptApiKey, clearApiKey } from '../utils/crypto';
+import { 
+  hasApiKeyForProvider, 
+  encryptApiKeyForProvider, 
+  decryptApiKeyForProvider, 
+  clearApiKeyForProvider 
+} from '../utils/crypto';
 import { api } from '../api';
+import { 
+  type Provider, 
+  PROVIDERS, 
+  getProviderIds,
+  getProviderConfig,
+  validateApiKey 
+} from '../utils/providers';
+import { getChatStateManager, type ChatStateManager } from '../utils/chat-state';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -19,9 +32,6 @@ interface ChatSession {
   createdAt: Date;
   updatedAt: Date;
 }
-
-const DEFAULT_MODEL = 'mistralai/devstral-2512:free';
-const MODEL_STORAGE_KEY = 'cortex-model';
 
 export class Chat extends Component {
   private messages: ChatMessage[] = [];
@@ -38,15 +48,15 @@ export class Chat extends Component {
   private expandedSessionId: string | null = null;
   private showHistory = true;
 
-  private getModel(): string {
-    return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
-  }
-
-  private setModel(model: string): void {
-    localStorage.setItem(MODEL_STORAGE_KEY, model);
-  }
+  // Multi-provider state
+  private stateManager: ChatStateManager;
+  private currentProvider: Provider = 'openrouter';
 
   async init(): Promise<void> {
+    // Initialize state manager
+    this.stateManager = getChatStateManager();
+    this.currentProvider = this.stateManager.getProvider();
+
     // Get API URL from server port
     if (typeof window !== 'undefined' && window.serverApi) {
       try {
@@ -59,7 +69,7 @@ export class Chat extends Component {
       }
     }
 
-    this.apiKeyExists = hasApiKey();
+    this.apiKeyExists = hasApiKeyForProvider(this.currentProvider);
     
     // Load chat sessions
     await this.loadSessions();
@@ -91,6 +101,8 @@ export class Chat extends Component {
   }
 
   private renderApiKeyPrompt(): void {
+    const providerConfig = getProviderConfig(this.currentProvider);
+    
     const wrapper = createElement('div', {
       className: 'flex flex-col items-center justify-center w-full h-full gap-6 p-8',
     });
@@ -111,17 +123,21 @@ export class Chat extends Component {
 
     const title = createElement('h2', {
       className: 'text-lg font-mono uppercase tracking-wider text-foreground',
-      textContent: 'OpenRouter API Key Required',
+      textContent: `${providerConfig.displayName} API Key Required`,
     });
     header.appendChild(title);
 
     const description = createElement('p', {
       className: 'text-sm text-muted-foreground font-mono',
-      textContent: 'Encrypted and stored locally. Get one from openrouter.ai/keys',
+      textContent: `Encrypted and stored locally. ${providerConfig.keyHint}`,
     });
     header.appendChild(description);
 
     wrapper.appendChild(header);
+
+    // Provider selector
+    const providerSelector = this.createProviderSelector();
+    wrapper.appendChild(providerSelector);
 
     // Input form
     const form = createElement('div', {
@@ -132,11 +148,18 @@ export class Chat extends Component {
       className: 'w-full px-4 py-3 bg-card border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary',
       attributes: {
         type: 'password',
-        placeholder: 'sk-or-v1-...',
+        placeholder: providerConfig.keyPrefix ? `${providerConfig.keyPrefix}...` : 'Enter API key...',
         autocomplete: 'off',
       },
     });
     form.appendChild(input);
+
+    // Validation message
+    const validationMsg = createElement('p', {
+      className: 'text-xs text-destructive font-mono hidden',
+      attributes: { id: 'validation-msg' },
+    });
+    form.appendChild(validationMsg);
 
     const button = createElement('button', {
       className: 'w-full px-4 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
@@ -148,11 +171,20 @@ export class Chat extends Component {
       const apiKey = (input as HTMLInputElement).value.trim();
       if (!apiKey) return;
 
+      // Validate key format
+      const validation = validateApiKey(apiKey, this.currentProvider);
+      if (!validation.valid) {
+        validationMsg.textContent = validation.error || 'Invalid API key';
+        validationMsg.classList.remove('hidden');
+        return;
+      }
+
+      validationMsg.classList.add('hidden');
       button.setAttribute('disabled', 'true');
       button.textContent = 'ENCRYPTING...';
 
       try {
-        await encryptApiKey(apiKey);
+        await encryptApiKeyForProvider(apiKey, this.currentProvider);
         this.apiKeyExists = true;
         this.render();
       } catch (error) {
@@ -174,6 +206,44 @@ export class Chat extends Component {
 
     // Focus input
     setTimeout(() => (input as HTMLInputElement).focus(), 100);
+  }
+
+  private createProviderSelector(): HTMLElement {
+    const wrapper = createElement('div', {
+      className: 'flex items-center gap-2 mb-4',
+    });
+
+    const label = createElement('span', {
+      className: 'text-xs font-mono text-muted-foreground uppercase tracking-wider',
+      textContent: 'Provider:',
+    });
+    wrapper.appendChild(label);
+
+    const select = createElement('select', {
+      className: 'bg-card border border-border text-foreground font-mono text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer',
+    }) as HTMLSelectElement;
+
+    getProviderIds().forEach(providerId => {
+      const config = getProviderConfig(providerId);
+      const option = createElement('option', {
+        attributes: { value: providerId },
+        textContent: config.displayName,
+      }) as HTMLOptionElement;
+      if (providerId === this.currentProvider) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    select.addEventListener('change', () => {
+      this.currentProvider = select.value as Provider;
+      this.stateManager.setProvider(this.currentProvider);
+      this.apiKeyExists = hasApiKeyForProvider(this.currentProvider);
+      this.render();
+    });
+
+    wrapper.appendChild(select);
+    return wrapper;
   }
 
   private renderChatInterface(): void {
@@ -242,8 +312,12 @@ export class Chat extends Component {
       className: 'max-w-4xl mx-auto',
     });
 
+    // Provider/Model row
+    const controlsRow = this.createInlinProviderControls();
+    inputContainer.appendChild(controlsRow);
+
     const inputWrapper = createElement('div', {
-      className: 'flex items-center gap-2',
+      className: 'flex items-center gap-2 mt-2',
     });
 
     this.inputElement = createElement('input', {
@@ -292,6 +366,107 @@ export class Chat extends Component {
     if (!this.isStreaming) {
       setTimeout(() => this.inputElement?.focus(), 100);
     }
+  }
+
+  private createInlinProviderControls(): HTMLElement {
+    const row = createElement('div', {
+      className: 'flex items-center gap-3 text-xs font-mono text-muted-foreground',
+    });
+
+    // Provider selector
+    const providerWrapper = createElement('div', {
+      className: 'flex items-center gap-1.5',
+    });
+    
+    const providerLabel = createElement('span', {
+      className: 'uppercase tracking-wider',
+      textContent: 'Provider:',
+    });
+    providerWrapper.appendChild(providerLabel);
+
+    const providerSelect = createElement('select', {
+      className: 'bg-transparent text-foreground focus:outline-none cursor-pointer',
+    }) as HTMLSelectElement;
+
+    getProviderIds().forEach(providerId => {
+      const config = getProviderConfig(providerId);
+      const option = createElement('option', {
+        attributes: { value: providerId },
+        textContent: config.displayName,
+      }) as HTMLOptionElement;
+      if (providerId === this.currentProvider) {
+        option.selected = true;
+      }
+      providerSelect.appendChild(option);
+    });
+
+    providerSelect.addEventListener('change', () => {
+      this.currentProvider = providerSelect.value as Provider;
+      this.stateManager.setProvider(this.currentProvider);
+      this.apiKeyExists = hasApiKeyForProvider(this.currentProvider);
+      if (!this.apiKeyExists) {
+        this.render();
+      } else {
+        // Just re-render the controls
+        this.render();
+      }
+    });
+
+    providerWrapper.appendChild(providerSelect);
+    row.appendChild(providerWrapper);
+
+    // Separator
+    const sep = createElement('span', {
+      className: 'text-border',
+      textContent: '|',
+    });
+    row.appendChild(sep);
+
+    // Model selector
+    const modelWrapper = createElement('div', {
+      className: 'flex items-center gap-1.5',
+    });
+    
+    const modelLabel = createElement('span', {
+      className: 'uppercase tracking-wider',
+      textContent: 'Model:',
+    });
+    modelWrapper.appendChild(modelLabel);
+
+    const modelSelect = createElement('select', {
+      className: 'bg-transparent text-foreground focus:outline-none cursor-pointer max-w-[200px]',
+    }) as HTMLSelectElement;
+
+    const providerConfig = getProviderConfig(this.currentProvider);
+    const currentModel = this.stateManager.getModel(this.currentProvider);
+
+    providerConfig.models.forEach(model => {
+      const option = createElement('option', {
+        attributes: { value: model.id },
+        textContent: model.name,
+      }) as HTMLOptionElement;
+      if (model.id === currentModel) {
+        option.selected = true;
+      }
+      modelSelect.appendChild(option);
+    });
+
+    modelSelect.addEventListener('change', () => {
+      this.stateManager.setModel(this.currentProvider, modelSelect.value);
+    });
+
+    modelWrapper.appendChild(modelSelect);
+    row.appendChild(modelWrapper);
+
+    // Settings link
+    const settingsLink = createElement('button', {
+      className: 'ml-auto hover:text-foreground transition-colors',
+      textContent: '[Settings]',
+    });
+    settingsLink.addEventListener('click', () => this.showSettingsModal());
+    row.appendChild(settingsLink);
+
+    return row;
   }
 
   private renderMessages(): void {
@@ -356,13 +531,13 @@ export class Chat extends Component {
     this.renderMessages();
 
     // Get API key
-    const apiKey = await decryptApiKey();
+    const apiKey = await decryptApiKeyForProvider(this.currentProvider);
     if (!apiKey) {
       this.messages.push({
         role: 'assistant',
         content: 'Error: Could not retrieve API key. Please re-enter your key.'
       });
-      clearApiKey();
+      clearApiKeyForProvider(this.currentProvider);
       this.apiKeyExists = false;
       this.render();
       return;
@@ -381,7 +556,10 @@ export class Chat extends Component {
     this.renderMessages();
 
     try {
-      const response = await fetch(`${this.apiUrl}/api/chat/openrouter`, {
+      const endpoint = this.stateManager.getEndpoint(this.currentProvider, this.getServerPort());
+      const model = this.stateManager.getModel(this.currentProvider);
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -392,13 +570,14 @@ export class Chat extends Component {
             role: m.role,
             content: m.content,
           })),
-          model: this.getModel(),
+          model,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        const providerName = getProviderConfig(this.currentProvider).displayName;
+        throw new Error(errorData.error || `${providerName} HTTP ${response.status}`);
       }
 
       // Stream response
@@ -432,6 +611,12 @@ export class Chat extends Component {
     }
   }
 
+  private getServerPort(): number {
+    // Extract port from apiUrl
+    const match = this.apiUrl.match(/:(\d+)/);
+    return match ? parseInt(match[1], 10) : 3000;
+  }
+
   private showSettingsModal(): void {
     // Remove existing modal if any
     this.settingsModal?.remove();
@@ -443,113 +628,248 @@ export class Chat extends Component {
 
     // Modal container
     const modal = createElement('div', {
-      className: 'glass-panel bg-background border border-border rounded-3xl p-6 w-full max-w-md space-y-4 elevation-3',
+      className: 'glass-panel bg-background border border-border rounded-3xl p-6 w-full max-w-lg space-y-4 elevation-3',
     });
 
     // Title
     const title = createElement('h3', {
       className: 'text-lg font-mono uppercase tracking-wider text-foreground',
-      textContent: 'Settings',
+      textContent: 'Chat Settings',
     });
     modal.appendChild(title);
 
-    // API Key field
-    const apiKeyLabel = createElement('label', {
-      className: 'block text-sm font-mono text-muted-foreground uppercase tracking-wider',
-      textContent: 'OpenRouter API Key',
-    });
-    modal.appendChild(apiKeyLabel);
-
-    const apiKeyInput = createElement('input', {
-      className: 'w-full px-4 py-2 bg-card border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary mt-1',
-      attributes: {
-        type: 'password',
-        placeholder: 'sk-or-v1-... (leave blank to keep current)',
-      },
-    }) as HTMLInputElement;
-    modal.appendChild(apiKeyInput);
-
-    // Model field
-    const modelLabel = createElement('label', {
-      className: 'block text-sm font-mono text-muted-foreground uppercase tracking-wider mt-4',
-      textContent: 'Model',
-    });
-    modal.appendChild(modelLabel);
-
-    const modelInput = createElement('input', {
-      className: 'w-full px-4 py-2 bg-card border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary mt-1',
-      attributes: {
-        type: 'text',
-        placeholder: DEFAULT_MODEL,
-      },
-    }) as HTMLInputElement;
-    modelInput.value = this.getModel();
-    modal.appendChild(modelInput);
-
-    // Helper text
-    const helperText = createElement('p', {
-      className: 'text-xs text-muted-foreground font-mono mt-1',
-      textContent: 'e.g. openai/gpt-4o, anthropic/claude-3.5-sonnet',
-    });
-    modal.appendChild(helperText);
-
-    // Buttons
-    const buttonRow = createElement('div', {
-      className: 'flex gap-2 mt-6',
+    // Tabs
+    const tabContainer = createElement('div', {
+      className: 'flex gap-1 border-b border-border',
     });
 
-    const cancelButton = createElement('button', {
-      className: 'flex-1 px-4 py-2 bg-card text-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-accent transition-colors',
-      textContent: 'Cancel',
-    });
-    cancelButton.addEventListener('click', () => {
-      backdrop.remove();
-      this.settingsModal = null;
-    });
-    buttonRow.appendChild(cancelButton);
+    const providers = getProviderIds();
+    let activeTab: Provider = this.currentProvider;
 
-    const saveButton = createElement('button', {
-      className: 'flex-1 px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-primary/90 transition-colors',
-      textContent: 'Save',
+    const tabContent = createElement('div', {
+      className: 'pt-4',
     });
-    saveButton.addEventListener('click', async () => {
-      // Save API key if provided
-      const newApiKey = apiKeyInput.value.trim();
-      if (newApiKey) {
-        await encryptApiKey(newApiKey);
+
+    const renderTabContent = () => {
+      tabContent.innerHTML = '';
+      const config = getProviderConfig(activeTab);
+      
+      // API Key section
+      const keySection = createElement('div', {
+        className: 'space-y-2',
+      });
+
+      const keyLabel = createElement('label', {
+        className: 'block text-sm font-mono text-muted-foreground uppercase tracking-wider',
+        textContent: `${config.displayName} API Key`,
+      });
+      keySection.appendChild(keyLabel);
+
+      const hasKey = hasApiKeyForProvider(activeTab);
+      
+      const keyInput = createElement('input', {
+        className: 'w-full px-4 py-2 bg-card border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary',
+        attributes: {
+          type: 'password',
+          placeholder: hasKey ? '••••••••••••••••' : (config.keyPrefix ? `${config.keyPrefix}...` : 'Enter API key...'),
+        },
+      }) as HTMLInputElement;
+      keySection.appendChild(keyInput);
+
+      // Key hint
+      const keyHint = createElement('p', {
+        className: 'text-xs text-muted-foreground font-mono',
+        textContent: config.keyHint,
+      });
+      keySection.appendChild(keyHint);
+
+      // Validation message
+      const validationMsg = createElement('p', {
+        className: 'text-xs text-destructive font-mono hidden',
+      });
+      keySection.appendChild(validationMsg);
+
+      tabContent.appendChild(keySection);
+
+      // Model section
+      const modelSection = createElement('div', {
+        className: 'space-y-2 mt-4',
+      });
+
+      const modelLabel = createElement('label', {
+        className: 'block text-sm font-mono text-muted-foreground uppercase tracking-wider',
+        textContent: 'Model',
+      });
+      modelSection.appendChild(modelLabel);
+
+      const modelSelect = createElement('select', {
+        className: 'w-full px-4 py-2 bg-card border border-border text-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer',
+      }) as HTMLSelectElement;
+
+      const currentModel = this.stateManager.getModel(activeTab);
+      config.models.forEach(model => {
+        const option = createElement('option', {
+          attributes: { value: model.id },
+          textContent: `${model.name}${model.contextWindow ? ` (${model.contextWindow})` : ''}`,
+        }) as HTMLOptionElement;
+        if (model.id === currentModel) {
+          option.selected = true;
+        }
+        modelSelect.appendChild(option);
+      });
+
+      modelSection.appendChild(modelSelect);
+      tabContent.appendChild(modelSection);
+
+      // Status indicator
+      const statusSection = createElement('div', {
+        className: 'flex items-center gap-2 mt-4 pt-4 border-t border-border',
+      });
+
+      const statusDot = createElement('div', {
+        className: `w-2 h-2 rounded-full ${hasKey ? 'bg-green-500' : 'bg-amber-500'}`,
+      });
+      statusSection.appendChild(statusDot);
+
+      const statusText = createElement('span', {
+        className: 'text-xs font-mono text-muted-foreground',
+        textContent: hasKey ? 'API key configured' : 'No API key set',
+      });
+      statusSection.appendChild(statusText);
+
+      // Clear key button (if key exists)
+      if (hasKey) {
+        const clearBtn = createElement('button', {
+          className: 'ml-auto text-xs font-mono text-muted-foreground hover:text-destructive transition-colors',
+          textContent: '[Clear Key]',
+        });
+        clearBtn.addEventListener('click', () => {
+          clearApiKeyForProvider(activeTab);
+          if (activeTab === this.currentProvider) {
+            this.apiKeyExists = false;
+          }
+          renderTabContent();
+        });
+        statusSection.appendChild(clearBtn);
       }
 
-      // Save model
-      const newModel = modelInput.value.trim() || DEFAULT_MODEL;
-      this.setModel(newModel);
+      tabContent.appendChild(statusSection);
 
-      backdrop.remove();
-      this.settingsModal = null;
-    });
-    buttonRow.appendChild(saveButton);
+      // Save button for this tab
+      const saveSection = createElement('div', {
+        className: 'flex gap-2 mt-4',
+      });
 
-    // Clear API key button
-    const clearButton = createElement('button', {
-      className: 'w-full px-4 py-2 bg-transparent text-muted-foreground font-mono uppercase tracking-wider text-xs border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors mt-2',
-      textContent: 'Clear API Key',
+      const saveKeyBtn = createElement('button', {
+        className: 'flex-1 px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-primary/90 transition-colors',
+        textContent: hasKey ? 'Update Key' : 'Save Key',
+      });
+
+      saveKeyBtn.addEventListener('click', async () => {
+        const newKey = keyInput.value.trim();
+        if (!newKey) {
+          if (hasKey) {
+            // No change needed, just close
+            return;
+          }
+          validationMsg.textContent = 'Please enter an API key';
+          validationMsg.classList.remove('hidden');
+          return;
+        }
+
+        // Validate
+        const validation = validateApiKey(newKey, activeTab);
+        if (!validation.valid) {
+          validationMsg.textContent = validation.error || 'Invalid API key';
+          validationMsg.classList.remove('hidden');
+          return;
+        }
+
+        validationMsg.classList.add('hidden');
+        saveKeyBtn.textContent = 'Saving...';
+        saveKeyBtn.setAttribute('disabled', 'true');
+
+        try {
+          await encryptApiKeyForProvider(newKey, activeTab);
+          
+          // Save model selection
+          this.stateManager.setModel(activeTab, modelSelect.value);
+
+          // Update current state if this is the active provider
+          if (activeTab === this.currentProvider) {
+            this.apiKeyExists = true;
+          }
+
+          renderTabContent();
+        } catch (error) {
+          console.error('Failed to save API key:', error);
+          validationMsg.textContent = 'Failed to save API key';
+          validationMsg.classList.remove('hidden');
+        }
+      });
+
+      saveSection.appendChild(saveKeyBtn);
+      tabContent.appendChild(saveSection);
+    };
+
+    // Create tabs
+    providers.forEach(providerId => {
+      const config = getProviderConfig(providerId);
+      const tab = createElement('button', {
+        className: `px-4 py-2 text-sm font-mono uppercase tracking-wider transition-colors ${
+          activeTab === providerId
+            ? 'text-foreground border-b-2 border-primary -mb-px'
+            : 'text-muted-foreground hover:text-foreground'
+        }`,
+        textContent: config.name,
+      });
+
+      tab.addEventListener('click', () => {
+        activeTab = providerId;
+        // Re-render tabs
+        tabContainer.querySelectorAll('button').forEach((btn, idx) => {
+          const isActive = providers[idx] === activeTab;
+          btn.className = `px-4 py-2 text-sm font-mono uppercase tracking-wider transition-colors ${
+            isActive
+              ? 'text-foreground border-b-2 border-primary -mb-px'
+              : 'text-muted-foreground hover:text-foreground'
+          }`;
+        });
+        renderTabContent();
+      });
+
+      tabContainer.appendChild(tab);
     });
-    clearButton.addEventListener('click', () => {
-      clearApiKey();
-      this.apiKeyExists = false;
-      this.messages = [];
+
+    modal.appendChild(tabContainer);
+    modal.appendChild(tabContent);
+
+    // Initial render
+    renderTabContent();
+
+    // Close button
+    const closeRow = createElement('div', {
+      className: 'flex justify-end pt-4 border-t border-border mt-4',
+    });
+
+    const closeBtn = createElement('button', {
+      className: 'px-4 py-2 bg-card text-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-accent transition-colors',
+      textContent: 'Close',
+    });
+    closeBtn.addEventListener('click', () => {
       backdrop.remove();
       this.settingsModal = null;
       this.render();
     });
-
-    modal.appendChild(buttonRow);
-    modal.appendChild(clearButton);
+    closeRow.appendChild(closeBtn);
+    modal.appendChild(closeRow);
 
     // Close on backdrop click
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) {
         backdrop.remove();
         this.settingsModal = null;
+        this.render();
       }
     });
 

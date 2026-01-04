@@ -32,9 +32,9 @@ export class DetailModal extends Component {
     const appSidebar = document.querySelector('[data-sidebar]');
     if (appSidebar) appSidebar.classList.add('hidden');
     
-    // Backdrop with enhanced blur
+    // Backdrop with enhanced blur and staggered entrance
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 md:p-12 animate-in fade-in duration-300',
+      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -44,9 +44,9 @@ export class DetailModal extends Component {
       }
     });
     
-    // Modal container with glass morphism
+    // Modal container with glass morphism and spring entrance
     const modal = createElement('div', {
-      className: 'glass-panel bg-card border border-border/50 w-full max-w-5xl h-full max-h-[85vh] flex flex-col md:flex-row overflow-hidden elevation-3 rounded-3xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative',
+      className: 'glass-panel bg-card border border-border/50 w-full max-w-5xl h-full max-h-[85vh] flex flex-col md:flex-row elevation-3 rounded-3xl modal-enter relative',
     });
     
     // Close button
@@ -62,18 +62,20 @@ export class DetailModal extends Component {
     });
     modal.appendChild(closeBtn);
 
-    // LEFT: Content Area
+    // LEFT: Content Area (stagger delay: 0ms)
     const contentArea = createElement('div', {
-      className: 'flex-1 h-full overflow-y-auto bg-gradient-soft flex items-center justify-center p-8 md:p-12',
+      className: 'flex-1 h-full overflow-y-auto bg-gradient-soft p-8 md:p-12',
+      style: 'animation: blur-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0s both;',
     });
-    
+
     const content = this.renderMainContent();
     contentArea.appendChild(content);
     modal.appendChild(contentArea);
-    
-    // RIGHT: Sidebar
+
+    // RIGHT: Sidebar (stagger delay: 80ms)
     const sidebarPanel = createElement('aside', {
       className: 'w-full md:w-[360px] h-full border-l border-border/50 bg-card flex flex-col relative',
+      style: 'animation: slide-in-right 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.08s both;',
     });
     
     // Sidebar Header
@@ -260,10 +262,12 @@ export class DetailModal extends Component {
   }
 
   private createMetaSection(label: string, value: string): HTMLElement {
-    const section = createElement('div', { className: 'space-y-1' });
+    const section = createElement('div', {
+      className: 'p-4 rounded-xl bg-linear-to-br from-secondary/40 to-secondary/20 border border-border/30 space-y-2 transition-all hover:shadow-sm hover:border-border/50',
+    });
     section.innerHTML = `
-      <div class="text-xs text-muted-foreground">${label}</div>
-      <div class="text-sm font-medium">${escapeHtml(value)}</div>
+      <div style="font-family: var(--font-sans); font-weight: 600; font-size: 0.6875rem; letter-spacing: 0.08em;" class="text-muted-foreground/70 uppercase">${label}</div>
+      <div style="font-family: var(--font-sans); font-weight: 600; font-size: 0.9375rem;" class="text-foreground">${escapeHtml(value)}</div>
     `;
     return section;
   }
@@ -290,82 +294,130 @@ export class DetailModal extends Component {
 
   private renderMainContent(): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'w-full max-w-2xl',
+      className: 'w-full max-w-3xl mx-auto',
     });
 
     switch (this.item.type) {
       case 'obsidian-note': {
         const note = this.item.data as { title: string; body: string; path: string; tags?: string[] };
-        wrapper.className = 'w-full max-w-2xl';
+        wrapper.className = 'w-full max-w-3xl';
 
-        // Create card structure
-        const card = createElement('div', { className: 'space-y-6 card-modern p-8' });
+        // Magazine-style editorial layout
+        const article = createElement('article', { className: 'space-y-8 stagger-container' });
 
-        // Header with icon and title
-        const header = createElement('div', { className: 'flex items-center gap-4' });
+        // Editorial header with large display typography
+        const header = createElement('header', { className: 'space-y-6 pb-8 border-b-2 border-primary/20 stagger-item' });
         header.innerHTML = `
-          <div class="p-3 bg-purple-500/10 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-purple-500">
+          <div class="inline-flex items-center gap-3 px-4 py-2 bg-linear-to-r from-purple-500/15 via-purple-500/10 to-transparent rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-500">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
             </svg>
+            <span class="font-body text-xs font-bold text-purple-500 uppercase tracking-[0.15em]">Obsidian Note</span>
           </div>
-          <div>
-            <div class="font-semibold text-lg">${escapeHtml(note.title)}</div>
-            <div class="text-muted-foreground text-sm">${escapeHtml(note.path)}</div>
-          </div>
+          <h1 class="font-display font-bold text-foreground leading-[1.1] tracking-tight" style="font-size: clamp(2rem, 5vw, 3.5rem);">${escapeHtml(note.title)}</h1>
+          <p class="font-mono text-xs text-muted-foreground/60 tracking-wide">${escapeHtml(note.path)}</p>
         `;
-        card.appendChild(header);
+        article.appendChild(header);
 
-        // Body with markdown rendering
-        const bodyContainer = createElement('div', { className: 'markdown-content prose prose-sm max-w-none' });
+        // Magazine-style content with drop cap and multi-column layout
+        const bodyContainer = createElement('div', {
+          className: 'markdown-content editorial-prose stagger-item',
+        });
         bodyContainer.innerHTML = parseMarkdown(note.body);
         setupMarkdownInteractivity(bodyContainer);
-        card.appendChild(bodyContainer);
 
-        // Tags
-        if (note.tags?.length) {
-          const tagsContainer = createElement('div', { className: 'flex flex-wrap gap-2 pt-4 border-t border-border/50' });
-          tagsContainer.innerHTML = note.tags.map(t => `<span class="px-3 py-1 bg-purple-500/10 text-purple-500 text-xs rounded-full">#${escapeHtml(t)}</span>`).join('');
-          card.appendChild(tagsContainer);
+        // Add drop cap to first paragraph
+        const firstParagraph = bodyContainer.querySelector('p');
+        if (firstParagraph && firstParagraph.textContent) {
+          firstParagraph.classList.add('drop-cap');
         }
 
-        wrapper.appendChild(card);
+        article.appendChild(bodyContainer);
+
+        // Tags with refined styling
+        if (note.tags?.length) {
+          const tagsContainer = createElement('div', {
+            className: 'flex flex-wrap gap-2.5 pt-8 border-t border-border/30 stagger-item'
+          });
+          tagsContainer.innerHTML = note.tags.map(t =>
+            `<span class="px-3.5 py-1.5 bg-linear-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/15 transition-colors">#${escapeHtml(t)}</span>`
+          ).join('');
+          article.appendChild(tagsContainer);
+        }
+
+        wrapper.appendChild(article);
         break;
       }
         
       case 'cast': {
         const cast = this.item.data as FarcasterCast;
-        wrapper.innerHTML = `
-          <div class="space-y-6 card-modern p-8">
-            <div class="flex items-center gap-4">
-              <img src="${cast.author.pfp_url}" class="w-14 h-14 rounded-full" />
-              <div>
-                <div class="font-semibold text-lg">${escapeHtml(cast.author.display_name)}</div>
-                <div class="text-muted-foreground">@${escapeHtml(cast.author.username)}</div>
+        wrapper.className = 'w-full max-w-3xl';
+
+        // Quote-style editorial layout with decorative elements
+        const article = createElement('article', { className: 'space-y-10 stagger-container relative' });
+
+        // Decorative quotation mark background
+        article.innerHTML = `
+          <div class="absolute -top-4 -left-4 opacity-5 pointer-events-none select-none" style="font-size: 12rem; line-height: 1; font-family: var(--font-display); font-weight: 900; color: hsl(var(--primary));">"</div>
+
+          <header class="flex items-center gap-6 stagger-item">
+            <div class="relative">
+              <div class="absolute inset-0 bg-linear-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-xl"></div>
+              <img src="${cast.author.pfp_url}" class="relative w-20 h-20 rounded-full ring-4 ring-blue-500/30 shadow-xl" />
+            </div>
+            <div class="flex-1">
+              <div class="font-display font-bold text-foreground text-2xl leading-tight tracking-tight">${escapeHtml(cast.author.display_name)}</div>
+              <div class="font-body font-medium text-muted-foreground text-base mt-1">@${escapeHtml(cast.author.username)}</div>
+              <div class="inline-flex items-center gap-2 mt-2 px-3 py-1 bg-linear-to-r from-blue-500/15 via-blue-500/10 to-transparent rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-500">
+                  <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
+                </svg>
+                <span class="font-body text-xs font-bold text-blue-500 uppercase tracking-[0.12em]">Farcaster</span>
               </div>
             </div>
-            <p class="text-xl leading-relaxed whitespace-pre-wrap">${escapeHtml(cast.text)}</p>
-            ${cast.embeds?.length ? `
-              <div class="grid grid-cols-1 gap-4 mt-4">
-                ${cast.embeds.map(e => e.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? `<img src="${e.url}" class="rounded-xl max-h-[400px] object-contain" />` : '').join('')}
-              </div>
-            ` : ''}
-            <div class="flex items-center gap-6 pt-4 text-muted-foreground">
-              <span class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                ${cast.reactions?.likes_count || 0}
-              </span>
-              <span class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-                ${cast.reactions?.recasts_count || 0}
-              </span>
+          </header>
+
+          <blockquote class="relative pl-8 stagger-item">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-blue-500/40 via-cyan-500/30 to-transparent rounded-full"></div>
+            <p class="font-body text-foreground text-xl md:text-2xl leading-relaxed whitespace-pre-wrap" style="font-weight: 400; letter-spacing: -0.01em;">${escapeHtml(cast.text)}</p>
+          </blockquote>
+
+          ${cast.embeds?.length ? `
+            <div class="grid grid-cols-1 gap-5 stagger-item">
+              ${cast.embeds.map(e => e.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ?
+                `<div class="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-border/50">
+                  <img src="${e.url}" class="w-full max-h-[500px] object-cover" />
+                </div>` : ''
+              ).join('')}
             </div>
-          </div>
+          ` : ''}
+
+          <footer class="flex items-center gap-8 pt-6 border-t border-border/30 stagger-item">
+            <div class="flex items-center gap-3 group cursor-pointer transition-colors">
+              <div class="p-2.5 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500">
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+              </div>
+              <span class="font-mono text-lg font-bold text-foreground animated-counter">${cast.reactions?.likes_count || 0}</span>
+              <span class="font-body text-xs text-muted-foreground uppercase tracking-wide">Likes</span>
+            </div>
+            <div class="flex items-center gap-3 group cursor-pointer transition-colors">
+              <div class="p-2.5 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-500">
+                  <path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+                </svg>
+              </div>
+              <span class="font-mono text-lg font-bold text-foreground animated-counter">${cast.reactions?.recasts_count || 0}</span>
+              <span class="font-body text-xs text-muted-foreground uppercase tracking-wide">Recasts</span>
+            </div>
+          </footer>
         `;
+
+        wrapper.appendChild(article);
         break;
       }
 
@@ -373,15 +425,18 @@ export class DetailModal extends Component {
         const tx = this.item.data as TellerTransaction;
         const amount = parseFloat(tx.amount);
         wrapper.innerHTML = `
-          <div class="text-center space-y-8 card-modern p-12">
-            <div class="text-5xl font-semibold ${amount > 0 ? 'text-green-500' : 'text-foreground'}">
-              ${amount > 0 ? '+' : '-'}$${Math.abs(amount).toFixed(2)}
+          <div class="text-center space-y-10 card-modern p-12 relative overflow-hidden">
+            <div class="absolute inset-0 bg-linear-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none"></div>
+            <div style="font-family: var(--font-display); font-weight: 800; font-size: 4.5rem; line-height: 1; letter-spacing: -0.03em;" class="${amount > 0 ? 'text-green-500' : 'text-foreground'} relative z-10">
+              ${amount > 0 ? '+' : ''}$${Math.abs(amount).toFixed(2)}
             </div>
-            <div class="space-y-2">
-              <h2 class="text-2xl font-semibold">${escapeHtml(tx.description)}</h2>
-              <p class="text-muted-foreground">${escapeHtml(tx.details.category || 'Uncategorized')}</p>
+            <div class="space-y-3 relative z-10">
+              <h2 style="font-family: var(--font-display); font-weight: 600; font-size: 1.75rem; line-height: 1.3; letter-spacing: -0.01em;" class="text-foreground">${escapeHtml(tx.description)}</h2>
+              <div class="inline-flex items-center px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                <span style="font-family: var(--font-sans); font-weight: 500; font-size: 0.875rem;" class="text-amber-600 dark:text-amber-400">${escapeHtml(tx.details.category || 'Uncategorized')}</span>
+              </div>
             </div>
-            <div class="p-6 bg-secondary/30 rounded-xl text-sm text-left grid grid-cols-2 gap-4">
+            <div class="p-6 bg-linear-to-br from-secondary/40 to-secondary/20 border border-border/30 rounded-2xl text-sm text-left grid grid-cols-2 gap-4 relative z-10">
               <div class="text-muted-foreground">Account</div><div>${escapeHtml(tx.account_id || 'Primary')}</div>
               <div class="text-muted-foreground">Status</div><div class="text-green-500">Completed</div>
               <div class="text-muted-foreground">Date</div><div>${formatFullDate(this.item.timestamp)}</div>
@@ -400,15 +455,16 @@ export class DetailModal extends Component {
         } catch {
           // Intentionally empty
         }
-        
+
         wrapper.innerHTML = `
-          <div class="text-center space-y-6 card-modern p-12">
-            <div class="inline-flex p-5 bg-secondary rounded-2xl">
-              ${faviconUrl ? `<img src="${faviconUrl}" class="w-14 h-14" />` : '<div class="w-14 h-14 bg-muted rounded-full"></div>'}
+          <div class="text-center space-y-10 card-modern p-12 relative overflow-hidden">
+            <div class="absolute inset-0 bg-linear-to-br from-slate-500/5 via-transparent to-transparent pointer-events-none"></div>
+            <div class="inline-flex p-6 bg-linear-to-br from-slate-500/10 to-slate-600/5 rounded-2xl shadow-lg ring-1 ring-slate-500/10 relative z-10">
+              ${faviconUrl ? `<img src="${faviconUrl}" class="w-16 h-16 rounded-lg shadow-sm" />` : '<div class="w-16 h-16 bg-muted rounded-lg"></div>'}
             </div>
-            <div class="space-y-4">
-              <h2 class="text-2xl font-semibold max-w-xl mx-auto">${escapeHtml(entry.title || 'Untitled Page')}</h2>
-              <a href="${entry.url}" target="_blank" class="text-primary hover:underline truncate block max-w-lg mx-auto text-sm">
+            <div class="space-y-5 relative z-10">
+              <h2 style="font-family: var(--font-display); font-weight: 600; font-size: 1.75rem; line-height: 1.3; letter-spacing: -0.01em;" class="text-foreground max-w-xl mx-auto">${escapeHtml(entry.title || 'Untitled Page')}</h2>
+              <a href="${entry.url}" target="_blank" style="font-family: var(--font-mono); font-size: 0.8125rem;" class="text-primary hover:underline truncate block max-w-lg mx-auto transition-colors">
                 ${escapeHtml(entry.url)}
               </a>
             </div>

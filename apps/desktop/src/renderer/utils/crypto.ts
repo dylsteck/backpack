@@ -1,9 +1,12 @@
 /**
  * Crypto utilities for API key encryption
  * Uses Web Crypto API with AES-GCM for local storage encryption
+ * 
+ * Supports multiple providers with provider-specific storage keys
  */
 
-const STORAGE_KEY = 'cortex_openrouter_key';
+import { type Provider, getProviderConfig } from './providers';
+
 const SALT = 'cortex-local-encryption-salt-v1';
 
 /**
@@ -35,9 +38,9 @@ async function deriveKey(): Promise<CryptoKey> {
 }
 
 /**
- * Encrypt and store API key in localStorage
+ * Encrypt and store API key for a specific provider
  */
-export async function encryptApiKey(apiKey: string): Promise<void> {
+export async function encryptApiKeyForProvider(apiKey: string, provider: Provider): Promise<void> {
   const key = await deriveKey();
   const encoder = new TextEncoder();
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -54,14 +57,16 @@ export async function encryptApiKey(apiKey: string): Promise<void> {
     data: Array.from(new Uint8Array(encryptedData)),
   };
   
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  const storageKey = getProviderConfig(provider).apiKeyStorageKey;
+  localStorage.setItem(storageKey, JSON.stringify(stored));
 }
 
 /**
- * Decrypt and retrieve API key from localStorage
+ * Decrypt and retrieve API key for a specific provider
  */
-export async function decryptApiKey(): Promise<string | null> {
-  const stored = localStorage.getItem(STORAGE_KEY);
+export async function decryptApiKeyForProvider(provider: Provider): Promise<string | null> {
+  const storageKey = getProviderConfig(provider).apiKeyStorageKey;
+  const stored = localStorage.getItem(storageKey);
   if (!stored) return null;
   
   try {
@@ -77,22 +82,56 @@ export async function decryptApiKey(): Promise<string | null> {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedData);
   } catch (error) {
-    console.error('Failed to decrypt API key:', error);
+    console.error(`Failed to decrypt API key for ${provider}:`, error);
     return null;
   }
 }
 
 /**
- * Check if API key exists in storage
+ * Check if API key exists for a specific provider
  */
-export function hasApiKey(): boolean {
-  return localStorage.getItem(STORAGE_KEY) !== null;
+export function hasApiKeyForProvider(provider: Provider): boolean {
+  const storageKey = getProviderConfig(provider).apiKeyStorageKey;
+  return localStorage.getItem(storageKey) !== null;
 }
 
 /**
- * Remove API key from storage
+ * Remove API key for a specific provider
+ */
+export function clearApiKeyForProvider(provider: Provider): void {
+  const storageKey = getProviderConfig(provider).apiKeyStorageKey;
+  localStorage.removeItem(storageKey);
+}
+
+// =============================================================================
+// Backward compatible wrappers (default to OpenRouter)
+// =============================================================================
+
+/**
+ * Encrypt and store API key in localStorage (defaults to OpenRouter)
+ */
+export async function encryptApiKey(apiKey: string): Promise<void> {
+  return encryptApiKeyForProvider(apiKey, 'openrouter');
+}
+
+/**
+ * Decrypt and retrieve API key from localStorage (defaults to OpenRouter)
+ */
+export async function decryptApiKey(): Promise<string | null> {
+  return decryptApiKeyForProvider('openrouter');
+}
+
+/**
+ * Check if API key exists in storage (defaults to OpenRouter)
+ */
+export function hasApiKey(): boolean {
+  return hasApiKeyForProvider('openrouter');
+}
+
+/**
+ * Remove API key from storage (defaults to OpenRouter)
  */
 export function clearApiKey(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  clearApiKeyForProvider('openrouter');
 }
 
