@@ -36,10 +36,10 @@ function extractTags(content: string): string[] {
 
 	// Extract tags from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-	if (frontmatterMatch) {
+	if (frontmatterMatch && frontmatterMatch[1]) {
 		const frontmatter = frontmatterMatch[1];
 		const tagsMatch = frontmatter.match(/tags:\s*\[(.*?)\]/);
-		if (tagsMatch) {
+		if (tagsMatch && tagsMatch[1]) {
 			const tagList = tagsMatch[1].split(",").map((t) => t.trim().replace(/["']/g, ""));
 			tagList.forEach((t) => t && tags.add(t));
 		}
@@ -59,7 +59,9 @@ function extractBacklinks(content: string): string[] {
 	const links: Set<string> = new Set();
 	const matches = content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g);
 	for (const match of matches) {
-		links.add(match[1]);
+		if (match[1]) {
+			links.add(match[1]);
+		}
 	}
 	return Array.from(links);
 }
@@ -67,12 +69,16 @@ function extractBacklinks(content: string): string[] {
 // Helper to get title from note
 function extractTitle(content: string, filePath: string): string {
 	const headingMatch = content.match(/^#\s+(.+)$/m);
-	if (headingMatch) return headingMatch[1];
+	if (headingMatch && headingMatch[1]) {
+		return headingMatch[1];
+	}
 
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-	if (frontmatterMatch) {
+	if (frontmatterMatch && frontmatterMatch[1]) {
 		const titleMatch = frontmatterMatch[1].match(/title:\s*["']?([^"'\n]+)["']?/);
-		if (titleMatch) return titleMatch[1];
+		if (titleMatch && titleMatch[1]) {
+			return titleMatch[1];
+		}
 	}
 
 	return path.basename(filePath, ".md");
@@ -145,12 +151,13 @@ function readVaultNotes(vaultPath: string): ObsidianNote[] {
  */
 export const obsidianListNotesTool = tool({
 	description:
-		"List all notes in the connected Obsidian vault. Returns note titles, paths, and preview text. Use this to see what notes exist.",
+		"List all notes in the connected Obsidian vault. Returns note titles, paths, and preview text. Use this to see what notes exist. Can filter by folder name (e.g., 'Clippings', 'Notes', etc.).",
 	inputSchema: z.object({
 		limit: z.number().optional().default(20).describe("Maximum number of notes to return"),
 		search: z.string().optional().describe("Optional search query to filter notes by title or content"),
+		folder: z.string().optional().describe("Optional folder name to filter notes by (e.g., 'Clippings', 'Notes'). Case-insensitive partial matching."),
 	}),
-	execute: async ({ limit, search }) => {
+	execute: async ({ limit, search, folder }) => {
 		const vaultPath = await getObsidianVaultPath();
 		if (!vaultPath) {
 			return {
@@ -160,6 +167,19 @@ export const obsidianListNotesTool = tool({
 		}
 
 		let notes = readVaultNotes(vaultPath);
+
+		// Filter by folder if specified
+		if (folder) {
+			const lowerFolder = folder.toLowerCase();
+			notes = notes.filter((n) => {
+				// Get relative path from vault root
+				const relativePath = path.relative(vaultPath, n.path);
+				const folderPath = path.dirname(relativePath);
+				// Check if folder name matches (case-insensitive, partial match)
+				return folderPath.toLowerCase().includes(lowerFolder) || 
+				       relativePath.toLowerCase().includes(lowerFolder);
+			});
+		}
 
 		if (search) {
 			const lowerSearch = search.toLowerCase();
@@ -173,13 +193,18 @@ export const obsidianListNotesTool = tool({
 
 		return {
 			success: true,
-			notes: notes.slice(0, limit).map((n) => ({
-				title: n.title,
-				path: n.path,
-				preview: n.body.substring(0, 200),
-				tags: n.tags,
-				lastModified: new Date(n.mtime).toISOString(),
-			})),
+			notes: notes.slice(0, limit).map((n) => {
+				const relativePath = path.relative(vaultPath, n.path);
+				const folderPath = path.dirname(relativePath);
+				return {
+					title: n.title,
+					path: n.path,
+					folder: folderPath === '.' ? 'root' : folderPath,
+					preview: n.body.substring(0, 200),
+					tags: n.tags,
+					lastModified: new Date(n.mtime).toISOString(),
+				};
+			}),
 			totalNotes: notes.length,
 		};
 	},
@@ -451,7 +476,7 @@ export const obsidianAddBacklinkTool = tool({
  */
 export const obsidianSearchTool = tool({
 	description:
-		"Search through Obsidian vault notes by content, title, or tags. Use this to find specific information in your notes.",
+		"Search through Obsidian vault notes by content, title, or tags. Use this to find specific information in your notes. Can filter by folder name.",
 	inputSchema: z.object({
 		query: z.string().describe("The search query"),
 		searchIn: z
@@ -459,8 +484,9 @@ export const obsidianSearchTool = tool({
 			.default("all")
 			.describe("Where to search: all, titles, content, or tags"),
 		limit: z.number().optional().default(10).describe("Maximum results to return"),
+		folder: z.string().optional().describe("Optional folder name to filter notes by (e.g., 'Clippings', 'Notes'). Case-insensitive partial matching."),
 	}),
-	execute: async ({ query, searchIn, limit }) => {
+	execute: async ({ query, searchIn, limit, folder }) => {
 		const vaultPath = await getObsidianVaultPath();
 		if (!vaultPath) {
 			return {
@@ -469,7 +495,19 @@ export const obsidianSearchTool = tool({
 			};
 		}
 
-		const notes = readVaultNotes(vaultPath);
+		let notes = readVaultNotes(vaultPath);
+		
+		// Filter by folder if specified
+		if (folder) {
+			const lowerFolder = folder.toLowerCase();
+			notes = notes.filter((n) => {
+				const relativePath = path.relative(vaultPath, n.path);
+				const folderPath = path.dirname(relativePath);
+				return folderPath.toLowerCase().includes(lowerFolder) || 
+				       relativePath.toLowerCase().includes(lowerFolder);
+			});
+		}
+		
 		const lowerQuery = query.toLowerCase();
 
 		const filtered = notes.filter((note) => {
@@ -491,13 +529,18 @@ export const obsidianSearchTool = tool({
 
 		return {
 			success: true,
-			results: filtered.slice(0, limit).map((n) => ({
-				title: n.title,
-				path: n.path,
-				preview: n.body.substring(0, 200),
-				tags: n.tags,
-				lastModified: new Date(n.mtime).toISOString(),
-			})),
+			results: filtered.slice(0, limit).map((n) => {
+				const relativePath = path.relative(vaultPath, n.path);
+				const folderPath = path.dirname(relativePath);
+				return {
+					title: n.title,
+					path: n.path,
+					folder: folderPath === '.' ? 'root' : folderPath,
+					preview: n.body.substring(0, 200),
+					tags: n.tags,
+					lastModified: new Date(n.mtime).toISOString(),
+				};
+			}),
 			totalFound: filtered.length,
 		};
 	},

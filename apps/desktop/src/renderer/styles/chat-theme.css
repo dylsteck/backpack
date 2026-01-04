@@ -1,0 +1,568 @@
+/**
+ * Cortex Chat - Command Center Design System
+ * A sophisticated dark interface with glass morphism and atmospheric depth
+ */
+
+/* ============================================
+   CUSTOM FONTS - Import distinctive typography
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap');
+
+/* ============================================
+   CSS VARIABLES - Design Tokens
+   ============================================ */
+:root {
+  /* Command Center Color Palette */
+  --cc-void: #0a0a0f;
+  --cc-deep: #12121a;
+  --cc-surface: #1a1a26;
+  --cc-elevated: #22223a;
+
+  /* Atmospheric Gradients */
+  --cc-gradient-bg: linear-gradient(135deg,
+    #0a0a0f 0%,
+    #12121a 50%,
+    #1a1a26 100%);
+  --cc-gradient-mesh:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.04) 0px, transparent 50%);
+
+  /* Accent Colors */
+  --cc-primary: #6366f1;
+  --cc-primary-glow: rgba(99, 102, 241, 0.3);
+  --cc-secondary: #8b5cf6;
+  --cc-accent: #3b82f6;
+  --cc-success: #10b981;
+  --cc-warning: #f59e0b;
+
+  /* Text Colors */
+  --cc-text-primary: #f8fafc;
+  --cc-text-secondary: #cbd5e1;
+  --cc-text-tertiary: #64748b;
+  --cc-text-muted: #475569;
+
+  /* Glass Morphism */
+  --cc-glass-bg: rgba(26, 26, 38, 0.7);
+  --cc-glass-border: rgba(255, 255, 255, 0.06);
+  --cc-glass-highlight: rgba(255, 255, 255, 0.02);
+  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                     0 2px 8px rgba(0, 0, 0, 0.2);
+
+  /* Elevation Shadows */
+  --cc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --cc-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --cc-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --cc-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4);
+
+  /* Typography Scale */
+  --cc-font-display: 'Syne', system-ui, sans-serif;
+  --cc-font-body: 'Archivo', system-ui, sans-serif;
+  --cc-font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+  --cc-text-xs: 0.6875rem;    /* 11px */
+  --cc-text-sm: 0.8125rem;    /* 13px */
+  --cc-text-base: 0.9375rem;  /* 15px */
+  --cc-text-lg: 1.0625rem;    /* 17px */
+  --cc-text-xl: 1.25rem;      /* 20px */
+  --cc-text-2xl: 1.5rem;      /* 24px */
+  --cc-text-3xl: 2rem;        /* 32px */
+
+  /* Spacing Scale */
+  --cc-space-1: 0.25rem;   /* 4px */
+  --cc-space-2: 0.5rem;    /* 8px */
+  --cc-space-3: 0.75rem;   /* 12px */
+  --cc-space-4: 1rem;      /* 16px */
+  --cc-space-5: 1.25rem;   /* 20px */
+  --cc-space-6: 1.5rem;    /* 24px */
+  --cc-space-8: 2rem;      /* 32px */
+  --cc-space-10: 2.5rem;   /* 40px */
+  --cc-space-12: 3rem;     /* 48px */
+
+  /* Border Radius */
+  --cc-radius-sm: 0.5rem;   /* 8px */
+  --cc-radius-md: 0.75rem;  /* 12px */
+  --cc-radius-lg: 1rem;     /* 16px */
+  --cc-radius-xl: 1.5rem;   /* 24px */
+  --cc-radius-2xl: 2rem;    /* 32px */
+  --cc-radius-full: 9999px;
+
+  /* Transitions */
+  --cc-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cc-transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cc-transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cc-transition-spring: 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================
+   GLASS MORPHISM UTILITIES
+   ============================================ */
+.cc-glass {
+  background: var(--cc-glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--cc-glass-border);
+  box-shadow: var(--cc-glass-shadow);
+}
+
+.cc-glass-light {
+  background: rgba(34, 34, 58, 0.6);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cc-glass-subtle {
+  background: rgba(18, 18, 26, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================
+   MESSAGE BUBBLE STYLES
+   ============================================ */
+.cc-message-user {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(139, 92, 246, 0.12) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--cc-radius-lg);
+  border-bottom-right-radius: var(--cc-radius-sm);
+  padding: var(--cc-space-4) var(--cc-space-5);
+  color: var(--cc-text-primary);
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-base);
+  line-height: 1.6;
+  box-shadow:
+    0 4px 16px rgba(99, 102, 241, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  transition: all var(--cc-transition-base);
+}
+
+.cc-message-user:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow:
+    0 6px 24px rgba(99, 102, 241, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  transform: translateY(-1px);
+}
+
+.cc-message-assistant {
+  background: var(--cc-glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--cc-glass-border);
+  border-radius: var(--cc-radius-lg);
+  border-top-left-radius: var(--cc-radius-sm);
+  padding: var(--cc-space-4) var(--cc-space-5);
+  color: var(--cc-text-secondary);
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-base);
+  line-height: 1.6;
+  box-shadow:
+    var(--cc-shadow-md),
+    0 0 0 1px var(--cc-glass-highlight) inset;
+  transition: all var(--cc-transition-base);
+}
+
+.cc-message-assistant:hover {
+  background: rgba(26, 26, 38, 0.8);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    var(--cc-shadow-lg),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   TOOL INDICATOR CARDS
+   ============================================ */
+.cc-tool-indicator {
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(99, 102, 241, 0.06) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-left: 3px solid var(--cc-secondary);
+  border-radius: var(--cc-radius-md);
+  padding: var(--cc-space-3) var(--cc-space-4);
+  margin: var(--cc-space-3) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-3);
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-sm);
+  font-weight: 500;
+  color: var(--cc-text-secondary);
+  animation: cc-slideIn var(--cc-transition-base);
+}
+
+.cc-tool-indicator-icon {
+  font-size: var(--cc-text-lg);
+  line-height: 1;
+}
+
+.cc-tool-indicator-label {
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Tool indicator variants */
+.cc-tool-indicator.cc-tool-search {
+  border-left-color: var(--cc-primary);
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(59, 130, 246, 0.06) 100%);
+}
+
+.cc-tool-indicator.cc-tool-obsidian {
+  border-left-color: var(--cc-accent);
+  background: linear-gradient(135deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(14, 165, 233, 0.06) 100%);
+}
+
+/* ============================================
+   AVATAR STYLES
+   ============================================ */
+.cc-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--cc-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--cc-text-sm);
+  font-weight: 600;
+  transition: all var(--cc-transition-base);
+}
+
+.cc-avatar-user {
+  background: linear-gradient(135deg, var(--cc-primary) 0%, var(--cc-secondary) 100%);
+  color: white;
+  box-shadow:
+    0 4px 12px rgba(99, 102, 241, 0.2),
+    0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cc-avatar-assistant {
+  background: var(--cc-elevated);
+  color: var(--cc-primary);
+  border: 1.5px solid var(--cc-glass-border);
+  box-shadow:
+    var(--cc-shadow-sm),
+    0 0 0 1px var(--cc-glass-highlight) inset;
+}
+
+/* ============================================
+   INPUT AREA STYLES
+   ============================================ */
+.cc-input-container {
+  background: var(--cc-glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--cc-glass-border);
+  border-radius: var(--cc-radius-xl);
+  padding: var(--cc-space-4);
+  box-shadow:
+    var(--cc-shadow-lg),
+    0 0 0 1px var(--cc-glass-highlight) inset;
+  transition: all var(--cc-transition-base);
+}
+
+.cc-input-container:focus-within {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow:
+    0 8px 32px rgba(99, 102, 241, 0.15),
+    0 0 0 3px rgba(99, 102, 241, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.cc-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--cc-text-primary);
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-base);
+  line-height: 1.5;
+  width: 100%;
+  resize: none;
+  min-height: 2.5rem;
+  max-height: 12rem;
+}
+
+.cc-input::placeholder {
+  color: var(--cc-text-muted);
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+.cc-button {
+  background: var(--cc-primary);
+  color: white;
+  border: none;
+  border-radius: var(--cc-radius-md);
+  padding: var(--cc-space-3) var(--cc-space-5);
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all var(--cc-transition-base);
+  box-shadow:
+    0 4px 12px rgba(99, 102, 241, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.cc-button:hover {
+  background: #5558e3;
+  box-shadow:
+    0 6px 20px rgba(99, 102, 241, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  transform: translateY(-1px);
+}
+
+.cc-button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 8px rgba(99, 102, 241, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.cc-button-secondary {
+  background: var(--cc-elevated);
+  color: var(--cc-text-primary);
+  box-shadow:
+    var(--cc-shadow-sm),
+    0 0 0 1px var(--cc-glass-border) inset;
+}
+
+.cc-button-secondary:hover {
+  background: rgba(34, 34, 58, 0.9);
+  box-shadow:
+    var(--cc-shadow-md),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* ============================================
+   CODE BLOCK STYLES
+   ============================================ */
+.cc-code-block {
+  background: var(--cc-deep);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--cc-radius-md);
+  padding: var(--cc-space-4);
+  margin: var(--cc-space-3) 0;
+  font-family: var(--cc-font-mono);
+  font-size: var(--cc-text-sm);
+  line-height: 1.7;
+  color: var(--cc-text-secondary);
+  overflow-x: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) inset;
+}
+
+.cc-code-inline {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: var(--cc-radius-sm);
+  padding: 0.125rem 0.375rem;
+  font-family: var(--cc-font-mono);
+  font-size: 0.875em;
+  color: var(--cc-primary);
+}
+
+/* ============================================
+   BADGE STYLES
+   ============================================ */
+.cc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--cc-radius-full);
+  padding: 0.25rem 0.625rem;
+  font-family: var(--cc-font-body);
+  font-size: var(--cc-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cc-primary);
+}
+
+.cc-badge-success {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: var(--cc-success);
+}
+
+.cc-badge-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--cc-warning);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes cc-slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cc-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cc-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes cc-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes cc-typingDot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.cc-animate-slideIn {
+  animation: cc-slideIn var(--cc-transition-base) both;
+}
+
+.cc-animate-fadeIn {
+  animation: cc-fadeIn var(--cc-transition-base) both;
+}
+
+.cc-animate-pulse {
+  animation: cc-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Stagger animations for lists */
+.cc-stagger-1 { animation-delay: 50ms; }
+.cc-stagger-2 { animation-delay: 100ms; }
+.cc-stagger-3 { animation-delay: 150ms; }
+.cc-stagger-4 { animation-delay: 200ms; }
+.cc-stagger-5 { animation-delay: 250ms; }
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+.cc-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cc-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cc-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--cc-radius-full);
+  transition: background var(--cc-transition-fast);
+}
+
+.cc-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.cc-text-gradient {
+  background: linear-gradient(135deg, var(--cc-primary) 0%, var(--cc-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cc-glow {
+  box-shadow:
+    0 0 20px rgba(99, 102, 241, 0.15),
+    0 0 40px rgba(99, 102, 241, 0.08);
+}
+
+.cc-divider {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--cc-glass-border) 50%,
+    transparent 100%);
+  margin: var(--cc-space-4) 0;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 768px) {
+  :root {
+    --cc-text-base: 0.875rem;
+    --cc-text-lg: 1rem;
+    --cc-space-4: 0.875rem;
+    --cc-space-5: 1rem;
+  }
+
+  .cc-message-user,
+  .cc-message-assistant {
+    padding: var(--cc-space-3) var(--cc-space-4);
+  }
+}
+
+/* ============================================
+   DARK MODE ENHANCEMENTS
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  /* Already optimized for dark mode */
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

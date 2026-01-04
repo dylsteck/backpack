@@ -7,6 +7,7 @@ import {
 	OBSIDIAN_READ_NOTE_CHANNEL,
 	OBSIDIAN_CREATE_NOTE_CHANNEL,
 	OBSIDIAN_UPDATE_NOTE_CHANNEL,
+	OBSIDIAN_DELETE_NOTE_CHANNEL,
 	OBSIDIAN_SEARCH_NOTES_CHANNEL,
 } from "./obsidian-channels";
 
@@ -335,9 +336,26 @@ export function addObsidianEventListeners() {
 			if (!fs.existsSync(vaultPath)) {
 				return { success: false, error: 'Vault path does not exist' };
 			}
-			
+
 			const notes = searchNotes(vaultPath, query);
 			return { success: true, notes };
+		} catch (error: any) {
+			return { success: false, error: error.message };
+		}
+	});
+
+	// Delete note
+	ipcMain.handle(OBSIDIAN_DELETE_NOTE_CHANNEL, (_event, notePath: string) => {
+		try {
+			if (!fs.existsSync(notePath)) {
+				return { success: false, error: 'Note does not exist' };
+			}
+
+			// Move to trash instead of permanent delete (safer)
+			const { shell } = require('electron');
+			shell.trashItem(notePath);
+
+			return { success: true };
 		} catch (error: any) {
 			return { success: false, error: error.message };
 		}

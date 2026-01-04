@@ -174,6 +174,45 @@ export function closeDatabase(): void {
 	}
 }
 
+/**
+ * Execute a raw SQL query (SELECT only for safety)
+ * Returns the results as an array of objects
+ */
+export function executeRawQuery(query: string): { success: boolean; data?: Record<string, unknown>[]; error?: string } {
+	if (!sqliteDb) {
+		return { success: false, error: "Database not initialized" };
+	}
+
+	// Safety: only allow SELECT queries
+	const trimmedQuery = query.trim().toUpperCase();
+	if (!trimmedQuery.startsWith("SELECT")) {
+		return { success: false, error: "Only SELECT queries are allowed for safety" };
+	}
+
+	try {
+		const results = sqliteDb.query(query).all() as Record<string, unknown>[];
+		return { success: true, data: results };
+	} catch (error) {
+		return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+	}
+}
+
+/**
+ * Get the database schema for AI context
+ */
+export function getDatabaseSchema(): string {
+	return `
+Database Tables:
+- apps: id (text PK), name, description, transport, oauth (int), icon_url, config, connection_type, created_at, updated_at
+- connections: id (text PK), server_id, server_name, vendor, transport_type, transport_config, status, secret_uri, credential_storage, encrypted_credentials, connection_metadata, last_synced_at, created_at, updated_at
+- items: id (text PK), source (e.g. 'farcaster', 'teller'), type (e.g. 'cast', 'transaction'), timestamp (unix ms), data (JSON text), created_at, updated_at
+- chat_sessions: id (text PK), title, created_at, updated_at
+- chat_messages: id (text PK), session_id, role, content, created_at
+
+Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source.
+`.trim();
+}
+
 // For backwards compatibility, export db as a getter
 // This will throw if accessed before initialization
 export { db };

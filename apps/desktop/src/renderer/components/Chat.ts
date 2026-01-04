@@ -3,21 +3,22 @@
  * Multi-provider chat with API key management and session history
  */
 
+import '../styles/chat-theme.css';
 import { Component } from './Component';
 import { createElement, clearChildren } from '../utils/dom';
-import { 
-  hasApiKeyForProvider, 
-  encryptApiKeyForProvider, 
-  decryptApiKeyForProvider, 
-  clearApiKeyForProvider 
+import {
+  hasApiKeyForProvider,
+  encryptApiKeyForProvider,
+  decryptApiKeyForProvider,
+  clearApiKeyForProvider
 } from '../utils/crypto';
 import { api } from '../api';
-import { 
-  type Provider, 
-  PROVIDERS, 
+import {
+  type Provider,
+  PROVIDERS,
   getProviderIds,
   getProviderConfig,
-  validateApiKey 
+  validateApiKey
 } from '../utils/providers';
 import { getChatStateManager, type ChatStateManager } from '../utils/chat-state';
 
@@ -252,6 +253,14 @@ export class Chat extends Component {
     const wrapper = createElement('div', {
       className: 'flex flex-col w-full h-full relative',
     });
+    (wrapper as HTMLElement).style.cssText = 'background: var(--cc-gradient-bg); background-attachment: fixed;';
+
+    // Add atmospheric mesh gradient overlay
+    const meshOverlay = createElement('div', {
+      className: '',
+    });
+    (meshOverlay as HTMLElement).style.cssText = 'position: absolute; inset: 0; background: var(--cc-gradient-mesh); pointer-events: none; z-index: 0;';
+    wrapper.appendChild(meshOverlay);
     
     // If showing history and we have sessions, show history view
     if (this.showHistory && this.sessions.length > 0 && this.messages.length === 0) {
@@ -262,7 +271,7 @@ export class Chat extends Component {
 
     // Messages area
     this.messagesContainer = createElement('div', {
-      className: 'flex-1 p-6 overflow-y-auto',
+      className: 'flex-1 p-6 overflow-y-auto cc-scrollbar relative z-10',
     });
 
     // Welcome message if no messages
@@ -303,9 +312,9 @@ export class Chat extends Component {
 
     wrapper.appendChild(this.messagesContainer);
 
-    // Input area - at bottom of wrapper
+    // Input area - at bottom with glass morphism
     const inputArea = createElement('div', {
-      className: 'sticky bottom-0 bg-background p-4 border-t border-border',
+      className: 'sticky bottom-0 p-6 relative z-10',
     });
 
     const inputContainer = createElement('div', {
@@ -316,15 +325,16 @@ export class Chat extends Component {
     const controlsRow = this.createInlinProviderControls();
     inputContainer.appendChild(controlsRow);
 
+    // Input wrapper with glass morphism
     const inputWrapper = createElement('div', {
-      className: 'flex items-center gap-2 mt-2',
+      className: 'cc-input-container flex items-center gap-3 mt-3',
     });
 
     this.inputElement = createElement('input', {
-      className: 'flex-1 px-4 py-3 bg-card border border-border font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+      className: 'cc-input flex-1',
       attributes: {
         type: 'text',
-        placeholder: '> Type a message...',
+        placeholder: 'Type a message...',
       },
     }) as HTMLInputElement;
 
@@ -340,12 +350,14 @@ export class Chat extends Component {
     });
 
     const sendButton = createElement('button', {
-      className: 'px-4 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+      className: 'cc-button',
       textContent: 'Send',
     });
 
     if (this.isStreaming) {
       sendButton.setAttribute('disabled', 'true');
+      (sendButton as HTMLElement).style.opacity = '0.5';
+      (sendButton as HTMLElement).style.cursor = 'not-allowed';
     }
 
     sendButton.addEventListener('click', () => {
@@ -488,43 +500,42 @@ export class Chat extends Component {
     const isUser = message.role === 'user';
 
     const wrapper = createElement('div', {
-      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`,
+      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 cc-animate-slideIn`,
     });
 
     if (isUser) {
-      // User messages: clean, right-aligned
+      // User messages: glass morphism with gradient glow
       const bubble = createElement('div', {
-        className: 'max-w-[75%] px-4 py-3 rounded-2xl rounded-tr-md bg-primary text-primary-foreground shadow-sm',
+        className: 'max-w-[75%] cc-message-user',
       });
 
       const content = createElement('div', {
-        className: 'text-sm leading-relaxed',
         textContent: message.content,
       });
       bubble.appendChild(content);
       wrapper.appendChild(bubble);
     } else {
-      // Assistant messages: left-aligned with subtle styling
+      // Assistant messages: sophisticated glass effect with avatar
       const messageContainer = createElement('div', {
-        className: 'max-w-[75%] flex gap-2 items-start',
+        className: 'max-w-[75%] flex gap-3 items-start',
       });
 
-      // Avatar
+      // Avatar with icon
       const avatar = createElement('div', {
-        className: 'w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1',
-        innerHTML: `<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        className: 'cc-avatar cc-avatar-assistant',
+        innerHTML: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
         </svg>`,
       });
       messageContainer.appendChild(avatar);
 
-      // Content
+      // Content wrapper
       const contentWrapper = createElement('div', {
         className: 'flex-1',
       });
 
       const bubble = createElement('div', {
-        className: 'px-4 py-3 rounded-2xl rounded-tl-md bg-secondary/50 border border-border/50 shadow-sm',
+        className: 'cc-message-assistant',
       });
 
       // Parse content for tool usage indicators
@@ -532,7 +543,6 @@ export class Chat extends Component {
         this.renderMessageWithTools(bubble, message.content);
       } else {
         const content = createElement('div', {
-          className: 'text-sm leading-relaxed',
           textContent: message.content,
         });
         bubble.appendChild(content);
@@ -570,47 +580,81 @@ export class Chat extends Component {
   }
 
   private createToolIndicator(toolName: string): HTMLElement {
-    // Icon and label based on tool name
-    let icon = '🔧';
+    const indicator = createElement('div', {
+      className: 'flex items-center gap-2.5 px-3 py-2 my-2.5 rounded-xl',
+    });
+    (indicator as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      animation: cc-fadeIn 0.3s ease-out;
+    `;
+
+    // Icon, label, and color based on tool name
+    let icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
     let label = toolName;
-    let bgColor = 'bg-blue-500/5';
-    let borderColor = 'border-blue-500/20';
-    let textColor = 'text-blue-600';
+    let iconColor = 'rgba(99, 102, 241, 0.9)';
 
     if (toolName === 'searchItems') {
-      icon = '🔍';
+      icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`;
       label = 'Searching your data';
-      bgColor = 'bg-purple-500/5';
-      borderColor = 'border-purple-500/20';
-      textColor = 'text-purple-600';
+      iconColor = 'rgba(59, 130, 246, 0.9)';
+    } else if (toolName === 'analyzeAllItems') {
+      icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>`;
+      label = 'Analyzing all data';
+      iconColor = 'rgba(16, 185, 129, 0.9)';
     } else if (toolName.startsWith('obsidian_')) {
-      icon = '📝';
+      icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+      iconColor = 'rgba(168, 85, 247, 0.9)';
       if (toolName === 'obsidian_list_notes') label = 'Listing notes';
       else if (toolName === 'obsidian_read_note') label = 'Reading note';
       else if (toolName === 'obsidian_create_note') label = 'Creating note';
       else if (toolName === 'obsidian_update_note') label = 'Updating note';
       else if (toolName === 'obsidian_search') label = 'Searching notes';
       else label = 'Obsidian';
-      bgColor = 'bg-green-500/5';
-      borderColor = 'border-green-500/20';
-      textColor = 'text-green-600';
     }
 
-    const indicator = createElement('div', {
-      className: `flex items-center gap-2 px-3 py-2 my-2 rounded-lg border ${bgColor} ${borderColor}`,
+    // Icon container with subtle glow
+    const iconContainer = createElement('div', {
+      className: 'flex items-center justify-center',
     });
+    (iconContainer as HTMLElement).style.cssText = `
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: ${iconColor.replace('0.9', '0.12')};
+      color: ${iconColor};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    `;
+    iconContainer.innerHTML = icon;
+    indicator.appendChild(iconContainer);
 
-    const iconSpan = createElement('span', {
-      className: 'text-base',
-      textContent: icon,
-    });
-    indicator.appendChild(iconSpan);
-
-    const labelSpan = createElement('span', {
-      className: `text-xs font-medium ${textColor}`,
-      textContent: label,
-    });
+    const labelSpan = createElement('span', {});
+    (labelSpan as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--cc-text-secondary, #cbd5e1);
+      letter-spacing: -0.01em;
+    `;
+    labelSpan.textContent = label;
     indicator.appendChild(labelSpan);
+
+    // Subtle animated dot to indicate activity
+    const activityDot = createElement('div', {});
+    (activityDot as HTMLElement).style.cssText = `
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: ${iconColor};
+      margin-left: auto;
+      animation: cc-pulse 1.5s ease-in-out infinite;
+    `;
+    indicator.appendChild(activityDot);
 
     return indicator;
   }

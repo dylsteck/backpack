@@ -126,6 +126,10 @@ interface ObsidianVaultContext {
     note?: ObsidianNote;
     error?: string;
   }>;
+  deleteNote: (notePath: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
   searchNotes: (vaultPath: string, query: string) => Promise<{
     success: boolean;
     notes?: ObsidianNote[];

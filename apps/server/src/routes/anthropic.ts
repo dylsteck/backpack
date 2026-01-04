@@ -27,7 +27,8 @@ function convertToolsToAnthropicFormat(): Anthropic.Tool[] {
 				type: "object",
 				properties: {
 					limit: { type: "number", description: "Maximum number of notes to return", default: 20 },
-					search: { type: "string", description: "Optional search query to filter notes by title or content" }
+					search: { type: "string", description: "Optional search query to filter notes by title or content" },
+					folder: { type: "string", description: "Optional folder name to filter notes by (e.g., 'Clippings', 'Notes'). Case-insensitive partial matching." }
 				}
 			};
 		} else if (name === 'obsidian_read_note') {
@@ -75,7 +76,24 @@ function convertToolsToAnthropicFormat(): Anthropic.Tool[] {
 				properties: {
 					query: { type: "string", description: "The search query" },
 					searchIn: { type: "string", enum: ["all", "titles", "content", "tags"], description: "Where to search: all, titles, content, or tags", default: "all" },
-					limit: { type: "number", description: "Maximum results to return", default: 10 }
+					limit: { type: "number", description: "Maximum results to return", default: 10 },
+					folder: { type: "string", description: "Optional folder name to filter notes by (e.g., 'Clippings', 'Notes'). Case-insensitive partial matching." }
+				},
+				required: ["query"]
+			};
+		} else if (name === 'analyzeAllItems') {
+			inputSchema = {
+				type: "object",
+				properties: {
+					source: { type: "string", enum: ["farcaster", "teller"], description: "Filter by source: 'farcaster' for social posts, 'teller' for transactions" },
+					type: { type: "string", enum: ["cast", "transaction"], description: "Filter by type" }
+				}
+			};
+		} else if (name === 'querySQLite') {
+			inputSchema = {
+				type: "object",
+				properties: {
+					query: { type: "string", description: "SQL SELECT query to execute against the local database. Only SELECT queries are allowed." }
 				},
 				required: ["query"]
 			};
@@ -108,6 +126,35 @@ async function executeTool(toolName: string, input: unknown) {
 		abortSignal: new AbortController().signal
 	});
 	return result;
+}
+
+// Summarize tool result for display (keep it short)
+function summarizeToolResult(result: unknown): string {
+	if (!result || typeof result !== 'object') return 'Done';
+
+	const obj = result as Record<string, unknown>;
+
+	// Handle common result shapes
+	if ('totalFound' in obj && typeof obj.totalFound === 'number') {
+		return `Found ${obj.totalFound} items`;
+	}
+	if ('totalCount' in obj && typeof obj.totalCount === 'number') {
+		return `${obj.totalCount} total items`;
+	}
+	if ('rowCount' in obj && typeof obj.rowCount === 'number') {
+		return `${obj.rowCount} rows`;
+	}
+	if ('notes' in obj && Array.isArray(obj.notes)) {
+		return `${obj.notes.length} notes`;
+	}
+	if ('success' in obj) {
+		return obj.success ? 'Success' : 'Failed';
+	}
+	if ('error' in obj) {
+		return `Error: ${String(obj.error).slice(0, 50)}`;
+	}
+
+	return 'Done';
 }
 
 export const anthropicRoutes = new Elysia({ prefix: "/api/chat/anthropic" })
@@ -162,15 +209,20 @@ export const anthropicRoutes = new Elysia({ prefix: "/api/chat/anthropic" })
 			// Default system prompt for Cortex (with tool instructions)
 			const finalSystemPrompt = systemPrompt || `You are Cortex, a helpful AI assistant that can search through the user's saved items including Farcaster posts and bank transactions.
 You can also interact with the user's Obsidian vault - listing, reading, creating, and updating markdown notes.
+You have direct access to query the local SQLite database for advanced analysis.
 
-When the user asks about their content, posts, spending, or wants to find something, use the searchItems tool.
+When the user asks about their content, posts, spending, or wants to find something:
+- Use searchItems for specific, limited queries (default limit: 50 items)
+- Use analyzeAllItems when the user asks to analyze "all" their posts/data - this returns total counts and a representative sample without limits
+- Use querySQLite for advanced queries or custom analysis that other tools don't support - you can write custom SQL SELECT queries
+
 When the user asks about their notes or wants to work with Obsidian, use the obsidian_* tools:
-- obsidian_list_notes: List all notes in the vault
+- obsidian_list_notes: List all notes in the vault. Use the 'folder' parameter to filter by folder name (e.g., 'Clippings', 'Notes'). Case-insensitive partial matching.
 - obsidian_read_note: Read the full content of a specific note
-- obsidian_create_note: Create a new note
+- obsidian_create_note: Create a new note (can specify folder)
 - obsidian_update_note: Update an existing note (append, prepend, or replace)
 - obsidian_add_backlink: Add [[wikilinks]] to connect notes
-- obsidian_search: Search notes by title, content, or tags
+- obsidian_search: Search notes by title, content, or tags. Use the 'folder' parameter to limit search to a specific folder.
 
 After using any tool, provide a helpful summary of what you found or did.
 If no results are found, suggest how the user might refine their search or request.`;
@@ -182,12 +234,35 @@ If no results are found, suggest how the user might refine their search or reque
 			const readableStream = new ReadableStream({
 				async start(controller) {
 					const encoder = new TextEncoder();
+					let isClosed = false;
+
+					const safeClose = () => {
+						if (!isClosed) {
+							isClosed = true;
+							try {
+								controller.close();
+							} catch {
+								// Already closed
+							}
+						}
+					};
+
+					const safeEnqueue = (data: Uint8Array) => {
+						if (!isClosed) {
+							try {
+								controller.enqueue(data);
+							} catch {
+								// Controller closed
+							}
+						}
+					};
+
 					try {
 						let currentMessages = [...anthropicMessages];
 						let continueLoop = true;
 						let maxIterations = 5; // Prevent infinite loops
 
-						while (continueLoop && maxIterations > 0) {
+						while (continueLoop && maxIterations > 0 && !isClosed) {
 							maxIterations--;
 
 							// Stream response using Anthropic SDK with tools
@@ -199,25 +274,46 @@ If no results are found, suggest how the user might refine their search or reque
 								tools: anthropicTools,
 							});
 
+							// Track tool inputs for streaming
+							const toolInputs: Map<number, { name: string; input: string }> = new Map();
+
 							// Stream events in real-time
 							for await (const event of stream) {
+								if (isClosed) break;
+
 								if (event.type === "content_block_start") {
 									const block = event.content_block;
 
-									// If it's a tool use, send indicator immediately
+									// If it's a tool use, send indicator with placeholder for input
 									if (block.type === "tool_use") {
-										const toolIndicator = `[Using tool: ${block.name}]\n`;
-										controller.enqueue(encoder.encode(toolIndicator));
+										toolInputs.set(event.index, { name: block.name, input: '' });
+										const toolIndicator = `\n[TOOL_START:${block.name}:${event.index}]\n`;
+										safeEnqueue(encoder.encode(toolIndicator));
 									}
 								} else if (event.type === "content_block_delta") {
 									const delta = event.delta;
 
 									// Stream text deltas immediately
 									if (delta.type === "text_delta") {
-										controller.enqueue(encoder.encode(delta.text));
+										safeEnqueue(encoder.encode(delta.text));
+									} else if (delta.type === "input_json_delta" && delta.partial_json) {
+										// Accumulate tool input JSON
+										const existing = toolInputs.get(event.index);
+										if (existing) {
+											existing.input += delta.partial_json;
+										}
+									}
+								} else if (event.type === "content_block_stop") {
+									// Send complete tool input when block ends
+									const toolData = toolInputs.get(event.index);
+									if (toolData) {
+										const inputMarker = `[TOOL_INPUT:${event.index}:${toolData.input}]\n`;
+										safeEnqueue(encoder.encode(inputMarker));
 									}
 								}
 							}
+
+							if (isClosed) break;
 
 							// Get the final message to check for tool use
 							const finalMessage = await stream.finalMessage();
@@ -231,14 +327,20 @@ If no results are found, suggest how the user might refine their search or reque
 								// Execute tools and collect results
 								const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
 
-								for (const toolUse of toolUseBlocks) {
+								for (let i = 0; i < toolUseBlocks.length; i++) {
+									const toolUse = toolUseBlocks[i];
 									try {
 										const result = await executeTool(toolUse.name, toolUse.input);
+										const resultStr = JSON.stringify(result);
 										toolResults.push({
 											type: "tool_result",
 											tool_use_id: toolUse.id,
-											content: JSON.stringify(result),
+											content: resultStr,
 										});
+										// Send tool result marker with summary
+										const summary = summarizeToolResult(result);
+										const resultMarker = `[TOOL_RESULT:${toolUse.name}:${summary}]\n`;
+										safeEnqueue(encoder.encode(resultMarker));
 									} catch (error: unknown) {
 										const errorMessage = error instanceof Error ? error.message : "Unknown error";
 										toolResults.push({
@@ -247,6 +349,8 @@ If no results are found, suggest how the user might refine their search or reque
 											content: JSON.stringify({ error: errorMessage }),
 											is_error: true,
 										});
+										const resultMarker = `[TOOL_RESULT:${toolUse.name}:Error: ${errorMessage}]\n`;
+										safeEnqueue(encoder.encode(resultMarker));
 									}
 								}
 
@@ -267,10 +371,17 @@ If no results are found, suggest how the user might refine their search or reque
 							}
 						}
 
-						controller.close();
+						safeClose();
 					} catch (error) {
 						console.error("Anthropic stream error:", error);
-						controller.error(error);
+						if (!isClosed) {
+							isClosed = true;
+							try {
+								controller.error(error);
+							} catch {
+								// Already closed/errored
+							}
+						}
 					}
 				},
 			});

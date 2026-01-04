@@ -108,6 +108,7 @@ const OBSIDIAN_READ_VAULT_CHANNEL = "obsidian:read-vault";
 const OBSIDIAN_READ_NOTE_CHANNEL = "obsidian:read-note";
 const OBSIDIAN_CREATE_NOTE_CHANNEL = "obsidian:create-note";
 const OBSIDIAN_UPDATE_NOTE_CHANNEL = "obsidian:update-note";
+const OBSIDIAN_DELETE_NOTE_CHANNEL = "obsidian:delete-note";
 const OBSIDIAN_SEARCH_NOTES_CHANNEL = "obsidian:search-notes";
 function exposeObsidianContext() {
   const electron2 = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
@@ -118,6 +119,7 @@ function exposeObsidianContext() {
     readNote: (notePath) => ipcRenderer.invoke(OBSIDIAN_READ_NOTE_CHANNEL, notePath),
     createNote: (vaultPath, title, content, frontmatter) => ipcRenderer.invoke(OBSIDIAN_CREATE_NOTE_CHANNEL, vaultPath, title, content, frontmatter),
     updateNote: (notePath, content, mode) => ipcRenderer.invoke(OBSIDIAN_UPDATE_NOTE_CHANNEL, notePath, content, mode),
+    deleteNote: (notePath) => ipcRenderer.invoke(OBSIDIAN_DELETE_NOTE_CHANNEL, notePath),
     searchNotes: (vaultPath, query) => ipcRenderer.invoke(OBSIDIAN_SEARCH_NOTES_CHANNEL, vaultPath, query)
   });
 }

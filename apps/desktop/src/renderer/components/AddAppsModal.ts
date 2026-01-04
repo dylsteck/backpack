@@ -6,6 +6,7 @@
 import { Component } from './Component';
 import { store } from '../store';
 import { router } from '../router';
+import { fetchAppsWithCache } from '../api';
 import { createElement, clearChildren } from '../utils/dom';
 import type { AppServer } from '../types';
 
@@ -16,9 +17,20 @@ export class AddAppsModal extends Component {
 
   async init(): Promise<void> {
     this.render();
-    
+
     // Subscribe to apps changes
     this.subscribe(store.apps, () => this.renderAppsGrid());
+
+    // Ensure apps are loaded
+    await this.loadApps();
+  }
+
+  private async loadApps(): Promise<void> {
+    try {
+      await fetchAppsWithCache();
+    } catch (error) {
+      console.error('Failed to load apps:', error);
+    }
   }
 
   render(): void {
@@ -107,20 +119,41 @@ export class AddAppsModal extends Component {
   private renderAppsGrid(): void {
     const gridContainer = this.container.querySelector('#add-apps-grid');
     if (!gridContainer) return;
-    
+
     const apps = store.apps.get();
+    // Filter to show only unconnected apps
+    const unconnectedApps = apps.filter(app => app.connection?.status !== 'connected');
+
     clearChildren(gridContainer);
-    
+
     if (apps.length === 0) {
+      // Apps haven't loaded yet - show loading state
       gridContainer.innerHTML = `
         <div class="col-span-full text-center py-12 text-muted-foreground font-mono uppercase tracking-wider text-sm">
-          No apps available
+          <div class="flex items-center justify-center gap-2">
+            <div class="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+            Loading apps...
+          </div>
         </div>
       `;
       return;
     }
-    
-    for (const app of apps) {
+
+    if (unconnectedApps.length === 0) {
+      gridContainer.innerHTML = `
+        <div class="col-span-full text-center py-12 px-6">
+          <div class="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <p class="text-sm text-muted-foreground font-mono">All available apps are connected!</p>
+        </div>
+      `;
+      return;
+    }
+
+    for (const app of unconnectedApps) {
       const card = this.createAppCard(app);
       gridContainer.appendChild(card);
     }

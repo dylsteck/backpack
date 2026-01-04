@@ -46,7 +46,10 @@ export class ChatSidebar extends Component {
   private sessions: ChatSession[] = [];
   private historyDropdownOpen = false;
   private settingsModal: HTMLElement | null = null;
-  
+
+  // Message queue for queuing messages while waiting for response
+  private messageQueue: string[] = [];
+
   // Multi-provider state
   private stateManager!: ChatStateManager;
   private currentProvider: Provider = 'openrouter';
@@ -75,53 +78,174 @@ export class ChatSidebar extends Component {
   render(): void {
     this.container.innerHTML = '';
     
-    // Sidebar container
+    // Sidebar container - sleek glass panel
     const panel = createElement('div', {
-      className: 'flex flex-col h-full bg-card border-l border-border/50 shadow-2xl animate-in slide-in-from-right duration-300 w-full',
+      className: 'flex flex-col h-full w-full relative',
+    });
+    (panel as HTMLElement).style.cssText = `
+      background: linear-gradient(180deg, rgba(18, 18, 26, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+      border-left: 1px solid rgba(255, 255, 255, 0.04);
+      animation: cc-slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 0;
+      overflow: hidden;
+    `;
+    
+    // Resize handle on the left edge
+    const resizeHandle = createElement('div', {
+      className: 'absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-primary/30 transition-colors',
+    });
+    (resizeHandle as HTMLElement).style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: col-resize;
+      z-index: 50;
+      transition: background-color 0.2s;
+    `;
+    
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    this.addListener(resizeHandle, 'mousedown', (e: MouseEvent) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = this.container.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
     });
     
-    // Header with history dropdown
-    const header = createElement('div', {
-      className: 'flex flex-col border-b border-border/50 shrink-0 bg-background/95 backdrop-blur-xl sticky top-0 z-30',
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const deltaX = startX - e.clientX; // Inverted because we're resizing from the left
+      const newWidth = Math.max(280, Math.min(800, startWidth + deltaX));
+      this.container.style.width = `${newWidth}px`;
+      this.container.dataset.resized = 'true';
+      
+      // Update topbar right offset
+      const topbarContainer = document.querySelector('.topbar-container') as HTMLElement;
+      if (topbarContainer) {
+        topbarContainer.style.right = `${newWidth}px`;
+      }
+    };
+    
+    const handleMouseUp = () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    this.registerCleanup(() => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     });
+    
+    resizeHandle.addEventListener('mouseenter', () => {
+      (resizeHandle as HTMLElement).style.backgroundColor = 'rgba(99, 102, 241, 0.3)';
+    });
+    resizeHandle.addEventListener('mouseleave', () => {
+      if (!isResizing) {
+        (resizeHandle as HTMLElement).style.backgroundColor = 'transparent';
+      }
+    });
+    
+    panel.appendChild(resizeHandle);
+    
+    // Header - minimal and clean
+    const header = createElement('div', {
+      className: 'flex flex-col shrink-0 sticky top-0 z-30',
+    });
+    (header as HTMLElement).style.cssText = `
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
+    `;
 
     const topRow = createElement('div', {
-      className: 'flex items-center justify-between px-4 py-3.5',
+      className: 'flex items-center justify-between px-4 py-3 min-w-0',
     });
-
-    // History dropdown button
-    const historyButton = createElement('button', {
-      className: 'flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/60 transition-all duration-200 flex-1 text-left group/history',
-    });
-    historyButton.innerHTML = `
-      <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 group-hover/history:scale-105 transition-transform duration-200 shadow-lg shadow-primary/20">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      </div>
-      <div class="flex flex-col flex-1 min-w-0">
-        <span class="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-bold leading-none mb-0.5">Chat Session</span>
-        <span class="font-semibold text-sm truncate text-foreground/90">${this.sessionId ? 'Current Chat' : 'New Chat'}</span>
-      </div>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-muted-foreground/50 transition-transform duration-300 ${this.historyDropdownOpen ? 'rotate-180' : ''}">
-        <path d="m6 9 6 6 6-6"/>
-      </svg>
+    (topRow as HTMLElement).style.cssText = `
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
     `;
+
+    // History dropdown button - minimal design
+    const historyButton = createElement('button', {
+      className: 'flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 flex-1 text-left group min-w-0',
+    });
+    (historyButton as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      min-width: 0;
+      overflow: hidden;
+    `;
+    const historyText = createElement('span');
+    (historyText as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--cc-text-primary, #f8fafc);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
+    `;
+    historyText.textContent = this.sessionId ? 'Current Chat' : 'New Chat';
+    historyButton.appendChild(historyText);
+    
+    const chevronWrapper = createElement('span');
+    (chevronWrapper as HTMLElement).style.cssText = `
+      color: var(--cc-text-muted, #475569);
+      transition: transform 0.2s;
+      transform: ${this.historyDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'};
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+    `;
+    chevronWrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>`;
+    historyButton.appendChild(chevronWrapper);
+    historyButton.addEventListener('mouseenter', () => {
+      (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
+      (historyButton as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.06)';
+    });
+    historyButton.addEventListener('mouseleave', () => {
+      (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
+      (historyButton as HTMLElement).style.borderColor = 'transparent';
+    });
     this.addListener(historyButton, 'click', () => {
       this.historyDropdownOpen = !this.historyDropdownOpen;
       this.render();
     });
     topRow.appendChild(historyButton);
 
+    // Close button - simple X
     const closeButton = createElement('button', {
-      className: 'ml-1 p-2.5 hover:bg-secondary/80 rounded-xl transition-all duration-200 group/close active:scale-95',
-      innerHTML: `
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/60 group-hover/close:text-foreground transition-colors">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-          <line x1="15" x2="15" y1="3" y2="21"/>
-          <path d="m11 9-3 3 3 3" class="opacity-0 group-hover/close:opacity-100 transition-opacity" />
-        </svg>
-      `,
+      className: 'p-2 rounded-lg transition-all duration-200',
+    });
+    (closeButton as HTMLElement).style.cssText = `
+      color: var(--cc-text-tertiary, #64748b);
+    `;
+    closeButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      </svg>
+    `;
+    closeButton.addEventListener('mouseenter', () => {
+      (closeButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+      (closeButton as HTMLElement).style.color = 'var(--cc-text-primary, #f8fafc)';
+    });
+    closeButton.addEventListener('mouseleave', () => {
+      (closeButton as HTMLElement).style.background = 'transparent';
+      (closeButton as HTMLElement).style.color = 'var(--cc-text-tertiary, #64748b)';
     });
     this.addListener(closeButton, 'click', () => store.chatSidebarOpen.set(false));
     topRow.appendChild(closeButton);
@@ -142,8 +266,16 @@ export class ChatSidebar extends Component {
     
     // Messages container
     this.messagesContainer = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-5 space-y-4 scrollbar-hide',
+      className: 'flex-1 overflow-y-auto p-4 space-y-4',
     });
+    (this.messagesContainer as HTMLElement).style.cssText = `
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+      width: 100%;
+      min-width: 0;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    `;
     
     if (this.apiKeyMissing) {
       this.renderApiKeyMissingState();
@@ -153,24 +285,48 @@ export class ChatSidebar extends Component {
     
     panel.appendChild(this.messagesContainer);
     
-    // Input area
+    // Input area - refined floating design
     if (!this.apiKeyMissing) {
       const inputArea = createElement('div', {
-        className: 'p-4 border-t border-border/50 shrink-0 bg-background/80 backdrop-blur-sm',
+        className: 'p-4 shrink-0',
       });
-      
+      (inputArea as HTMLElement).style.cssText = `
+        background: linear-gradient(180deg, transparent 0%, rgba(10, 10, 15, 0.8) 100%);
+      `;
+
       const inputWrapper = createElement('div', {
-        className: 'flex items-end gap-2 bg-secondary/50 border border-border/50 rounded-2xl px-4 py-3 focus-within:bg-secondary/70 focus-within:border-primary/30 transition-all shadow-sm',
+        className: 'flex items-end gap-3 px-4 py-3 rounded-2xl transition-all',
       });
-      
+      (inputWrapper as HTMLElement).style.cssText = `
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+      `;
+      inputWrapper.addEventListener('focusin', () => {
+        (inputWrapper as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.4)';
+        (inputWrapper as HTMLElement).style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(99, 102, 241, 0.1)';
+      });
+      inputWrapper.addEventListener('focusout', () => {
+        (inputWrapper as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.08)';
+        (inputWrapper as HTMLElement).style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.2)';
+      });
+
       this.inputElement = createElement('textarea', {
-        className: 'flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm resize-none min-h-[20px] max-h-32 py-1',
+        className: 'flex-1 bg-transparent border-none outline-none resize-none min-h-[22px] max-h-32 py-0.5',
         attributes: {
-          placeholder: 'Ask anything...',
+          placeholder: 'Message...',
           rows: '1',
         },
       }) as HTMLTextAreaElement;
-      
+      (this.inputElement as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 14px;
+        color: var(--cc-text-primary, #f8fafc);
+        line-height: 1.5;
+      `;
+
       // Auto-resize
       this.addListener(this.inputElement, 'input', () => {
         if (this.inputElement) {
@@ -178,7 +334,7 @@ export class ChatSidebar extends Component {
           this.inputElement.style.height = Math.min(this.inputElement.scrollHeight, 128) + 'px';
         }
       });
-      
+
       this.addListener(this.inputElement, 'keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && !e.altKey && !e.shiftKey && !this.isLoading) {
           e.preventDefault();
@@ -190,16 +346,30 @@ export class ChatSidebar extends Component {
           }
         }
       });
-      
+
       inputWrapper.appendChild(this.inputElement);
-      
+
       const sendButton = createElement('button', {
-        className: 'p-2.5 bg-gradient-to-br from-primary to-primary/80 text-white rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0',
+        className: 'p-2.5 rounded-xl transition-all shrink-0',
         innerHTML: `
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
         `,
+      });
+      (sendButton as HTMLElement).style.cssText = `
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+        border-radius: 12px;
+      `;
+      sendButton.addEventListener('mouseenter', () => {
+        (sendButton as HTMLElement).style.transform = 'scale(1.05)';
+        (sendButton as HTMLElement).style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.4)';
+      });
+      sendButton.addEventListener('mouseleave', () => {
+        (sendButton as HTMLElement).style.transform = 'scale(1)';
+        (sendButton as HTMLElement).style.boxShadow = '0 2px 12px rgba(99, 102, 241, 0.3)';
       });
       this.addListener(sendButton, 'click', () => {
         if (!this.isLoading) {
@@ -212,7 +382,7 @@ export class ChatSidebar extends Component {
         }
       });
       inputWrapper.appendChild(sendButton);
-      
+
       inputArea.appendChild(inputWrapper);
       panel.appendChild(inputArea);
     }
@@ -226,23 +396,39 @@ export class ChatSidebar extends Component {
 
   private createProviderControls(): HTMLElement {
     const controlsRow = createElement('div', {
-      className: 'flex items-center gap-2 px-4 py-2 bg-secondary/20 border-t border-border/20',
+      className: 'flex items-center gap-2 px-4 py-2 min-w-0',
     });
+    (controlsRow as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.015);
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
+      flex-wrap: wrap;
+    `;
 
-    // Provider selector
+    // Provider selector - minimal styling
     const providerWrapper = createElement('div', {
-      className: 'flex items-center gap-2 px-2.5 py-1 bg-background/50 rounded-lg border border-border/30 hover:border-primary/20 transition-all duration-200 group/provider',
+      className: 'flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 min-w-0 shrink-0',
     });
-
-    const providerLabel = createElement('span', {
-      className: 'text-[9px] uppercase tracking-[0.15em] text-muted-foreground/60 font-bold hidden sm:block',
-      textContent: 'AI',
-    });
-    providerWrapper.appendChild(providerLabel);
+    (providerWrapper as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.03);
+      min-width: 0;
+      max-width: 45%;
+    `;
 
     const providerSelect = createElement('select', {
-      className: 'bg-transparent text-[11px] font-medium focus:outline-none cursor-pointer text-foreground pr-1',
+      className: 'bg-transparent focus:outline-none cursor-pointer min-w-0',
     }) as HTMLSelectElement;
+    (providerSelect as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cc-text-secondary, #cbd5e1);
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `;
 
     // Populate with providers
     getProviderIds().forEach(providerId => {
@@ -256,6 +442,14 @@ export class ChatSidebar extends Component {
       }
       providerSelect.appendChild(option);
     });
+    
+    // Make select text truncate on narrow widths
+    providerSelect.addEventListener('change', () => {
+      const selectedOption = providerSelect.options[providerSelect.selectedIndex];
+      if (selectedOption) {
+        providerSelect.title = selectedOption.text;
+      }
+    });
 
     this.addListener(providerSelect, 'change', () => {
       this.onProviderChange(providerSelect.value as Provider);
@@ -263,26 +457,42 @@ export class ChatSidebar extends Component {
     providerWrapper.appendChild(providerSelect);
     controlsRow.appendChild(providerWrapper);
 
-    // Separator
-    const separator = createElement('div', {
-      className: 'w-px h-4 bg-border/50',
+    // Separator - subtle dot (hide on very narrow widths)
+    const separator = createElement('span', {
+      textContent: '·',
     });
+    (separator as HTMLElement).style.cssText = `
+      color: var(--cc-text-muted, #475569);
+      font-size: 10px;
+      flex-shrink: 0;
+    `;
     controlsRow.appendChild(separator);
 
-    // Model selector
+    // Model selector - minimal
     const modelWrapper = createElement('div', {
-      className: 'flex-1 flex items-center gap-1.5 px-2 py-1 bg-secondary/30 rounded-lg border border-border/40 hover:border-border transition-colors min-w-0',
+      className: 'flex-1 flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors min-w-0',
     });
-
-    const modelLabel = createElement('span', {
-      className: 'text-[9px] uppercase tracking-wider text-muted-foreground font-medium hidden sm:block shrink-0',
-      textContent: 'Model',
-    });
-    modelWrapper.appendChild(modelLabel);
+    (modelWrapper as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.03);
+      min-width: 0;
+      flex: 1 1 0%;
+      max-width: 50%;
+    `;
 
     const modelSelect = createElement('select', {
-      className: 'flex-1 bg-transparent text-[11px] font-medium focus:outline-none cursor-pointer text-foreground min-w-0 truncate',
+      className: 'flex-1 bg-transparent focus:outline-none cursor-pointer min-w-0',
     }) as HTMLSelectElement;
+    (modelSelect as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cc-text-secondary, #cbd5e1);
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `;
 
     // Populate with models for current provider
     const providerConfig = getProviderConfig(this.currentProvider);
@@ -298,6 +508,14 @@ export class ChatSidebar extends Component {
       }
       modelSelect.appendChild(option);
     });
+    
+    // Make select text truncate on narrow widths
+    modelSelect.addEventListener('change', () => {
+      const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+      if (selectedOption) {
+        modelSelect.title = selectedOption.text;
+      }
+    });
 
     this.addListener(modelSelect, 'change', () => {
       this.onModelChange(modelSelect.value);
@@ -305,11 +523,23 @@ export class ChatSidebar extends Component {
     modelWrapper.appendChild(modelSelect);
     controlsRow.appendChild(modelWrapper);
 
-    // Settings button
+    // Settings button - minimal
     const settingsBtn = createElement('button', {
-      className: 'p-1.5 hover:bg-secondary/80 rounded-lg text-muted-foreground/60 hover:text-foreground transition-all duration-200 active:scale-90',
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+      className: 'p-1.5 rounded-md transition-all duration-200 shrink-0',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
       attributes: { title: 'AI Settings' }
+    });
+    (settingsBtn as HTMLElement).style.cssText = `
+      color: var(--cc-text-tertiary, #64748b);
+      flex-shrink: 0;
+    `;
+    settingsBtn.addEventListener('mouseenter', () => {
+      (settingsBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+      (settingsBtn as HTMLElement).style.color = 'var(--cc-text-primary, #f8fafc)';
+    });
+    settingsBtn.addEventListener('mouseleave', () => {
+      (settingsBtn as HTMLElement).style.background = 'transparent';
+      (settingsBtn as HTMLElement).style.color = 'var(--cc-text-tertiary, #64748b)';
     });
     this.addListener(settingsBtn, 'click', () => this.showSettingsModal());
     controlsRow.appendChild(settingsBtn);
@@ -628,14 +858,19 @@ export class ChatSidebar extends Component {
   }
   
   private async sendMessage(content: string): Promise<void> {
-    if (this.isLoading) return;
-    
+    // If loading, queue the message instead of blocking
+    if (this.isLoading) {
+      this.messageQueue.push(content);
+      this.updateQueueIndicator();
+      return;
+    }
+
     if (!hasApiKeyForProvider(this.currentProvider)) {
       this.apiKeyMissing = true;
       this.render();
       return;
     }
-    
+
     this.isLoading = true;
     
     if (!this.sessionId) {
@@ -699,22 +934,40 @@ export class ChatSidebar extends Component {
 
         // Provider-specific error handling
         const providerName = getProviderConfig(this.currentProvider).displayName;
-        
-        if (error.message.includes('401') || error.message.includes('Invalid API key')) {
-          this.showErrorMessage(`${providerName} API key is invalid. Update in settings.`);
+
+        if (error.message.includes('401') || error.message.includes('Invalid API key') || error.message.includes('authentication_error')) {
+          this.showErrorMessage(`${providerName} API key is invalid or expired. Please update it in settings.`);
           return;
         }
 
-        if (error.message.includes('429')) {
-          this.showErrorMessage('Rate limit reached. Try again later.');
+        if (error.message.includes('429') || error.message.includes('rate_limit')) {
+          // Extract retry-after if available
+          const retryMatch = error.message.match(/retry.?after.*?(\d+)/i);
+          const retrySeconds = retryMatch ? Math.ceil(parseInt(retryMatch[1]) / 60) : null;
+          const retryMsg = retrySeconds ? ` Try again in ~${retrySeconds} minutes.` : ' Please wait a moment and try again.';
+          this.showErrorMessage(`Rate limit reached.${retryMsg}`);
           return;
         }
+
+        if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
+          this.showErrorMessage(`${providerName} is temporarily unavailable. Please try again in a moment.`);
+          return;
+        }
+
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          this.showErrorMessage('Network error. Check your connection and try again.');
+          return;
+        }
+
+        // Show the actual error message for debugging
+        this.showErrorMessage(`Error: ${error.message.slice(0, 150)}${error.message.length > 150 ? '...' : ''}`);
+        return;
       }
-      
+
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Error processing request.',
+        content: 'An unexpected error occurred. Please try again.',
         createdAt: new Date(),
       };
       this.messages.push(errorMessage);
@@ -722,6 +975,60 @@ export class ChatSidebar extends Component {
     }
     
     this.isLoading = false;
+
+    // Process queued messages if any
+    this.processQueue();
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.messageQueue.length > 0 && !this.isLoading) {
+      const nextMessage = this.messageQueue.shift();
+      this.updateQueueIndicator();
+      if (nextMessage) {
+        await this.sendMessage(nextMessage);
+      }
+    }
+  }
+
+  private updateQueueIndicator(): void {
+    // Find or create queue indicator near the input
+    const inputArea = this.container.querySelector('.chat-input-area');
+    if (!inputArea) return;
+
+    // Remove existing indicator
+    const existing = inputArea.querySelector('.queue-indicator');
+    if (existing) existing.remove();
+
+    if (this.messageQueue.length === 0) return;
+
+    // Create queue indicator
+    const indicator = createElement('div', {
+      className: 'queue-indicator',
+    });
+    (indicator as HTMLElement).style.cssText = `
+      position: absolute;
+      top: -28px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 11px;
+      color: rgba(99, 102, 241, 0.9);
+    `;
+    indicator.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+      </svg>
+      <span>${this.messageQueue.length} message${this.messageQueue.length > 1 ? 's' : ''} queued</span>
+    `;
+
+    inputArea.insertBefore(indicator, inputArea.firstChild);
   }
 
   private showErrorMessage(text: string): void {
@@ -801,45 +1108,101 @@ export class ChatSidebar extends Component {
   private createMessageElement(message: ChatMessage): HTMLElement {
     const isUser = message.role === 'user';
     const wrapper = createElement('div', {
-      className: `flex ${isUser ? 'justify-end' : 'justify-start'} stagger-item`
+      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`
     });
+    (wrapper as HTMLElement).style.cssText = `
+      animation: cc-slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    `;
 
     if (isUser) {
-      // User messages: editorial cut with gradient
+      // User messages: refined gradient with glow
       const bubble = createElement('div', {
-        className: 'max-w-[85%] p-4 rounded-2xl rounded-tr-sm text-sm leading-relaxed font-body bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-sm',
+        className: 'max-w-[80%] px-4 py-3 rounded-2xl markdown-content',
       });
+      (bubble as HTMLElement).style.cssText = `
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(139, 92, 246, 0.12) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 18px 18px 4px 18px;
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--cc-text-primary, #f8fafc);
+        box-shadow: 0 2px 12px rgba(99, 102, 241, 0.08);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        min-width: 0;
+        max-width: 100%;
+      `;
       bubble.textContent = message.content;
       wrapper.appendChild(bubble);
     } else {
-      // Assistant messages: refined layout with decorative accent
+      // Assistant messages: clean minimal with subtle avatar
       const messageContainer = createElement('div', {
-        className: 'max-w-[85%] flex gap-3 items-start'
+        className: 'max-w-[88%] flex gap-2.5 items-start min-w-0'
       });
+      (messageContainer as HTMLElement).style.cssText = `
+        min-width: 0;
+        max-width: 88%;
+        width: 100%;
+      `;
 
-      // Decorative accent bar (left side)
-      const accent = createElement('div', {
-        className: 'w-1 h-full bg-gradient-to-b from-primary/40 to-primary/10 rounded-full mt-1 shrink-0'
+      // Small avatar indicator
+      const avatar = createElement('div', {
+        className: 'flex-shrink-0',
       });
-      messageContainer.appendChild(accent);
+      (avatar as HTMLElement).style.cssText = `
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+      `;
+      avatar.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: rgba(99, 102, 241, 0.8);"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3a3 3 0 1 1-3 3 3 3 0 0 1 3-3zm0 14a8 8 0 0 1-6.5-3.3c0-2.2 4.3-3.4 6.5-3.4s6.5 1.2 6.5 3.4A8 8 0 0 1 12 19z"/></svg>`;
+      messageContainer.appendChild(avatar);
 
       // Message content
-      const contentWrapper = createElement('div', { className: 'flex-1' });
       const bubble = createElement('div', {
-        className: 'p-4 rounded-2xl rounded-bl-sm bg-surface-2 border border-border/50 text-sm leading-relaxed font-body markdown-content shadow-sm',
+        className: 'px-4 py-3 rounded-2xl markdown-content flex-1',
       });
+      (bubble as HTMLElement).style.cssText = `
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 4px 18px 18px 18px;
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--cc-text-secondary, #e2e8f0);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        min-width: 0;
+        max-width: 100%;
+      `;
 
-      // Check for tool usage indicators and render them
-      if (message.content.includes('[Using tool:')) {
+      // Check for tool usage indicators and render them (support both old and new format)
+      if (message.content.includes('[Using tool:') || message.content.includes('[TOOL_START:')) {
         this.renderMessageWithTools(bubble, message.content);
       } else {
         bubble.innerHTML = parseMarkdown(message.content);
+        // Ensure markdown content wraps
+        const markdownElements = bubble.querySelectorAll('*');
+        markdownElements.forEach((el: Element) => {
+          (el as HTMLElement).style.wordWrap = 'break-word';
+          (el as HTMLElement).style.overflowWrap = 'break-word';
+          (el as HTMLElement).style.wordBreak = 'break-word';
+          (el as HTMLElement).style.maxWidth = '100%';
+        });
         setupMarkdownInteractivity(bubble);
       }
 
-      contentWrapper.appendChild(bubble);
-      messageContainer.appendChild(contentWrapper);
-
+      messageContainer.appendChild(bubble);
       wrapper.appendChild(messageContainer);
     }
 
@@ -847,96 +1210,399 @@ export class ChatSidebar extends Component {
   }
 
   private renderMessageWithTools(bubble: HTMLElement, content: string): void {
-    // Split content by tool usage indicators
-    const parts = content.split(/(\[Using tool: [^\]]+\])/g);
+    // Parse tool data from content
+    const toolData: Map<string, { name: string; input?: string; result?: string }> = new Map();
 
-    for (const part of parts) {
-      if (part.startsWith('[Using tool:')) {
-        // Extract tool name
-        const toolName = part.match(/\[Using tool: ([^\]]+)\]/)?.[1];
-        if (toolName) {
-          const toolIndicator = this.createToolIndicator(toolName);
-          bubble.appendChild(toolIndicator);
-        }
-      } else if (part.trim()) {
-        // Regular text content - parse as markdown
-        const textDiv = createElement('div', {
-          className: 'markdown-content',
-        });
-        textDiv.innerHTML = parseMarkdown(part);
-        setupMarkdownInteractivity(textDiv);
-        bubble.appendChild(textDiv);
+    // Extract TOOL_START markers: [TOOL_START:toolName:index]
+    const startMatches = content.matchAll(/\[TOOL_START:([^:]+):(\d+)\]/g);
+    for (const match of startMatches) {
+      const [, toolName, index] = match;
+      toolData.set(index, { name: toolName });
+    }
+
+    // Extract TOOL_INPUT markers: [TOOL_INPUT:index:jsonData]
+    const inputMatches = content.matchAll(/\[TOOL_INPUT:(\d+):([^\]]*)\]/g);
+    for (const match of inputMatches) {
+      const [, index, input] = match;
+      const existing = toolData.get(index);
+      if (existing) {
+        existing.input = input;
       }
+    }
+
+    // Extract TOOL_RESULT markers: [TOOL_RESULT:toolName:summary]
+    const resultMatches = content.matchAll(/\[TOOL_RESULT:([^:]+):([^\]]*)\]/g);
+    for (const match of resultMatches) {
+      const [, toolName, result] = match;
+      // Find matching tool by name
+      for (const [, data] of toolData) {
+        if (data.name === toolName && !data.result) {
+          data.result = result;
+          break;
+        }
+      }
+    }
+
+    // Remove all tool markers from content for text rendering
+    const cleanContent = content
+      .replace(/\[TOOL_START:[^\]]+\]/g, '')
+      .replace(/\[TOOL_INPUT:[^\]]*\]/g, '')
+      .replace(/\[TOOL_RESULT:[^\]]*\]/g, '')
+      .replace(/\[Using tool: [^\]]+\]/g, '');
+
+    // Render tool indicators first if we have any
+    if (toolData.size > 0) {
+      for (const [, data] of toolData) {
+        const toolIndicator = this.createToolIndicator(data.name, data.input, data.result);
+        bubble.appendChild(toolIndicator);
+      }
+    } else {
+      // Fallback: parse old format [Using tool: name]
+      const oldParts = content.split(/(\[Using tool: [^\]]+\])/g);
+      for (const part of oldParts) {
+        if (part.startsWith('[Using tool:')) {
+          const toolName = part.match(/\[Using tool: ([^\]]+)\]/)?.[1];
+          if (toolName) {
+            const toolIndicator = this.createToolIndicator(toolName);
+            bubble.appendChild(toolIndicator);
+          }
+        }
+      }
+    }
+
+    // Render remaining text content
+    const textContent = cleanContent.trim();
+    if (textContent) {
+      const textDiv = createElement('div', {
+        className: 'markdown-content',
+      });
+      (textDiv as HTMLElement).style.cssText = `
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        min-width: 0;
+        max-width: 100%;
+      `;
+      textDiv.innerHTML = parseMarkdown(textContent);
+      // Ensure all markdown elements wrap properly
+      const allElements = textDiv.querySelectorAll('*');
+      allElements.forEach((el: Element) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.wordWrap = 'break-word';
+        htmlEl.style.overflowWrap = 'break-word';
+        htmlEl.style.wordBreak = 'break-word';
+        htmlEl.style.maxWidth = '100%';
+        // Code blocks should scroll horizontally if needed, but wrap text
+        if (el.tagName === 'PRE' || el.tagName === 'CODE') {
+          htmlEl.style.whiteSpace = 'pre-wrap';
+          htmlEl.style.overflowX = 'auto';
+        }
+      });
+      setupMarkdownInteractivity(textDiv);
+      bubble.appendChild(textDiv);
     }
   }
 
-  private createToolIndicator(toolName: string): HTMLElement {
-    const indicator = createElement('div', {
-      className: 'flex items-center gap-2 px-3 py-2 my-2 bg-primary/5 border border-primary/20 rounded-lg text-xs',
+  private createToolIndicator(toolName: string, toolInput?: string, toolResult?: string): HTMLElement {
+    const wrapper = createElement('div', {
+      className: 'my-2',
     });
+    (wrapper as HTMLElement).style.cssText = `
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      min-width: 0;
+      max-width: 100%;
+    `;
 
-    // Icon and label based on tool name
-    let icon = '🔧';
+    const indicator = createElement('div', {
+      className: 'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all',
+    });
+    (indicator as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      animation: cc-fadeIn 0.3s ease-out;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      min-width: 0;
+      max-width: 100%;
+    `;
+
+    // Icon, label, and color based on tool name
+    let icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
     let label = toolName;
-    let badgeColor = 'bg-blue-500/10 text-blue-400';
+    let iconColor = 'rgba(99, 102, 241, 0.9)';
 
     if (toolName === 'searchItems') {
-      icon = '🔍';
+      icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`;
       label = 'Searching data';
-      badgeColor = 'bg-purple-500/10 text-purple-400';
+      iconColor = 'rgba(59, 130, 246, 0.9)';
+    } else if (toolName === 'analyzeAllItems') {
+      icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>`;
+      label = 'Analyzing all data';
+      iconColor = 'rgba(16, 185, 129, 0.9)';
+    } else if (toolName === 'querySQLite') {
+      icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>`;
+      label = 'Querying database';
+      iconColor = 'rgba(245, 158, 11, 0.9)';
     } else if (toolName.startsWith('obsidian_')) {
-      icon = '📝';
+      icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+      iconColor = 'rgba(168, 85, 247, 0.9)';
       if (toolName === 'obsidian_list_notes') label = 'Listing notes';
       else if (toolName === 'obsidian_read_note') label = 'Reading note';
       else if (toolName === 'obsidian_create_note') label = 'Creating note';
       else if (toolName === 'obsidian_update_note') label = 'Updating note';
       else if (toolName === 'obsidian_search') label = 'Searching notes';
       else label = 'Obsidian';
-      badgeColor = 'bg-green-500/10 text-green-400';
     }
 
-    const iconSpan = createElement('span', {
-      textContent: icon,
+    // Icon container
+    const iconContainer = createElement('div', {
+      className: 'flex items-center justify-center flex-shrink-0',
     });
-    indicator.appendChild(iconSpan);
+    (iconContainer as HTMLElement).style.cssText = `
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: ${iconColor.replace('0.9', '0.15')};
+      color: ${iconColor};
+    `;
+    iconContainer.innerHTML = icon;
+    indicator.appendChild(iconContainer);
 
+    // Label with result summary if available
+    const displayLabel = toolResult ? `${label} · ${toolResult}` : label;
     const labelSpan = createElement('span', {
-      className: 'flex-1 font-medium',
-      textContent: label,
+      textContent: displayLabel,
     });
+    (labelSpan as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cc-text-secondary, #cbd5e1);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    `;
     indicator.appendChild(labelSpan);
 
-    const badge = createElement('span', {
-      className: `px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`,
-      textContent: 'Tool',
+    // Expand/collapse chevron
+    const chevron = createElement('div', {
+      className: 'flex-shrink-0 transition-transform duration-200',
     });
-    indicator.appendChild(badge);
+    (chevron as HTMLElement).style.cssText = `
+      color: var(--cc-text-muted, #475569);
+    `;
+    chevron.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`;
+    indicator.appendChild(chevron);
 
-    return indicator;
+    wrapper.appendChild(indicator);
+
+    // Expandable details section (hidden by default)
+    const details = createElement('div', {
+      className: 'overflow-hidden transition-all duration-200',
+    });
+    (details as HTMLElement).style.cssText = `
+      max-height: 0;
+      opacity: 0;
+    `;
+
+    const detailsInner = createElement('div', {
+      className: 'px-3 py-2 mt-1 rounded-lg space-y-2',
+    });
+    (detailsInner as HTMLElement).style.cssText = `
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    `;
+
+    // Tool name
+    const toolLabel = createElement('div', {});
+    (toolLabel as HTMLElement).style.cssText = `
+      font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
+      font-size: 10px;
+      color: var(--cc-text-muted, #475569);
+    `;
+    toolLabel.textContent = `Tool: ${toolName}`;
+    detailsInner.appendChild(toolLabel);
+
+    // Input section
+    if (toolInput) {
+      const inputSection = createElement('div', {});
+      (inputSection as HTMLElement).style.cssText = `margin-top: 6px;`;
+
+      const inputLabel = createElement('div', {
+        textContent: 'Input:',
+      });
+      (inputLabel as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--cc-text-muted, #475569);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+      `;
+      inputSection.appendChild(inputLabel);
+
+      // Parse and format JSON input
+      let formattedInput = toolInput;
+      try {
+        const parsed = JSON.parse(toolInput);
+        formattedInput = Object.entries(parsed)
+          .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+          .join('\n');
+      } catch {
+        // Keep as-is if not valid JSON
+      }
+
+      const inputValue = createElement('pre', {
+        textContent: formattedInput,
+      });
+      (inputValue as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
+        font-size: 10px;
+        color: var(--cc-text-secondary, #cbd5e1);
+        background: rgba(0, 0, 0, 0.3);
+        padding: 6px 8px;
+        border-radius: 6px;
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 80px;
+        overflow-y: auto;
+      `;
+      inputSection.appendChild(inputValue);
+      detailsInner.appendChild(inputSection);
+    }
+
+    // Result section
+    if (toolResult) {
+      const resultSection = createElement('div', {});
+      (resultSection as HTMLElement).style.cssText = `margin-top: 6px;`;
+
+      const resultLabel = createElement('div', {
+        textContent: 'Result:',
+      });
+      (resultLabel as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--cc-text-muted, #475569);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+      `;
+      resultSection.appendChild(resultLabel);
+
+      const resultValue = createElement('div', {
+        textContent: toolResult,
+      });
+      (resultValue as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 10px;
+        color: ${iconColor};
+        font-weight: 500;
+      `;
+      resultSection.appendChild(resultValue);
+      detailsInner.appendChild(resultSection);
+    }
+
+    // Status (shown if no result yet)
+    if (!toolResult) {
+      const statusLabel = createElement('div', {});
+      (statusLabel as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 10px;
+        color: ${iconColor};
+      `;
+      statusLabel.textContent = '✓ Completed';
+      detailsInner.appendChild(statusLabel);
+    }
+
+    details.appendChild(detailsInner);
+    wrapper.appendChild(details);
+
+    // Calculate dynamic height based on content
+    const hasInput = !!toolInput;
+    const expandedHeight = hasInput ? '200px' : '80px';
+
+    // Toggle expand/collapse
+    let isExpanded = false;
+    indicator.addEventListener('click', () => {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        (details as HTMLElement).style.maxHeight = expandedHeight;
+        (details as HTMLElement).style.opacity = '1';
+        (chevron as HTMLElement).style.transform = 'rotate(180deg)';
+        (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.06)';
+      } else {
+        (details as HTMLElement).style.maxHeight = '0';
+        (details as HTMLElement).style.opacity = '0';
+        (chevron as HTMLElement).style.transform = 'rotate(0)';
+        (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
+      }
+    });
+
+    // Hover effect
+    indicator.addEventListener('mouseenter', () => {
+      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.06)';
+    });
+    indicator.addEventListener('mouseleave', () => {
+      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.04)';
+    });
+
+    return wrapper;
   }
   
   private renderLoadingMessage(): void {
     if (!this.messagesContainer) return;
-    const wrapper = createElement('div', { className: 'flex justify-start loading-message' });
+    const wrapper = createElement('div', { className: 'flex justify-start loading-message mb-1' });
+    (wrapper as HTMLElement).style.cssText = `
+      animation: cc-slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    `;
 
-    const messageContainer = createElement('div', { className: 'max-w-[85%] flex gap-3 items-start' });
+    const messageContainer = createElement('div', { className: 'max-w-[88%] flex gap-2.5 items-start' });
 
-    // Decorative accent bar (matches assistant messages)
-    const accent = createElement('div', {
-      className: 'w-1 h-12 bg-gradient-to-b from-primary/40 to-primary/10 rounded-full shrink-0'
+    // Small avatar indicator (same as createMessageElement)
+    const avatar = createElement('div', {
+      className: 'flex-shrink-0',
     });
-    messageContainer.appendChild(accent);
+    (avatar as HTMLElement).style.cssText = `
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    `;
+    avatar.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: rgba(99, 102, 241, 0.8);"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3a3 3 0 1 1-3 3 3 3 0 0 1 3-3zm0 14a8 8 0 0 1-6.5-3.3c0-2.2 4.3-3.4 6.5-3.4s6.5 1.2 6.5 3.4A8 8 0 0 1 12 19z"/></svg>`;
+    messageContainer.appendChild(avatar);
 
-    // Loading bubble with shimmer effect
+    // Loading bubble with Apple-style typing indicator
     const bubble = createElement('div', {
-      className: 'flex-1 p-4 rounded-2xl rounded-bl-sm bg-surface-2 border border-border/50 relative overflow-hidden'
+      className: 'px-4 py-3 rounded-2xl relative overflow-hidden flex-1',
     });
+    (bubble as HTMLElement).style.cssText = `
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px 18px 18px 18px;
+    `;
 
+    // Apple-style typing dots
     bubble.innerHTML = `
-      <div class="flex items-center gap-2">
-        <div class="w-16 h-2 shimmer-loading rounded-full"></div>
-        <div class="w-12 h-2 shimmer-loading rounded-full"></div>
-        <div class="w-20 h-2 shimmer-loading rounded-full"></div>
+      <div style="display: flex; align-items: center; gap: 5px; padding: 2px 0;">
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(99, 102, 241, 0.6); animation: cc-typingDot 1.4s ease-in-out infinite;"></div>
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(99, 102, 241, 0.6); animation: cc-typingDot 1.4s ease-in-out 0.2s infinite;"></div>
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(99, 102, 241, 0.6); animation: cc-typingDot 1.4s ease-in-out 0.4s infinite;"></div>
       </div>
     `;
 
@@ -952,9 +1618,32 @@ export class ChatSidebar extends Component {
     if (loadingMessage && content.trim()) {
       const bubble = loadingMessage.querySelector('.rounded-2xl');
       if (bubble) {
-        bubble.className = 'flex-1 p-4 rounded-2xl rounded-bl-sm bg-surface-2 border border-border/50 text-sm leading-relaxed font-body markdown-content shadow-sm';
-        bubble.innerHTML = parseMarkdown(content);
-        setupMarkdownInteractivity(bubble as HTMLElement);
+        (bubble as HTMLElement).style.cssText = `
+          background: rgba(255, 255, 255, 0.03);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 4px 18px 18px 18px;
+          font-family: var(--cc-font-body, 'Archivo', sans-serif);
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--cc-text-secondary, #e2e8f0);
+          padding: 12px 16px;
+        `;
+        bubble.className = 'px-4 py-3 rounded-2xl markdown-content flex-1';
+
+        // Clear and render with tool indicators if present
+        while (bubble.firstChild) {
+          bubble.removeChild(bubble.firstChild);
+        }
+
+        if (content.includes('[Using tool:')) {
+          this.renderMessageWithTools(bubble as HTMLElement, content);
+        } else {
+          bubble.innerHTML = parseMarkdown(content);
+          setupMarkdownInteractivity(bubble as HTMLElement);
+        }
+
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
       }
     }
@@ -962,20 +1651,33 @@ export class ChatSidebar extends Component {
 
   private createHistoryDropdown(): HTMLElement {
     const dropdown = createElement('div', {
-      className: 'border-t border-border/50 bg-background max-h-80 overflow-y-auto',
+      className: 'max-h-80 overflow-y-auto',
     });
+    (dropdown as HTMLElement).style.cssText = `
+      background: rgba(10, 10, 15, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    `;
 
     // New chat button
     const newChatBtn = createElement('button', {
-      className: 'w-full px-5 py-2.5 flex items-center gap-2 hover:bg-secondary/50 transition-colors border-b border-border/50 text-left',
+      className: 'w-full px-4 py-2.5 flex items-center gap-2 transition-colors text-left',
+    });
+    (newChatBtn as HTMLElement).style.cssText = `
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    `;
+    newChatBtn.addEventListener('mouseenter', () => {
+      (newChatBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.03)';
+    });
+    newChatBtn.addEventListener('mouseleave', () => {
+      (newChatBtn as HTMLElement).style.background = 'transparent';
     });
     newChatBtn.innerHTML = `
-      <div class="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-primary">
+      <div style="width: 20px; height: 20px; border-radius: 6px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--cc-primary, #6366f1);">
           <path d="M5 12h14"/><path d="M12 5v14"/>
         </svg>
       </div>
-      <span class="text-sm font-medium">New Chat</span>
+      <span style="font-family: var(--cc-font-body, 'Archivo', sans-serif); font-size: 13px; font-weight: 500; color: var(--cc-text-primary, #f8fafc);">New Chat</span>
     `;
     this.addListener(newChatBtn, 'click', () => {
       this.sessionId = null;
@@ -988,43 +1690,100 @@ export class ChatSidebar extends Component {
     // Recent sessions
     if (this.sessions.length > 0) {
       const recentLabel = createElement('div', {
-        className: 'px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider',
-        textContent: 'Recent',
+        className: 'px-4 py-2',
       });
+      (recentLabel as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--cc-text-muted, #475569);
+      `;
+      recentLabel.textContent = 'Recent';
       dropdown.appendChild(recentLabel);
 
       for (const session of this.sessions.slice(0, 10)) {
-        const sessionBtn = createElement('button', {
-          className: 'w-full px-5 py-2.5 hover:bg-secondary/50 transition-colors text-left group',
+        const sessionRow = createElement('div', {
+          className: 'flex items-center gap-2 px-4 py-2.5 transition-colors group',
+        });
+        sessionRow.addEventListener('mouseenter', () => {
+          (sessionRow as HTMLElement).style.background = 'rgba(255, 255, 255, 0.03)';
+          const deleteBtn = sessionRow.querySelector('.delete-btn') as HTMLElement;
+          if (deleteBtn) deleteBtn.style.opacity = '1';
+        });
+        sessionRow.addEventListener('mouseleave', () => {
+          (sessionRow as HTMLElement).style.background = 'transparent';
+          const deleteBtn = sessionRow.querySelector('.delete-btn') as HTMLElement;
+          if (deleteBtn) deleteBtn.style.opacity = '0';
         });
 
         const isCurrentSession = this.sessionId === session.id;
 
-        sessionBtn.innerHTML = `
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 flex-1 min-w-0">
-              <div class="w-5 h-5 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-foreground">
-                  <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
-                </svg>
-              </div>
-              <span class="text-xs truncate ${isCurrentSession ? 'font-medium' : ''}">${escapeHtml(session.title || 'Untitled chat')}</span>
-            </div>
-            <span class="text-[10px] text-muted-foreground">${this.formatDate(session.updatedAt)}</span>
-          </div>
+        // Chat button (clickable area for loading session)
+        const chatBtn = createElement('button', {
+          className: 'flex items-center gap-2 flex-1 min-w-0 text-left',
+        });
+        chatBtn.innerHTML = `
+          <span style="font-family: var(--cc-font-body, 'Archivo', sans-serif); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${isCurrentSession ? 'var(--cc-primary, #6366f1)' : 'var(--cc-text-secondary, #cbd5e1)'}; font-weight: ${isCurrentSession ? '600' : '400'};">${escapeHtml(session.title || 'Untitled chat')}</span>
         `;
-
-        this.addListener(sessionBtn, 'click', async () => {
+        this.addListener(chatBtn, 'click', async () => {
           await this.loadSession(session.id);
         });
+        sessionRow.appendChild(chatBtn);
 
-        dropdown.appendChild(sessionBtn);
+        // Time label
+        const timeLabel = createElement('span', {
+          textContent: this.formatDate(session.updatedAt),
+        });
+        (timeLabel as HTMLElement).style.cssText = `
+          font-family: var(--cc-font-body, 'Archivo', sans-serif);
+          font-size: 10px;
+          color: var(--cc-text-muted, #475569);
+          flex-shrink: 0;
+        `;
+        sessionRow.appendChild(timeLabel);
+
+        // Delete button
+        const deleteBtn = createElement('button', {
+          className: 'delete-btn p-1 rounded transition-all',
+          innerHTML: `
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+            </svg>
+          `,
+        });
+        (deleteBtn as HTMLElement).style.cssText = `
+          opacity: 0;
+          color: var(--cc-text-muted, #475569);
+          flex-shrink: 0;
+        `;
+        deleteBtn.addEventListener('mouseenter', () => {
+          (deleteBtn as HTMLElement).style.color = '#ef4444';
+          (deleteBtn as HTMLElement).style.background = 'rgba(239, 68, 68, 0.1)';
+        });
+        deleteBtn.addEventListener('mouseleave', () => {
+          (deleteBtn as HTMLElement).style.color = 'var(--cc-text-muted, #475569)';
+          (deleteBtn as HTMLElement).style.background = 'transparent';
+        });
+        this.addListener(deleteBtn, 'click', async (e: Event) => {
+          e.stopPropagation();
+          await this.deleteSession(session.id);
+        });
+        sessionRow.appendChild(deleteBtn);
+
+        dropdown.appendChild(sessionRow);
       }
     } else {
       const emptyState = createElement('div', {
-        className: 'px-5 py-8 text-center text-xs text-muted-foreground',
-        textContent: 'No chat history yet',
+        className: 'px-4 py-8 text-center',
       });
+      (emptyState as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 12px;
+        color: var(--cc-text-muted, #475569);
+      `;
+      emptyState.textContent = 'No chat history yet';
       dropdown.appendChild(emptyState);
     }
 
@@ -1046,6 +1805,25 @@ export class ChatSidebar extends Component {
       this.renderMessages();
     } catch (error) {
       console.error('[ChatSidebar] Failed to load session:', error);
+    }
+  }
+
+  private async deleteSession(sessionId: string): Promise<void> {
+    try {
+      await api.chat.deleteSession.mutate({ sessionId });
+
+      // Remove from local state
+      this.sessions = this.sessions.filter(s => s.id !== sessionId);
+
+      // If we deleted the current session, clear it
+      if (this.sessionId === sessionId) {
+        this.sessionId = null;
+        this.messages = [];
+      }
+
+      this.render();
+    } catch (error) {
+      console.error('[ChatSidebar] Failed to delete session:', error);
     }
   }
 

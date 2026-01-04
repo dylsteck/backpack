@@ -4,6 +4,7 @@ import {
 	OBSIDIAN_READ_NOTE_CHANNEL,
 	OBSIDIAN_CREATE_NOTE_CHANNEL,
 	OBSIDIAN_UPDATE_NOTE_CHANNEL,
+	OBSIDIAN_DELETE_NOTE_CHANNEL,
 	OBSIDIAN_SEARCH_NOTES_CHANNEL,
 } from "./obsidian-channels";
 
@@ -34,11 +35,13 @@ export function exposeObsidianContext() {
 		selectVault: () => ipcRenderer.invoke(OBSIDIAN_SELECT_VAULT_CHANNEL),
 		readVault: (vaultPath: string) => ipcRenderer.invoke(OBSIDIAN_READ_VAULT_CHANNEL, vaultPath),
 		readNote: (notePath: string) => ipcRenderer.invoke(OBSIDIAN_READ_NOTE_CHANNEL, notePath),
-		createNote: (vaultPath: string, title: string, content: string, frontmatter?: Record<string, unknown>) => 
+		createNote: (vaultPath: string, title: string, content: string, frontmatter?: Record<string, unknown>) =>
 			ipcRenderer.invoke(OBSIDIAN_CREATE_NOTE_CHANNEL, vaultPath, title, content, frontmatter),
-		updateNote: (notePath: string, content: string, mode: 'replace' | 'append' | 'prepend') => 
+		updateNote: (notePath: string, content: string, mode: 'replace' | 'append' | 'prepend') =>
 			ipcRenderer.invoke(OBSIDIAN_UPDATE_NOTE_CHANNEL, notePath, content, mode),
-		searchNotes: (vaultPath: string, query: string) => 
+		deleteNote: (notePath: string) =>
+			ipcRenderer.invoke(OBSIDIAN_DELETE_NOTE_CHANNEL, notePath),
+		searchNotes: (vaultPath: string, query: string) =>
 			ipcRenderer.invoke(OBSIDIAN_SEARCH_NOTES_CHANNEL, vaultPath, query),
 	});
 }

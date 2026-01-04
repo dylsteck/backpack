@@ -46,13 +46,16 @@ export class DetailModal extends Component {
     
     // Modal container with glass morphism and spring entrance
     const modal = createElement('div', {
-      className: 'glass-panel bg-card border border-border/50 w-full max-w-5xl h-full max-h-[85vh] flex flex-col md:flex-row elevation-3 rounded-3xl modal-enter relative',
+      className: 'cc-glass w-full max-w-6xl h-full max-h-[90vh] flex flex-col md:flex-row rounded-[2.5rem] modal-enter relative overflow-hidden',
     });
+    (modal as HTMLElement).style.cssText = `
+      animation: cc-slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    `;
     
-    // Close button
+    // Close button - floating top right
     const closeBtn = createElement('button', {
-      className: 'absolute top-4 right-4 p-2.5 hover:bg-secondary rounded-xl transition-all z-[200] text-muted-foreground hover:text-foreground',
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+      className: 'absolute top-6 right-6 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all z-[200] text-cc-text-secondary hover:text-white group',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
     this.addListener(closeBtn, 'click', (e) => {
@@ -62,54 +65,65 @@ export class DetailModal extends Component {
     });
     modal.appendChild(closeBtn);
 
-    // LEFT: Content Area (stagger delay: 0ms)
+    // LEFT: Content Area (Main editorial view)
     const contentArea = createElement('div', {
-      className: 'flex-1 h-full overflow-y-auto bg-gradient-soft p-8 md:p-12',
-      style: 'animation: blur-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0s both;',
+      className: 'flex-1 min-h-0 overflow-y-auto cc-scrollbar bg-linear-to-br from-white/[0.02] to-transparent p-8 md:p-16',
     });
+    (contentArea as HTMLElement).style.cssText = `
+      max-height: 90vh;
+      scrollbar-gutter: stable;
+    `;
 
     const content = this.renderMainContent();
     contentArea.appendChild(content);
     modal.appendChild(contentArea);
 
-    // RIGHT: Sidebar (stagger delay: 80ms)
+    // RIGHT: Sidebar (Metadata & Actions)
     const sidebarPanel = createElement('aside', {
-      className: 'w-full md:w-[360px] h-full border-l border-border/50 bg-card flex flex-col relative',
-      style: 'animation: slide-in-right 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.08s both;',
+      className: 'w-full md:w-[380px] h-full border-l border-white/5 bg-cc-void/40 backdrop-blur-3xl flex flex-col shrink-0',
     });
     
     // Sidebar Header
     const sidebarHeader = createElement('div', {
-      className: 'p-6 border-b border-border/50 space-y-4 pr-14', 
+      className: 'p-8 space-y-6 pt-12 pr-16', 
     });
     
-    // Type badge
+    // Type badge with gradient
     const typeBadge = createElement('div', {
-      className: 'inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium',
+      className: 'cc-badge cc-badge-success',
       textContent: this.getTypeLabel(),
     });
+    (typeBadge as HTMLElement).style.cssText = `
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: var(--cc-primary);
+    `;
     sidebarHeader.appendChild(typeBadge);
     
-    const title = createElement('h2', {
-      className: 'text-xl font-semibold leading-tight',
+    const metaTitle = createElement('h2', {
+      className: 'text-2xl font-bold leading-tight tracking-tight text-cc-text-primary',
       textContent: this.getItemTitle(),
     });
-    sidebarHeader.appendChild(title);
+    (metaTitle as HTMLElement).style.fontFamily = 'var(--cc-font-display)';
+    sidebarHeader.appendChild(metaTitle);
     
     // Actions Row
     const actionRow = createElement('div', {
-      className: 'flex gap-2 pt-2 relative',
+      className: 'flex gap-3 pt-2 relative',
     });
     
     const connectBtn = createElement('button', {
-      className: 'flex-1 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-90 transition-opacity',
-      textContent: 'Connect',
+      className: 'cc-button flex-1 h-12 rounded-2xl flex items-center justify-center gap-2',
+      innerHTML: `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span>Connect App</span>
+      `,
     });
     actionRow.appendChild(connectBtn);
     
     const actionsBtn = createElement('button', {
-      className: 'px-4 py-2.5 bg-secondary text-sm font-medium rounded-xl hover:bg-secondary/80 transition-all flex items-center gap-2 cursor-pointer relative z-[20]',
-      innerHTML: `<span>Actions</span> <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`,
+      className: 'cc-button cc-button-secondary w-12 h-12 p-0 flex items-center justify-center rounded-2xl relative z-[20]',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
       attributes: { 'id': this.triggerId },
     });
     this.addListener(actionsBtn, 'click', (e) => {
@@ -119,15 +133,16 @@ export class DetailModal extends Component {
     });
     actionRow.appendChild(actionsBtn);
     
-    // Actions Dropdown
+    // Actions Dropdown - Apple-style glass dropdown
     const actionsDropdown = createElement('div', {
-      className: 'absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-[100] hidden flex-col overflow-hidden',
+      className: 'cc-glass absolute right-0 top-full mt-3 w-56 p-2 rounded-2xl shadow-2xl z-[100] hidden flex-col overflow-hidden',
       attributes: { 'id': this.dropdownId },
     });
+    (actionsDropdown as HTMLElement).style.background = 'rgba(26, 26, 38, 0.95)';
     
     const deleteBtn = createElement('button', {
-      className: 'w-full px-4 py-3 text-left text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-3 border-none bg-transparent cursor-pointer',
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Delete Item`,
+      className: 'w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-all rounded-xl flex items-center gap-3 border-none bg-transparent cursor-pointer font-medium',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Delete Note`,
     });
     this.addListener(deleteBtn, 'click', (e) => {
       e.stopPropagation();
@@ -141,44 +156,44 @@ export class DetailModal extends Component {
     
     // Metadata Area
     const metadata = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-6 space-y-6',
+      className: 'flex-1 overflow-y-auto cc-scrollbar p-8 space-y-6',
     });
     
-    metadata.appendChild(this.createMetaSection('Date', formatFullDate(this.item.timestamp)));
-    metadata.appendChild(this.createMetaSection('Time', formatTime(this.item.timestamp)));
-    metadata.appendChild(this.createMetaSection('Source', this.item.source.charAt(0).toUpperCase() + this.item.source.slice(1)));
+    metadata.appendChild(this.createMetaSection('Date Published', formatFullDate(this.item.timestamp)));
+    metadata.appendChild(this.createMetaSection('Time Indexed', formatTime(this.item.timestamp)));
+    metadata.appendChild(this.createMetaSection('Content Source', this.item.source.charAt(0).toUpperCase() + this.item.source.slice(1)));
     
     if (this.item.type === 'transaction') {
       const tx = this.item.data as TellerTransaction;
-      metadata.appendChild(this.createMetaSection('Amount', `$${Math.abs(parseFloat(tx.amount)).toFixed(2)}`));
-      metadata.appendChild(this.createMetaSection('Category', tx.details.category || 'N/A'));
+      metadata.appendChild(this.createMetaSection('Transaction Amount', `$${Math.abs(parseFloat(tx.amount)).toFixed(2)}`));
+      metadata.appendChild(this.createMetaSection('Financial Category', tx.details.category || 'N/A'));
     } else if (this.item.type === 'cast') {
       const cast = this.item.data as FarcasterCast;
-      metadata.appendChild(this.createMetaSection('Author', `@${cast.author.username}`));
+      metadata.appendChild(this.createMetaSection('Author Handle', `@${cast.author.username}`));
     }
     
     sidebarPanel.appendChild(metadata);
 
-    // Connections section
+    // Connections section - minimal integrated design
     const connectionsSection = createElement('div', {
-      className: 'mt-auto border-t border-border/50 p-6 bg-card',
+      className: 'mt-auto border-t border-white/5 p-8 bg-linear-to-b from-transparent to-cc-void/20',
     });
     
     const connectionsHeader = createElement('div', {
-      className: 'text-sm font-medium text-muted-foreground mb-4',
+      className: 'text-xs font-bold text-cc-text-muted uppercase tracking-widest mb-6',
       textContent: 'Connections (0)',
     });
     connectionsSection.appendChild(connectionsHeader);
     
     connectionsSection.innerHTML += `
-      <div class="flex flex-col items-center justify-center py-8 text-center space-y-3">
-        <div class="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+      <div class="flex flex-col items-center justify-center py-6 text-center space-y-4">
+        <div class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-cc-text-muted">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
           </svg>
         </div>
-        <span class="text-sm text-muted-foreground">No connections yet</span>
+        <span class="text-xs font-medium text-cc-text-muted">Explore knowledge graph connections</span>
       </div>
     `;
     
@@ -249,10 +264,21 @@ export class DetailModal extends Component {
     if (!confirmed) return;
 
     try {
-      await api.timeline.deleteItem.mutate({ id: this.item.id });
-      
+      // Handle Obsidian notes differently - use IPC
+      if (this.item.type === 'obsidian-note') {
+        const note = this.item.data as { path: string };
+        const result = await window.obsidianVault.deleteNote(note.path);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to delete note');
+        }
+        // Remove from local obsidian notes store
+        store.obsidianNotes.update(current => current.filter(n => n.path !== note.path));
+      } else {
+        await api.timeline.deleteItem.mutate({ id: this.item.id });
+      }
+
       store.timelineItems.update(current => current.filter(i => i.id !== this.item.id));
-      
+
       this.cleanup();
       this.onClose();
     } catch (error) {
@@ -263,87 +289,79 @@ export class DetailModal extends Component {
 
   private createMetaSection(label: string, value: string): HTMLElement {
     const section = createElement('div', {
-      className: 'p-4 rounded-xl bg-linear-to-br from-secondary/40 to-secondary/20 border border-border/30 space-y-2 transition-all hover:shadow-sm hover:border-border/50',
+      className: 'p-5 rounded-[1.25rem] bg-white/[0.03] border border-white/[0.05] space-y-2 transition-all hover:bg-white/[0.05] hover:border-white/[0.08] group',
     });
     section.innerHTML = `
-      <div style="font-family: var(--font-sans); font-weight: 600; font-size: 0.6875rem; letter-spacing: 0.08em;" class="text-muted-foreground/70 uppercase">${label}</div>
-      <div style="font-family: var(--font-sans); font-weight: 600; font-size: 0.9375rem;" class="text-foreground">${escapeHtml(value)}</div>
+      <div style="font-family: var(--cc-font-body); font-weight: 600; font-size: 0.625rem; letter-spacing: 0.12em;" class="text-cc-text-muted uppercase">${label}</div>
+      <div style="font-family: var(--cc-font-body); font-weight: 500; font-size: 0.9375rem;" class="text-cc-text-primary group-hover:text-white transition-colors">${escapeHtml(value)}</div>
     `;
     return section;
   }
 
   private getTypeLabel(): string {
     switch (this.item.type) {
-      case 'obsidian-note': return 'Obsidian Note';
-      case 'cast': return 'Post';
-      case 'transaction': return 'Transaction';
-      case 'browser-history': return 'Web Page';
-      default: return 'Item';
+      case 'obsidian-note': return 'Knowledge Note';
+      case 'cast': return 'Social Post';
+      case 'transaction': return 'Financal Record';
+      case 'browser-history': return 'Web Discovery';
+      default: return 'Cortex Item';
     }
   }
 
   private getItemTitle(): string {
     switch (this.item.type) {
       case 'obsidian-note': return (this.item.data as { title: string }).title;
-      case 'cast': return (this.item.data as FarcasterCast).author.display_name;
+      case 'cast': return `@${(this.item.data as FarcasterCast).author.username}`;
       case 'transaction': return (this.item.data as TellerTransaction).description;
-      case 'browser-history': return (this.item.data as BrowserHistoryEntry).title || 'Web Page';
-      default: return 'Timeline Item';
+      case 'browser-history': return (this.item.data as BrowserHistoryEntry).title || 'Untitled Web Page';
+      default: return 'Item Details';
     }
   }
 
   private renderMainContent(): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'w-full max-w-3xl mx-auto',
+      className: 'w-full max-w-4xl mx-auto min-h-0',
     });
 
     switch (this.item.type) {
       case 'obsidian-note': {
         const note = this.item.data as { title: string; body: string; path: string; tags?: string[] };
-        wrapper.className = 'w-full max-w-3xl';
+        
+        const article = createElement('article', { className: 'space-y-12 cc-animate-slideIn' });
 
-        // Magazine-style editorial layout
-        const article = createElement('article', { className: 'space-y-8 stagger-container' });
-
-        // Editorial header with large display typography
-        const header = createElement('header', { className: 'space-y-6 pb-8 border-b-2 border-primary/20 stagger-item' });
+        // Editorial header
+        const header = createElement('header', { className: 'space-y-8 pb-12 border-b border-white/[0.08]' });
         header.innerHTML = `
-          <div class="inline-flex items-center gap-3 px-4 py-2 bg-linear-to-r from-purple-500/15 via-purple-500/10 to-transparent rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-500">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <span class="font-body text-xs font-bold text-purple-500 uppercase tracking-[0.15em]">Obsidian Note</span>
+          <div class="space-y-4">
+            <h1 class="text-cc-text-primary leading-[1.05] tracking-tight" style="font-family: var(--cc-font-display); font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 700;">${escapeHtml(note.title)}</h1>
+            <div class="flex items-center gap-4 text-cc-text-muted font-mono text-[10px] tracking-wider uppercase bg-white/[0.03] px-4 py-2 rounded-full w-fit">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>${escapeHtml(note.path)}</span>
+            </div>
           </div>
-          <h1 class="font-display font-bold text-foreground leading-[1.1] tracking-tight" style="font-size: clamp(2rem, 5vw, 3.5rem);">${escapeHtml(note.title)}</h1>
-          <p class="font-mono text-xs text-muted-foreground/60 tracking-wide">${escapeHtml(note.path)}</p>
         `;
         article.appendChild(header);
 
-        // Magazine-style content with drop cap and multi-column layout
+        // Content
         const bodyContainer = createElement('div', {
-          className: 'markdown-content editorial-prose stagger-item',
+          className: 'markdown-content editorial-prose text-cc-text-secondary leading-relaxed cc-animate-fadeIn',
         });
+        (bodyContainer as HTMLElement).style.animationDelay = '100ms';
+        (bodyContainer as HTMLElement).style.fontFamily = 'var(--cc-font-body)';
+        (bodyContainer as HTMLElement).style.fontSize = '1.125rem';
         bodyContainer.innerHTML = parseMarkdown(note.body);
         setupMarkdownInteractivity(bodyContainer);
 
-        // Add drop cap to first paragraph
-        const firstParagraph = bodyContainer.querySelector('p');
-        if (firstParagraph && firstParagraph.textContent) {
-          firstParagraph.classList.add('drop-cap');
-        }
-
         article.appendChild(bodyContainer);
 
-        // Tags with refined styling
+        // Tags
         if (note.tags?.length) {
           const tagsContainer = createElement('div', {
-            className: 'flex flex-wrap gap-2.5 pt-8 border-t border-border/30 stagger-item'
+            className: 'flex flex-wrap gap-3 pt-12 cc-animate-fadeIn'
           });
+          (tagsContainer as HTMLElement).style.animationDelay = '200ms';
           tagsContainer.innerHTML = note.tags.map(t =>
-            `<span class="px-3.5 py-1.5 bg-linear-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/15 transition-colors">#${escapeHtml(t)}</span>`
+            `<span class="px-4 py-2 bg-white/[0.03] border border-white/[0.06] text-cc-primary text-xs font-semibold rounded-full hover:bg-white/[0.06] transition-all cursor-pointer">#${escapeHtml(t)}</span>`
           ).join('');
           article.appendChild(tagsContainer);
         }
@@ -354,67 +372,40 @@ export class DetailModal extends Component {
         
       case 'cast': {
         const cast = this.item.data as FarcasterCast;
-        wrapper.className = 'w-full max-w-3xl';
+        const article = createElement('article', { className: 'max-w-2xl mx-auto space-y-10' });
 
-        // Quote-style editorial layout with decorative elements
-        const article = createElement('article', { className: 'space-y-10 stagger-container relative' });
-
-        // Decorative quotation mark background
         article.innerHTML = `
-          <div class="absolute -top-4 -left-4 opacity-5 pointer-events-none select-none" style="font-size: 12rem; line-height: 1; font-family: var(--font-display); font-weight: 900; color: hsl(var(--primary));">"</div>
-
-          <header class="flex items-center gap-6 stagger-item">
-            <div class="relative">
-              <div class="absolute inset-0 bg-linear-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-xl"></div>
-              <img src="${cast.author.pfp_url}" class="relative w-20 h-20 rounded-full ring-4 ring-blue-500/30 shadow-xl" />
-            </div>
-            <div class="flex-1">
-              <div class="font-display font-bold text-foreground text-2xl leading-tight tracking-tight">${escapeHtml(cast.author.display_name)}</div>
-              <div class="font-body font-medium text-muted-foreground text-base mt-1">@${escapeHtml(cast.author.username)}</div>
-              <div class="inline-flex items-center gap-2 mt-2 px-3 py-1 bg-linear-to-r from-blue-500/15 via-blue-500/10 to-transparent rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-500">
-                  <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
-                </svg>
-                <span class="font-body text-xs font-bold text-blue-500 uppercase tracking-[0.12em]">Farcaster</span>
-              </div>
+          <header class="flex items-center gap-5">
+            <img src="${cast.author.pfp_url}" class="w-16 h-16 rounded-2xl shadow-2xl ring-2 ring-white/10" />
+            <div>
+              <div class="font-bold text-cc-text-primary text-xl tracking-tight" style="font-family: var(--cc-font-display)">${escapeHtml(cast.author.display_name)}</div>
+              <div class="text-cc-text-muted font-medium">@${escapeHtml(cast.author.username)}</div>
             </div>
           </header>
 
-          <blockquote class="relative pl-8 stagger-item">
-            <div class="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-blue-500/40 via-cyan-500/30 to-transparent rounded-full"></div>
-            <p class="font-body text-foreground text-xl md:text-2xl leading-relaxed whitespace-pre-wrap" style="font-weight: 400; letter-spacing: -0.01em;">${escapeHtml(cast.text)}</p>
-          </blockquote>
+          <div class="relative py-4">
+            <div class="absolute -left-8 top-0 text-white/5 font-display font-black text-9xl select-none">“</div>
+            <p class="text-cc-text-primary text-2xl leading-snug whitespace-pre-wrap relative z-10" style="font-family: var(--cc-font-body); font-weight: 450;">${escapeHtml(cast.text)}</p>
+          </div>
 
           ${cast.embeds?.length ? `
-            <div class="grid grid-cols-1 gap-5 stagger-item">
+            <div class="grid grid-cols-1 gap-6">
               ${cast.embeds.map(e => e.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ?
-                `<div class="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-border/50">
-                  <img src="${e.url}" class="w-full max-h-[500px] object-cover" />
-                </div>` : ''
+                `<img src="${e.url}" class="w-full rounded-[2rem] shadow-2xl border border-white/10" />` : ''
               ).join('')}
             </div>
           ` : ''}
 
-          <footer class="flex items-center gap-8 pt-6 border-t border-border/30 stagger-item">
-            <div class="flex items-center gap-3 group cursor-pointer transition-colors">
-              <div class="p-2.5 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500">
-                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                </svg>
-              </div>
-              <span class="font-mono text-lg font-bold text-foreground animated-counter">${cast.reactions?.likes_count || 0}</span>
-              <span class="font-body text-xs text-muted-foreground uppercase tracking-wide">Likes</span>
+          <div class="flex gap-8 pt-8 border-t border-white/[0.08]">
+            <div class="flex items-center gap-2 text-cc-text-secondary">
+              <span class="text-xl font-bold font-mono text-cc-primary">${cast.reactions?.likes_count || 0}</span>
+              <span class="text-xs font-bold uppercase tracking-widest text-cc-text-muted">Likes</span>
             </div>
-            <div class="flex items-center gap-3 group cursor-pointer transition-colors">
-              <div class="p-2.5 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-500">
-                  <path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>
-                </svg>
-              </div>
-              <span class="font-mono text-lg font-bold text-foreground animated-counter">${cast.reactions?.recasts_count || 0}</span>
-              <span class="font-body text-xs text-muted-foreground uppercase tracking-wide">Recasts</span>
+            <div class="flex items-center gap-2 text-cc-text-secondary">
+              <span class="text-xl font-bold font-mono text-cc-secondary">${cast.reactions?.recasts_count || 0}</span>
+              <span class="text-xs font-bold uppercase tracking-widest text-cc-text-muted">Recasts</span>
             </div>
-          </footer>
+          </div>
         `;
 
         wrapper.appendChild(article);
@@ -425,21 +416,31 @@ export class DetailModal extends Component {
         const tx = this.item.data as TellerTransaction;
         const amount = parseFloat(tx.amount);
         wrapper.innerHTML = `
-          <div class="text-center space-y-10 card-modern p-12 relative overflow-hidden">
-            <div class="absolute inset-0 bg-linear-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none"></div>
-            <div style="font-family: var(--font-display); font-weight: 800; font-size: 4.5rem; line-height: 1; letter-spacing: -0.03em;" class="${amount > 0 ? 'text-green-500' : 'text-foreground'} relative z-10">
-              ${amount > 0 ? '+' : ''}$${Math.abs(amount).toFixed(2)}
-            </div>
-            <div class="space-y-3 relative z-10">
-              <h2 style="font-family: var(--font-display); font-weight: 600; font-size: 1.75rem; line-height: 1.3; letter-spacing: -0.01em;" class="text-foreground">${escapeHtml(tx.description)}</h2>
-              <div class="inline-flex items-center px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                <span style="font-family: var(--font-sans); font-weight: 500; font-size: 0.875rem;" class="text-amber-600 dark:text-amber-400">${escapeHtml(tx.details.category || 'Uncategorized')}</span>
+          <div class="h-full flex flex-col items-center justify-center text-center space-y-12">
+            <div class="space-y-4">
+              <div class="cc-badge ${amount > 0 ? 'cc-badge-success' : 'cc-badge-warning'} px-6 py-2 text-sm">${tx.details.category || 'Payment'}</div>
+              <div class="text-cc-text-primary leading-none tracking-tighter" style="font-family: var(--cc-font-display); font-size: 8rem; font-weight: 800;">
+                <span class="opacity-30 text-4xl align-top mr-2 mt-8 inline-block font-body">$</span>${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
             </div>
-            <div class="p-6 bg-linear-to-br from-secondary/40 to-secondary/20 border border-border/30 rounded-2xl text-sm text-left grid grid-cols-2 gap-4 relative z-10">
-              <div class="text-muted-foreground">Account</div><div>${escapeHtml(tx.account_id || 'Primary')}</div>
-              <div class="text-muted-foreground">Status</div><div class="text-green-500">Completed</div>
-              <div class="text-muted-foreground">Date</div><div>${formatFullDate(this.item.timestamp)}</div>
+            
+            <div class="max-w-xl space-y-2">
+              <h2 class="text-3xl font-bold text-cc-text-primary tracking-tight" style="font-family: var(--cc-font-display)">${escapeHtml(tx.description)}</h2>
+              <p class="text-cc-text-muted text-lg">${formatFullDate(this.item.timestamp)}</p>
+            </div>
+
+            <div class="w-full max-w-md grid grid-cols-2 gap-4 p-8 bg-white/[0.02] border border-white/[0.05] rounded-[2rem]">
+              <div class="text-left space-y-1">
+                <div class="text-[10px] font-bold text-cc-text-muted uppercase tracking-widest">Account</div>
+                <div class="text-cc-text-primary font-medium">${escapeHtml(tx.account_id || 'Checking')}</div>
+              </div>
+              <div class="text-left space-y-1">
+                <div class="text-[10px] font-bold text-cc-text-muted uppercase tracking-widest">Status</div>
+                <div class="text-cc-success font-medium flex items-center gap-1.5">
+                  <div class="w-1.5 h-1.5 rounded-full bg-cc-success animate-pulse"></div>
+                  Cleared
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -448,24 +449,21 @@ export class DetailModal extends Component {
 
       case 'browser-history': {
         const entry = this.item.data as BrowserHistoryEntry;
-        let faviconUrl = '';
-        try {
-          const url = new URL(entry.url);
-          faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
-        } catch {
-          // Intentionally empty
-        }
+        const url = new URL(entry.url);
+        const favicon = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
 
         wrapper.innerHTML = `
-          <div class="text-center space-y-10 card-modern p-12 relative overflow-hidden">
-            <div class="absolute inset-0 bg-linear-to-br from-slate-500/5 via-transparent to-transparent pointer-events-none"></div>
-            <div class="inline-flex p-6 bg-linear-to-br from-slate-500/10 to-slate-600/5 rounded-2xl shadow-lg ring-1 ring-slate-500/10 relative z-10">
-              ${faviconUrl ? `<img src="${faviconUrl}" class="w-16 h-16 rounded-lg shadow-sm" />` : '<div class="w-16 h-16 bg-muted rounded-lg"></div>'}
+          <div class="h-full flex flex-col items-center justify-center text-center space-y-10">
+            <div class="relative group">
+              <div class="absolute inset-0 bg-cc-primary/20 blur-3xl rounded-full scale-150 group-hover:bg-cc-primary/30 transition-all"></div>
+              <img src="${favicon}" class="w-32 h-32 rounded-3xl shadow-2xl relative z-10 border border-white/10 p-4 bg-cc-surface/50 backdrop-blur-xl" />
             </div>
-            <div class="space-y-5 relative z-10">
-              <h2 style="font-family: var(--font-display); font-weight: 600; font-size: 1.75rem; line-height: 1.3; letter-spacing: -0.01em;" class="text-foreground max-w-xl mx-auto">${escapeHtml(entry.title || 'Untitled Page')}</h2>
-              <a href="${entry.url}" target="_blank" style="font-family: var(--font-mono); font-size: 0.8125rem;" class="text-primary hover:underline truncate block max-w-lg mx-auto transition-colors">
-                ${escapeHtml(entry.url)}
+
+            <div class="max-w-2xl space-y-4 relative z-10">
+              <h1 class="text-4xl font-bold text-cc-text-primary leading-tight tracking-tight" style="font-family: var(--cc-font-display)">${escapeHtml(entry.title || 'Knowledge Discovery')}</h1>
+              <a href="${entry.url}" target="_blank" class="inline-flex items-center gap-2 text-cc-primary hover:text-cc-secondary transition-colors font-mono text-sm bg-cc-primary/10 px-4 py-2 rounded-full">
+                <span>${url.hostname}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
             </div>
           </div>
@@ -475,8 +473,8 @@ export class DetailModal extends Component {
 
       default:
         wrapper.innerHTML = `
-          <div class="p-8 card-modern overflow-auto max-h-[60vh]">
-            <pre class="text-xs">${escapeHtml(JSON.stringify(this.item.data, null, 2))}</pre>
+          <div class="p-8 bg-white/[0.02] border border-white/[0.05] rounded-3xl">
+            <pre class="cc-code-block">${escapeHtml(JSON.stringify(this.item.data, null, 2))}</pre>
           </div>
         `;
     }

@@ -574,6 +574,7 @@ const OBSIDIAN_READ_VAULT_CHANNEL = "obsidian:read-vault";
 const OBSIDIAN_READ_NOTE_CHANNEL = "obsidian:read-note";
 const OBSIDIAN_CREATE_NOTE_CHANNEL = "obsidian:create-note";
 const OBSIDIAN_UPDATE_NOTE_CHANNEL = "obsidian:update-note";
+const OBSIDIAN_DELETE_NOTE_CHANNEL = "obsidian:delete-note";
 const OBSIDIAN_SEARCH_NOTES_CHANNEL = "obsidian:search-notes";
 function extractTags(content) {
   const tags = /* @__PURE__ */ new Set();
@@ -816,6 +817,18 @@ function addObsidianEventListeners() {
       }
       const notes = searchNotes(vaultPath, query);
       return { success: true, notes };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  require$$0.ipcMain.handle(OBSIDIAN_DELETE_NOTE_CHANNEL, (_event, notePath) => {
+    try {
+      if (!fs__namespace.existsSync(notePath)) {
+        return { success: false, error: "Note does not exist" };
+      }
+      const { shell } = require("electron");
+      shell.trashItem(notePath);
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

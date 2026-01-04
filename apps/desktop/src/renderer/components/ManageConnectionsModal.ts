@@ -7,10 +7,12 @@ import { Component } from './Component';
 import { store } from '../store';
 import { router } from '../router';
 import { api, fetchAppsWithCache } from '../api';
-import { createElement, clearChildren } from '../utils/dom';
+import { createElement, clearChildren, formatDate, formatTime } from '../utils/dom';
 import type { AppServer } from '../types';
 
 export class ManageConnectionsModal extends Component {
+  private editingAppId: string | null = null;
+
   constructor(container: HTMLElement, private onClose: () => void) {
     super(container);
   }
@@ -39,7 +41,7 @@ export class ManageConnectionsModal extends Component {
     
     // Modal container
     const modal = createElement('div', {
-      className: 'glass-panel bg-card border border-border/50 w-full max-w-3xl max-h-[85vh] flex flex-col elevation-3 rounded-3xl modal-enter relative overflow-hidden',
+      className: 'glass-panel bg-card border border-border/50 w-full max-w-4xl max-h-[85vh] flex flex-col elevation-3 rounded-3xl modal-enter relative overflow-hidden',
     });
     
     // Header
@@ -81,8 +83,8 @@ export class ManageConnectionsModal extends Component {
     
     // Connections list container
     const listContainer = createElement('div', {
-      className: 'space-y-3',
-      id: 'manage-connections-list',
+      className: 'space-y-4',
+      attributes: { id: 'manage-connections-list' },
     });
     
     content.appendChild(listContainer);
@@ -97,8 +99,14 @@ export class ManageConnectionsModal extends Component {
     // ESC key to close
     const escHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        this.cleanup();
-        this.onClose();
+        if (this.editingAppId) {
+          // Cancel editing if in edit mode
+          this.editingAppId = null;
+          this.renderConnectionsList();
+        } else {
+          this.cleanup();
+          this.onClose();
+        }
       }
     };
     window.addEventListener('keydown', escHandler);
@@ -106,7 +114,7 @@ export class ManageConnectionsModal extends Component {
   }
   
   private renderConnectionsList(): void {
-    const listContainer = this.container.querySelector('#manage-connections-list');
+    const listContainer = this.container.querySelector('#manage-connections-list') as HTMLElement;
     if (!listContainer) return;
     
     const apps = store.apps.get();
@@ -138,8 +146,16 @@ export class ManageConnectionsModal extends Component {
   }
   
   private createConnectionItem(app: AppServer): HTMLElement {
+    const isEditing = this.editingAppId === app.id;
+    
     const item = createElement('div', {
-      className: 'glass-panel flex items-center gap-4 p-4 border bg-card hover:bg-accent transition-all rounded-xl',
+      className: 'glass-panel border bg-card rounded-xl overflow-hidden transition-all',
+      dataset: { appId: app.id },
+    });
+    
+    // Main content row
+    const mainRow = createElement('div', {
+      className: 'flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors',
     });
     
     // Icon
@@ -158,7 +174,7 @@ export class ManageConnectionsModal extends Component {
         className: 'w-12 h-12 bg-muted shrink-0 flex items-center justify-center text-muted-foreground rounded-lg',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
       });
-      item.appendChild(placeholder);
+      mainRow.appendChild(placeholder);
     }
     
     // Info section
@@ -172,62 +188,321 @@ export class ManageConnectionsModal extends Component {
     });
     infoSection.appendChild(name);
     
-    // Connection status
-    const statusRow = createElement('div', {
-      className: 'flex items-center gap-2 mt-1',
+    // Connection details row
+    const detailsRow = createElement('div', {
+      className: 'flex items-center gap-4 mt-2 flex-wrap',
     });
     
+    // Status
+    const statusRow = createElement('div', {
+      className: 'flex items-center gap-2',
+    });
     const statusDot = createElement('div', {
-      className: 'w-2 h-2 rounded-full bg-status-connected pulse-slow',
+      className: 'w-2 h-2 rounded-full bg-status-connected',
     });
     statusRow.appendChild(statusDot);
-    
     const statusText = createElement('span', {
       className: 'text-xs text-muted-foreground font-mono',
       textContent: 'Connected',
     });
     statusRow.appendChild(statusText);
+    detailsRow.appendChild(statusRow);
     
-    infoSection.appendChild(statusRow);
-    item.appendChild(infoSection);
+    // Connection type
+    if (app.connectionType) {
+      const typeBadge = createElement('span', {
+        className: 'px-2 py-0.5 bg-muted text-xs text-muted-foreground font-mono uppercase rounded',
+        textContent: app.connectionType,
+      });
+      detailsRow.appendChild(typeBadge);
+    }
+    
+    // Last synced (if available in metadata)
+    const lastSyncedAt = app.connection?.connectionMetadata?.lastSyncedAt;
+    if (lastSyncedAt && typeof lastSyncedAt === 'string') {
+      const lastSynced = new Date(lastSyncedAt);
+      const lastSyncedText = createElement('span', {
+        className: 'text-xs text-muted-foreground font-mono',
+        textContent: `Last synced: ${formatDate(lastSynced)} ${formatTime(lastSynced)}`,
+      });
+      detailsRow.appendChild(lastSyncedText);
+    }
+    
+    infoSection.appendChild(detailsRow);
+    
+    // Show metadata if available
+    if (app.connection?.connectionMetadata) {
+      const metadata = app.connection.connectionMetadata;
+      if (metadata.localPath || metadata.fid) {
+        const metadataRow = createElement('div', {
+          className: 'mt-2 text-xs text-muted-foreground font-mono',
+        });
+        if (metadata.localPath) {
+          metadataRow.textContent = `Path: ${metadata.localPath}`;
+        } else if (metadata.fid) {
+          metadataRow.textContent = `FID: ${metadata.fid}`;
+        }
+        infoSection.appendChild(metadataRow);
+      }
+    }
+    
+    mainRow.appendChild(infoSection);
     
     // Actions section
     const actionsSection = createElement('div', {
       className: 'flex items-center gap-2 shrink-0',
     });
     
-    // View Details button
-    const viewButton = createElement('button', {
-      className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider border border-border hover:bg-secondary transition-colors rounded',
-      textContent: 'View Details',
+    // Edit button
+    const editButton = createElement('button', {
+      className: `px-3 py-1.5 text-xs font-mono uppercase tracking-wider border border-border hover:bg-secondary transition-colors rounded ${
+        isEditing ? 'bg-primary text-primary-foreground border-primary' : ''
+      }`,
+      textContent: isEditing ? 'Cancel' : 'Edit',
     });
     
-    this.addListener(viewButton, 'click', (e) => {
+    this.addListener(editButton, 'click', (e) => {
       e.stopPropagation();
-      // Close modal and navigate to app detail
-      this.cleanup();
-      this.onClose();
-      router.navigate(`/apps/${app.id}`);
+      if (isEditing) {
+        this.editingAppId = null;
+      } else {
+        this.editingAppId = app.id;
+      }
+      this.renderConnectionsList();
     });
     
-    actionsSection.appendChild(viewButton);
+    actionsSection.appendChild(editButton);
     
-    // Disconnect button
-    const disconnectButton = createElement('button', {
-      className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors rounded',
-      textContent: 'Disconnect',
-      dataset: { appId: app.id, connectionId: app.connection?.id || '' },
-    });
+    // View Details button (only show when not editing)
+    if (!isEditing) {
+      const viewButton = createElement('button', {
+        className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider border border-border hover:bg-secondary transition-colors rounded',
+        textContent: 'View Details',
+      });
+      
+      this.addListener(viewButton, 'click', (e) => {
+        e.stopPropagation();
+        this.cleanup();
+        this.onClose();
+        router.navigate(`/apps/${app.id}`);
+      });
+      
+      actionsSection.appendChild(viewButton);
+      
+      // Disconnect button
+      const disconnectButton = createElement('button', {
+        className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors rounded',
+        textContent: 'Disconnect',
+        dataset: { connectionId: app.connection?.id || '' },
+      });
+      
+      this.addListener(disconnectButton, 'click', async (e) => {
+        e.stopPropagation();
+        await this.handleDisconnect(app);
+      });
+      
+      actionsSection.appendChild(disconnectButton);
+    }
     
-    this.addListener(disconnectButton, 'click', async (e) => {
-      e.stopPropagation();
-      await this.handleDisconnect(app);
-    });
+    mainRow.appendChild(actionsSection);
+    item.appendChild(mainRow);
     
-    actionsSection.appendChild(disconnectButton);
-    item.appendChild(actionsSection);
+    // Edit form (expandable)
+    if (isEditing) {
+      const editForm = this.createEditForm(app);
+      item.appendChild(editForm);
+    }
     
     return item;
+  }
+  
+  private createEditForm(app: AppServer): HTMLElement {
+    const form = createElement('div', {
+      className: 'border-t border-border/50 bg-muted/20 p-4 space-y-4',
+    });
+    
+    const formTitle = createElement('h3', {
+      className: 'text-sm font-mono uppercase tracking-wider mb-4',
+      textContent: 'Edit Connection Settings',
+    });
+    form.appendChild(formTitle);
+    
+    // API Key field (for Farcaster and other API-based apps)
+    if (app.connectionType === 'api' && app.id === 'farcaster') {
+      const apiKeyGroup = createElement('div', {
+        className: 'space-y-2',
+      });
+      
+      const apiKeyLabel = createElement('label', {
+        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        textContent: 'Neynar API Key',
+      });
+      apiKeyGroup.appendChild(apiKeyLabel);
+      
+      const apiKeyWrapper = createElement('div', {
+        className: 'relative',
+      });
+      
+      const apiKeyInput = createElement('input', {
+        className: 'w-full px-3 py-2 pr-10 bg-background border border-border font-mono text-sm',
+        attributes: {
+          type: 'password',
+          placeholder: 'Enter your Neynar API key',
+          'data-api-key-input': 'true',
+        },
+      });
+      apiKeyWrapper.appendChild(apiKeyInput);
+      
+      // Toggle visibility button
+      const toggleBtn = createElement('button', {
+        className: 'absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent transition-colors',
+        attributes: { type: 'button' },
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+      });
+      
+      this.addListener(toggleBtn, 'click', () => {
+        const input = apiKeyInput as HTMLInputElement;
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+      
+      apiKeyWrapper.appendChild(toggleBtn);
+      apiKeyGroup.appendChild(apiKeyLabel);
+      apiKeyGroup.appendChild(apiKeyWrapper);
+      form.appendChild(apiKeyGroup);
+      
+      // FID field
+      const fidGroup = createElement('div', {
+        className: 'space-y-2',
+      });
+      
+      const fidLabel = createElement('label', {
+        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        textContent: 'Farcaster ID (FID)',
+      });
+      fidGroup.appendChild(fidLabel);
+      
+      const fidInput = createElement('input', {
+        className: 'w-full px-3 py-2 bg-background border border-border font-mono text-sm',
+        attributes: {
+          type: 'number',
+          placeholder: 'Enter your Farcaster ID',
+          'data-fid-input': 'true',
+          value: (app.connection?.connectionMetadata?.fid as string) || '',
+        },
+      });
+      fidGroup.appendChild(fidLabel);
+      fidGroup.appendChild(fidInput);
+      form.appendChild(fidGroup);
+    }
+    
+    // Local path field (for Obsidian, Chrome, Brave)
+    if (app.connection?.connectionMetadata?.localPath) {
+      const pathGroup = createElement('div', {
+        className: 'space-y-2',
+      });
+      
+      const pathLabel = createElement('label', {
+        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        textContent: 'Local Path',
+      });
+      pathGroup.appendChild(pathLabel);
+      
+      const pathInput = createElement('input', {
+        className: 'w-full px-3 py-2 bg-background border border-border font-mono text-sm',
+        attributes: {
+          type: 'text',
+          readonly: 'true',
+          value: app.connection.connectionMetadata.localPath as string,
+        },
+      });
+      pathGroup.appendChild(pathInput);
+      
+      const pathNote = createElement('p', {
+        className: 'text-xs text-muted-foreground font-mono',
+        textContent: 'To change the path, disconnect and reconnect this app.',
+      });
+      pathGroup.appendChild(pathNote);
+      form.appendChild(pathGroup);
+    }
+    
+    // Action buttons
+    const buttonRow = createElement('div', {
+      className: 'flex items-center gap-2 pt-2',
+    });
+    
+    const saveButton = createElement('button', {
+      className: 'px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs rounded transition-colors hover:bg-primary/90',
+      textContent: 'Save Changes',
+    });
+    
+    this.addListener(saveButton, 'click', async () => {
+      await this.handleSave(app, form);
+    });
+    
+    buttonRow.appendChild(saveButton);
+    form.appendChild(buttonRow);
+    
+    return form;
+  }
+  
+  private async handleSave(app: AppServer, form: HTMLElement): Promise<void> {
+    try {
+      // Get form values
+      const apiKeyInput = form.querySelector('[data-api-key-input]') as HTMLInputElement;
+      const fidInput = form.querySelector('[data-fid-input]') as HTMLInputElement;
+      
+      // For Farcaster, update API key and FID
+      if (app.id === 'farcaster' && apiKeyInput && fidInput) {
+        const apiKey = apiKeyInput.value.trim();
+        const fid = fidInput.value.trim();
+        
+        if (!apiKey) {
+          alert('Please enter your Neynar API key');
+          return;
+        }
+        
+        if (!fid) {
+          alert('Please enter your Farcaster ID (FID)');
+          return;
+        }
+        
+        const fidNumber = parseInt(fid, 10);
+        if (isNaN(fidNumber) || fidNumber <= 0) {
+          alert('Farcaster ID must be a valid positive number');
+          return;
+        }
+        
+        // Show loading state
+        const saveButton = form.querySelector('button') as HTMLButtonElement;
+        if (saveButton) {
+          saveButton.disabled = true;
+          saveButton.textContent = 'Saving...';
+        }
+        
+        // Save API key and FID
+        await api.apps.saveApiKey.mutate({
+          appId: app.id,
+          apiKey: apiKey,
+          connectionMetadata: {
+            fid: fidNumber.toString(),
+          },
+        });
+        
+        // Refresh apps
+        await fetchAppsWithCache();
+        
+        // Exit edit mode
+        this.editingAppId = null;
+        this.renderConnectionsList();
+      } else {
+        // No changes to save
+        this.editingAppId = null;
+        this.renderConnectionsList();
+      }
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+      alert(`Failed to save changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
   
   private async handleDisconnect(app: AppServer): Promise<void> {
@@ -264,7 +539,7 @@ export class ManageConnectionsModal extends Component {
   }
   
   private cleanup(): void {
-    // Any cleanup needed before closing
+    this.editingAppId = null;
   }
 }
 

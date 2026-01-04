@@ -150,8 +150,12 @@ export class Layout extends Component {
 
     // Chat Sidebar (Right)
     this.chatSidebarContainer = createElement('aside', {
-      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden',
+      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative',
     });
+    (this.chatSidebarContainer as HTMLElement).style.cssText = `
+      min-width: 0;
+      overflow: hidden;
+    `;
     mainWrapper.appendChild(this.chatSidebarContainer);
     
     this.container.appendChild(mainWrapper);
@@ -182,9 +186,13 @@ export class Layout extends Component {
 
   private updateChatSidebarState(): void {
     const open = store.chatSidebarOpen.get();
+    const chatWidth = '320px';
     if (this.chatSidebarContainer) {
-      this.chatSidebarContainer.style.width = open ? '360px' : '0';
-      
+      // Only set width if not already set by resize handle
+      if (!this.chatSidebarContainer.dataset.resized) {
+        this.chatSidebarContainer.style.width = open ? chatWidth : '0';
+      }
+
       if (open && !this.chatSidebar) {
         this.chatSidebar = new ChatSidebar(this.chatSidebarContainer);
         this.chatSidebar.init();
@@ -192,8 +200,8 @@ export class Layout extends Component {
     }
 
     if (this.topbarContainer) {
-      const right = open ? '360px' : '0';
-      this.topbarContainer.style.right = right;
+      const currentWidth = this.chatSidebarContainer?.offsetWidth || 320;
+      this.topbarContainer.style.right = open ? `${currentWidth}px` : '0';
     }
   }
   
