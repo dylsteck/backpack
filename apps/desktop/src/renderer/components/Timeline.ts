@@ -286,7 +286,7 @@ export class Timeline extends Component {
 
     // Subtle accent line
     const accentLine = createElement('div', {
-      className: 'absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/40 via-primary/20 to-transparent',
+      className: 'absolute top-0 left-0 right-0 h-[2px] bg-linear-to-r from-primary/40 via-primary/20 to-transparent',
     });
     card.appendChild(accentLine);
 
@@ -353,7 +353,7 @@ export class Timeline extends Component {
       dateHeader.innerHTML = `
         <h2 style="font-family: var(--font-display); font-weight: 700; font-size: 2.5rem; letter-spacing: -0.02em; line-height: 1.1;" class="text-foreground">${formatFullDate(new Date(dateKey))}</h2>
         <div class="flex items-center gap-4">
-          <div class="flex-1 h-[2px] bg-gradient-to-r from-primary/40 via-primary/20 to-transparent"></div>
+          <div class="flex-1 h-[2px] bg-linear-to-r from-primary/40 via-primary/20 to-transparent"></div>
           <span class="text-xs uppercase tracking-[0.15em] text-muted-foreground/50 font-medium" style="font-family: var(--font-sans);">${dayItems.length} ${dayItems.length === 1 ? 'item' : 'items'}</span>
         </div>
       `;

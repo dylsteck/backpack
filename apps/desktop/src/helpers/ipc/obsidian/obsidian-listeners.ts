@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from "electron";
+import { ipcMain, dialog, shell } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -191,8 +191,8 @@ export function addObsidianEventListeners() {
 				vaultPath,
 				noteCount: notes.length,
 			};
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 	
@@ -205,8 +205,8 @@ export function addObsidianEventListeners() {
 			
 			const notes = readVaultNotes(vaultPath);
 			return { success: true, notes, noteCount: notes.length };
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 	
@@ -220,19 +220,26 @@ export function addObsidianEventListeners() {
 			const content = fs.readFileSync(notePath, 'utf-8');
 			const stats = fs.statSync(notePath);
 			
+			// Get body without frontmatter
+			let body = content;
+			const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+			if (frontmatterMatch) {
+				body = content.substring(frontmatterMatch[0].length);
+			}
+			
 			return {
 				success: true,
 				note: {
 					path: notePath,
 					title: extractTitle(content, notePath),
-					body: content, // Full content
+					body: body.trim(), // Full content without frontmatter
 					mtime: stats.mtime.getTime(),
 					tags: extractTags(content),
 					backlinks: extractBacklinks(content),
 				}
 			};
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 	
@@ -279,8 +286,8 @@ export function addObsidianEventListeners() {
 					backlinks: extractBacklinks(fullContent),
 				}
 			};
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 	
@@ -325,8 +332,8 @@ export function addObsidianEventListeners() {
 					backlinks: extractBacklinks(newContent),
 				}
 			};
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 	
@@ -339,8 +346,8 @@ export function addObsidianEventListeners() {
 
 			const notes = searchNotes(vaultPath, query);
 			return { success: true, notes };
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 
@@ -352,12 +359,11 @@ export function addObsidianEventListeners() {
 			}
 
 			// Move to trash instead of permanent delete (safer)
-			const { shell } = require('electron');
 			shell.trashItem(notePath);
 
 			return { success: true };
-		} catch (error: any) {
-			return { success: false, error: error.message };
+		} catch (error: unknown) {
+			return { success: false, error: error instanceof Error ? error.message : String(error) };
 		}
 	});
 }

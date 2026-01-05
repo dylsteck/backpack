@@ -715,13 +715,18 @@ function addObsidianEventListeners() {
       }
       const content = fs__namespace.readFileSync(notePath, "utf-8");
       const stats = fs__namespace.statSync(notePath);
+      let body = content;
+      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+      if (frontmatterMatch) {
+        body = content.substring(frontmatterMatch[0].length);
+      }
       return {
         success: true,
         note: {
           path: notePath,
           title: extractTitle(content, notePath),
-          body: content,
-          // Full content
+          body: body.trim(),
+          // Full content without frontmatter
           mtime: stats.mtime.getTime(),
           tags: extractTags(content),
           backlinks: extractBacklinks(content)
