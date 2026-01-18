@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const Database = require("better-sqlite3");
+const http = require("http");
 const require$$3 = require("https");
 const require$$0$1 = require("stream");
 const require$$2 = require("events");
@@ -838,6 +839,1177 @@ function addObsidianEventListeners() {
     }
   });
 }
+const SESSION_ID = "default-browser-session";
+let saveTimeout = null;
+let lastSaveTime = 0;
+const MIN_SAVE_INTERVAL = 5e3;
+function saveBrowserSession(tabs, activeTabId) {
+  const now = Date.now();
+  const timeSinceLastSave = now - lastSaveTime;
+  if (timeSinceLastSave < MIN_SAVE_INTERVAL) {
+    if (!saveTimeout) {
+      saveTimeout = setTimeout(() => {
+        saveTimeout = null;
+        saveBrowserSessionImmediate(tabs, activeTabId);
+      }, MIN_SAVE_INTERVAL - timeSinceLastSave);
+    }
+    return;
+  }
+  saveBrowserSessionImmediate(tabs, activeTabId);
+}
+function saveBrowserSessionImmediate(tabs, activeTabId) {
+  try {
+    let dbPath = getDatabasePath();
+    if (!dbPath) {
+      dbPath = getDefaultDatabasePath();
+    }
+    if (!fs__namespace.existsSync(dbPath)) {
+      return;
+    }
+    const db = new Database(dbPath);
+    const now = Date.now();
+    lastSaveTime = now;
+    const tabsJson = JSON.stringify(tabs);
+    const existing = db.prepare("SELECT id FROM browser_sessions WHERE id = ?").get(SESSION_ID);
+    if (existing) {
+      db.prepare(`
+        UPDATE browser_sessions 
+        SET tabs = ?, active_tab_id = ?, updated_at = ?
+        WHERE id = ?
+      `).run(tabsJson, activeTabId, now, SESSION_ID);
+    } else {
+      db.prepare(`
+        INSERT INTO browser_sessions (id, tabs, active_tab_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(SESSION_ID, tabsJson, activeTabId, now, now);
+    }
+    db.close();
+  } catch (error) {
+  }
+}
+function loadBrowserSession() {
+  try {
+    let dbPath = getDatabasePath();
+    if (!dbPath) {
+      dbPath = getDefaultDatabasePath();
+    }
+    if (!fs__namespace.existsSync(dbPath)) {
+      console.log("[BrowserSession] Database not initialized, no session to load");
+      return null;
+    }
+    const db = new Database(dbPath);
+    const session = db.prepare("SELECT * FROM browser_sessions WHERE id = ?").get(SESSION_ID);
+    db.close();
+    if (!session) {
+      console.log("[BrowserSession] No saved session found");
+      return null;
+    }
+    const tabs = session.tabs ? JSON.parse(session.tabs) : [];
+    return {
+      id: session.id,
+      tabs,
+      activeTabId: session.active_tab_id || null
+    };
+  } catch (error) {
+    console.error("[BrowserSession] Failed to load session:", error);
+    return null;
+  }
+}
+class BrowserManager {
+  tabs = /* @__PURE__ */ new Map();
+  activeTabId = null;
+  window;
+  bounds = { x: 0, y: 0, width: 0, height: 0 };
+  saveTimeout = null;
+  constructor(window2) {
+    this.window = window2;
+    this.updateBounds();
+    window2.on("resize", () => this.updateBounds());
+    this.loadSession();
+    this.setupAutoSave();
+  }
+  /**
+   * Load saved browser session
+   */
+  loadSession() {
+    setTimeout(() => {
+      try {
+        const session = loadBrowserSession();
+        if (!session || !session.tabs || session.tabs.length === 0) {
+          const tabId = this.createTab("https://www.google.com");
+          this.hideAllTabs();
+          return;
+        }
+        const restoredTabIds = [];
+        for (const tabData of session.tabs) {
+          try {
+            const id = this.createTabFromSession(tabData);
+            restoredTabIds.push(id);
+            if (session.activeTabId === tabData.id) {
+              this.activeTabId = id;
+            }
+          } catch (error) {
+            console.error("[BrowserManager] Failed to restore tab:", tabData, error);
+          }
+        }
+        if (this.activeTabId && this.tabs.has(this.activeTabId)) {
+        } else if (restoredTabIds.length > 0) {
+          this.activeTabId = restoredTabIds[0];
+        } else {
+          const tabId = this.createTab("https://www.google.com");
+          this.activeTabId = tabId;
+        }
+        this.hideAllTabs();
+      } catch (error) {
+        if (this.tabs.size === 0) {
+          const tabId = this.createTab("https://www.google.com");
+          this.activeTabId = tabId;
+        }
+        this.hideAllTabs();
+      }
+    }, 500);
+  }
+  /**
+   * Create tab from saved session data
+   */
+  createTabFromSession(tabData) {
+    const id = tabData.id;
+    const view = new require$$0.WebContentsView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        partition: "persist:browser",
+        webSecurity: true,
+        allowRunningInsecureContent: false
+      }
+    });
+    const tab = {
+      id,
+      view,
+      url: tabData.url,
+      title: tabData.title || "New Tab",
+      favicon: tabData.favicon,
+      loading: true,
+      canGoBack: false,
+      canGoForward: false
+    };
+    this.setupViewListeners(tab);
+    this.tabs.set(id, tab);
+    this.tabs.set(id, tab);
+    view.webContents.loadURL(tabData.url);
+    return id;
+  }
+  /**
+   * Setup auto-save for browser sessions
+   */
+  setupAutoSave() {
+    this.window.on("close", () => {
+      this.saveSessionImmediate();
+    });
+    setInterval(() => {
+      this.saveSessionImmediate();
+    }, 6e4);
+  }
+  /**
+   * Save current browser session (debounced - won't save more than once per 5 seconds)
+   */
+  saveSession() {
+    const tabs = Array.from(this.tabs.values()).map((tab) => ({
+      id: tab.id,
+      url: tab.url,
+      title: tab.title,
+      favicon: tab.favicon
+    }));
+    saveBrowserSession(tabs, this.activeTabId);
+  }
+  /**
+   * Save session immediately (bypass debounce) - for critical moments like window close
+   */
+  saveSessionImmediate() {
+    const tabs = Array.from(this.tabs.values()).map((tab) => ({
+      id: tab.id,
+      url: tab.url,
+      title: tab.title,
+      favicon: tab.favicon
+    }));
+    saveBrowserSession(tabs, this.activeTabId);
+  }
+  updateBounds() {
+    const { width, height } = this.window.getContentBounds();
+    const sidebarWidth = 256;
+    this.bounds = {
+      x: sidebarWidth,
+      y: 44,
+      width: width - sidebarWidth,
+      height: height - 44
+    };
+    if (this.activeTabId) {
+      const tab = this.tabs.get(this.activeTabId);
+      if (tab) {
+        tab.view.setBounds(this.bounds);
+      }
+    }
+  }
+  /**
+   * Update bounds manually (called from renderer when layout changes)
+   */
+  updateBoundsManually(bounds) {
+    if (bounds.width <= 0 || bounds.height <= 0 || bounds.x < 0 || bounds.y < 0) {
+      console.warn("[BrowserManager] Invalid bounds:", bounds);
+      return;
+    }
+    const windowBounds = this.window.getContentBounds();
+    let clampedBounds = {
+      x: Math.max(0, bounds.x),
+      y: Math.max(44, bounds.y),
+      // At least below topbar
+      width: Math.min(bounds.width, windowBounds.width - bounds.x - 2),
+      // 2px safety margin
+      height: Math.min(bounds.height, windowBounds.height - bounds.y)
+    };
+    const rightEdge = clampedBounds.x + clampedBounds.width;
+    if (rightEdge > windowBounds.width - 2) {
+      clampedBounds.width = Math.max(100, windowBounds.width - clampedBounds.x - 2);
+    }
+    if (clampedBounds.y + clampedBounds.height > windowBounds.height) {
+      clampedBounds.height = Math.max(100, windowBounds.height - clampedBounds.y);
+    }
+    if (clampedBounds.width < 100 || clampedBounds.height < 100) {
+      console.warn("[BrowserManager] Clamped bounds too small:", { original: bounds, clamped: clampedBounds, windowBounds });
+      return;
+    }
+    const finalRightEdge = clampedBounds.x + clampedBounds.width;
+    if (finalRightEdge > windowBounds.width - 1) {
+      console.error("[BrowserManager] ERROR: Bounds would exceed window width!", {
+        bounds: clampedBounds,
+        windowWidth: windowBounds.width,
+        wouldExceed: finalRightEdge - windowBounds.width
+      });
+      clampedBounds.width = Math.max(100, windowBounds.width - clampedBounds.x - 2);
+    }
+    this.bounds = clampedBounds;
+    if (this.activeTabId) {
+      const tab = this.tabs.get(this.activeTabId);
+      if (tab) {
+        try {
+          const finalBounds = {
+            x: Math.max(0, clampedBounds.x),
+            y: Math.max(44, clampedBounds.y),
+            width: Math.min(clampedBounds.width, windowBounds.width - clampedBounds.x),
+            height: Math.min(clampedBounds.height, windowBounds.height - clampedBounds.y)
+          };
+          if (finalBounds.x + finalBounds.width > windowBounds.width) {
+            finalBounds.width = windowBounds.width - finalBounds.x;
+          }
+          tab.view.setBounds(finalBounds);
+        } catch (error) {
+          console.error("[BrowserManager] Failed to set bounds:", error);
+        }
+      }
+    }
+  }
+  /**
+   * Create a new browser tab
+   */
+  createTab(url = "https://www.google.com") {
+    const id = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const view = new require$$0.WebContentsView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        partition: "persist:browser",
+        webSecurity: true,
+        allowRunningInsecureContent: false
+      }
+    });
+    const tab = {
+      id,
+      view,
+      url,
+      title: "New Tab",
+      loading: true,
+      canGoBack: false,
+      canGoForward: false
+    };
+    this.setupViewListeners(tab);
+    this.tabs.set(id, tab);
+    view.webContents.loadURL(url);
+    this.activeTabId = id;
+    this.saveSession();
+    this.emit("tab-created", id);
+    return id;
+  }
+  /**
+   * Switch to a different tab
+   */
+  switchTab(id) {
+    const tab = this.tabs.get(id);
+    if (!tab) return;
+    if (this.activeTabId) {
+      const currentTab = this.tabs.get(this.activeTabId);
+      if (currentTab) {
+        try {
+          this.window.contentView.removeChildView(currentTab.view);
+        } catch (error) {
+          console.warn("[BrowserManager] Failed to remove view:", error);
+        }
+      }
+    }
+    try {
+      const isAttached = this.window.contentView.children.some(
+        (child) => child === tab.view
+      );
+      if (!isAttached) {
+        this.window.contentView.addChildView(tab.view);
+      }
+      if (this.bounds.width > 0 && this.bounds.height > 0) {
+        tab.view.setBounds(this.bounds);
+      }
+    } catch (error) {
+      console.error("[BrowserManager] Failed to add view:", error);
+    }
+    this.activeTabId = id;
+    this.emit("tab-switched", id);
+    this.saveSession();
+  }
+  /**
+   * Close a tab
+   */
+  async closeTab(id) {
+    const tab = this.tabs.get(id);
+    if (!tab) return;
+    if (this.activeTabId === id) {
+      try {
+        this.window.contentView.removeChildView(tab.view);
+      } catch (error) {
+        console.warn("[BrowserManager] Failed to remove view on close:", error);
+      }
+      const otherTabs = Array.from(this.tabs.keys()).filter((t) => t !== id);
+      if (otherTabs.length > 0) {
+        this.switchTab(otherTabs[0]);
+      } else {
+        this.activeTabId = null;
+      }
+    }
+    try {
+      tab.view.webContents.destroy();
+    } catch (error) {
+      console.warn("[BrowserManager] Failed to destroy webContents:", error);
+    }
+    this.tabs.delete(id);
+    this.emit("tab-closed", id);
+    this.saveSession();
+  }
+  /**
+   * Hide all tabs (when switching away from browser route)
+   */
+  hideAllTabs() {
+    for (const tab of this.tabs.values()) {
+      try {
+        const isAttached = this.window.contentView.children.some(
+          (child) => child === tab.view
+        );
+        if (isAttached) {
+          this.window.contentView.removeChildView(tab.view);
+        }
+      } catch (error) {
+      }
+    }
+  }
+  /**
+   * Show active tab (when switching to browser route)
+   */
+  showActiveTab() {
+    if (this.activeTabId) {
+      const tab = this.tabs.get(this.activeTabId);
+      if (tab) {
+        try {
+          const isAttached = this.window.contentView.children.some(
+            (child) => child === tab.view
+          );
+          if (!isAttached) {
+            this.window.contentView.addChildView(tab.view);
+          }
+          if (this.bounds.width > 100 && this.bounds.height > 100) {
+            tab.view.setBounds(this.bounds);
+          } else {
+            const windowBounds = this.window.getContentBounds();
+            const defaultBounds = {
+              x: 256,
+              y: 44,
+              width: windowBounds.width - 256,
+              height: windowBounds.height - 44
+            };
+            tab.view.setBounds(defaultBounds);
+            this.bounds = defaultBounds;
+          }
+        } catch (error) {
+          console.error("[BrowserManager] Failed to show active tab:", error);
+        }
+      }
+    }
+  }
+  /**
+   * Get tab by ID
+   */
+  getTab(id) {
+    return this.tabs.get(id);
+  }
+  /**
+   * Get active tab
+   */
+  getActiveTab() {
+    return this.activeTabId ? this.tabs.get(this.activeTabId) || null : null;
+  }
+  /**
+   * Get all tabs
+   */
+  getAllTabs() {
+    return Array.from(this.tabs.values());
+  }
+  /**
+   * Navigate tab to URL
+   */
+  navigateTab(id, url) {
+    const tab = this.tabs.get(id);
+    if (tab) {
+      tab.view.webContents.loadURL(url);
+    }
+  }
+  /**
+   * Reload tab
+   */
+  reloadTab(id) {
+    const tab = this.tabs.get(id);
+    if (tab) {
+      tab.view.webContents.reload();
+    }
+  }
+  /**
+   * Go back in tab history
+   */
+  goBack(id) {
+    const tab = this.tabs.get(id);
+    if (tab && tab.canGoBack) {
+      try {
+        if (tab.view.webContents.navigationHistory?.canGoBack()) {
+          tab.view.webContents.navigationHistory.goBack();
+        } else {
+          tab.view.webContents.goBack();
+        }
+      } catch (e) {
+        tab.view.webContents.goBack();
+      }
+    }
+  }
+  /**
+   * Go forward in tab history
+   */
+  goForward(id) {
+    const tab = this.tabs.get(id);
+    if (tab && tab.canGoForward) {
+      try {
+        if (tab.view.webContents.navigationHistory?.canGoForward()) {
+          tab.view.webContents.navigationHistory.goForward();
+        } else {
+          tab.view.webContents.goForward();
+        }
+      } catch (e) {
+        tab.view.webContents.goForward();
+      }
+    }
+  }
+  /**
+   * Take screenshot of tab
+   */
+  async captureScreenshot(id) {
+    const tab = this.tabs.get(id);
+    if (!tab) throw new Error("Tab not found");
+    const image = await tab.view.webContents.capturePage();
+    return image.toDataURL();
+  }
+  /**
+   * Get CDP target ID for a tab
+   */
+  async getCDPTargetId(tabId) {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return null;
+    return `electron-${tab.view.webContents.id}`;
+  }
+  /**
+   * Execute CDP command directly on a tab using webContents.debugger API
+   */
+  async executeCDPCommand(tabId, method, params = {}) {
+    const tab = this.tabs.get(tabId);
+    if (!tab) {
+      throw new Error(`Tab ${tabId} not found`);
+    }
+    const webContents = tab.view.webContents;
+    if (!webContents.debugger.isAttached()) {
+      webContents.debugger.attach("1.3");
+    }
+    try {
+      return await new Promise((resolve, reject) => {
+        webContents.debugger.sendCommand(method, params, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        });
+      });
+    } catch (error) {
+      console.error(`[BrowserManager] CDP command ${method} failed:`, error);
+      throw error;
+    }
+  }
+  /**
+   * Setup event listeners for a tab
+   */
+  setupViewListeners(tab) {
+    const { view } = tab;
+    view.webContents.setWindowOpenHandler(({ url }) => {
+      const newTabId = this.createTab(url);
+      this.switchTab(newTabId);
+      return { action: "deny" };
+    });
+    let ctrlKeyPressed = false;
+    let metaKeyPressed = false;
+    view.webContents.on("before-input-event", (_event, input) => {
+      ctrlKeyPressed = input.control || input.meta;
+      metaKeyPressed = input.meta;
+    });
+    view.webContents.on("will-navigate", (event, url) => {
+      if (ctrlKeyPressed || metaKeyPressed) {
+        event.preventDefault();
+        const newTabId = this.createTab(url);
+        this.switchTab(newTabId);
+        ctrlKeyPressed = false;
+        metaKeyPressed = false;
+      }
+    });
+    view.webContents.on("did-finish-load", () => {
+      view.webContents.executeJavaScript(`
+        (function() {
+          // Handle middle mouse button on links
+          document.addEventListener('auxclick', (e) => {
+            if (e.button === 1) { // Middle mouse button
+              const link = e.target.closest('a[href]');
+              if (link) {
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Create temporary link with target="_blank" to trigger setWindowOpenHandler
+                  const url = new URL(href, window.location.href).href;
+                  const tempLink = document.createElement('a');
+                  tempLink.href = url;
+                  tempLink.target = '_blank';
+                  tempLink.style.display = 'none';
+                  document.body.appendChild(tempLink);
+                  tempLink.click();
+                  document.body.removeChild(tempLink);
+                  return false;
+                }
+              }
+            }
+          }, true);
+          
+          // Handle Shift+click
+          document.addEventListener('click', (e) => {
+            if (e.shiftKey) {
+              const link = e.target.closest('a[href]');
+              if (link) {
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Create temporary link with target="_blank" to trigger setWindowOpenHandler
+                  const url = new URL(href, window.location.href).href;
+                  const tempLink = document.createElement('a');
+                  tempLink.href = url;
+                  tempLink.target = '_blank';
+                  tempLink.style.display = 'none';
+                  document.body.appendChild(tempLink);
+                  tempLink.click();
+                  document.body.removeChild(tempLink);
+                  return false;
+                }
+              }
+            }
+          }, true);
+        })();
+      `).catch((error) => {
+        console.error("[BrowserManager] Failed to inject link click handler:", error);
+      });
+    });
+    view.webContents.on("did-start-loading", () => {
+      tab.loading = true;
+      this.emit("tab-loading", tab.id);
+    });
+    view.webContents.on("did-stop-loading", () => {
+      tab.loading = false;
+      try {
+        const history = view.webContents.navigationHistory;
+        tab.canGoBack = history?.canGoBack() ?? false;
+        tab.canGoForward = history?.canGoForward() ?? false;
+      } catch (e) {
+        tab.canGoBack = view.webContents.canGoBack?.() ?? false;
+        tab.canGoForward = view.webContents.canGoForward?.() ?? false;
+      }
+      this.emit("tab-loaded", tab.id);
+    });
+    view.webContents.on("did-navigate", (_event, url) => {
+      tab.url = url;
+      try {
+        const history = view.webContents.navigationHistory;
+        tab.canGoBack = history?.canGoBack() ?? false;
+        tab.canGoForward = history?.canGoForward() ?? false;
+      } catch (e) {
+        tab.canGoBack = view.webContents.canGoBack?.() ?? false;
+        tab.canGoForward = view.webContents.canGoForward?.() ?? false;
+      }
+      this.emit("tab-navigated", tab.id, url);
+      this.saveSession();
+    });
+    view.webContents.on("did-navigate-in-page", (_event, url) => {
+      tab.url = url;
+      this.emit("tab-navigated", tab.id, url);
+    });
+    view.webContents.on("page-title-updated", (_event, title) => {
+      tab.title = title;
+      this.emit("tab-title-updated", tab.id, title);
+      this.saveSession();
+    });
+    view.webContents.on("page-favicon-updated", (_event, favicons) => {
+      tab.favicon = favicons[0];
+      this.emit("tab-favicon-updated", tab.id, favicons[0]);
+      this.saveSession();
+    });
+    view.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
+      console.error("Tab load failed:", errorDescription);
+      this.emit("tab-error", tab.id, errorDescription);
+    });
+  }
+  /**
+   * Emit event to renderer
+   */
+  emit(event, ...args) {
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.send("browser-event", { event, args });
+    }
+  }
+}
+const safeConsole = {
+  log: (...args) => {
+    try {
+      if (process.stdout?.writable ?? true) {
+        console.log(...args);
+      }
+    } catch {
+    }
+  },
+  warn: (...args) => {
+    try {
+      if (process.stderr?.writable ?? true) {
+        console.warn(...args);
+      }
+    } catch {
+    }
+  },
+  error: (...args) => {
+    try {
+      if (process.stderr?.writable ?? true) {
+        console.error(...args);
+      }
+    } catch {
+    }
+  }
+};
+class ChromeDevToolsMCP {
+  process = null;
+  pendingRequests = /* @__PURE__ */ new Map();
+  requestIdCounter = 0;
+  isRunning = false;
+  tools = [];
+  /**
+   * Start the MCP server process
+   */
+  async start() {
+    if (this.isRunning) {
+      safeConsole.log("[MCP] Server already running");
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const command = "npx";
+        const cdpPort = process.env.ELECTRON_CDP_PORT || process.env.CDP_PORT || "9222";
+        const args = ["-y", "chrome-devtools-mcp@latest", `--browser-url=http://127.0.0.1:${cdpPort}`];
+        safeConsole.log(`[MCP] Spawning chrome-devtools-mcp with: ${command} ${args.join(" ")} (CDP port ${cdpPort})`);
+        this.process = child_process.spawn(command, args, {
+          stdio: ["pipe", "pipe", "pipe"],
+          shell: true,
+          env: process.env
+        });
+        let stderrBuffer = "";
+        this.process.stdout?.on("data", (data) => {
+          const text = data.toString();
+          this.processMessages(text);
+        });
+        this.process.stdout?.on("end", () => {
+          safeConsole.warn("[MCP] stdout ended - process might have crashed or exited");
+          for (const [id, pending] of this.pendingRequests.entries()) {
+            pending.reject(new Error("MCP process stdout ended"));
+          }
+          this.pendingRequests.clear();
+        });
+        this.process.stdout?.on("error", (error) => {
+          safeConsole.error("[MCP] stdout error:", error);
+          for (const [id, pending] of this.pendingRequests.entries()) {
+            pending.reject(new Error(`MCP stdout error: ${error.message}`));
+          }
+          this.pendingRequests.clear();
+        });
+        this.process.stderr?.on("data", (data) => {
+          stderrBuffer += data.toString();
+          const lines = stderrBuffer.split("\n");
+          stderrBuffer = lines.pop() || "";
+          lines.forEach((line) => {
+            if (line.trim()) {
+              safeConsole.log("[MCP stderr]", line);
+              if (line.includes("ECONNREFUSED") || line.includes("connect") || line.includes("CDP") || line.includes("page")) {
+                safeConsole.warn("[MCP] CDP connection issue detected:", line);
+              }
+            }
+          });
+        });
+        if (!this.process.stdin || this.process.stdin.destroyed) {
+          safeConsole.error("[MCP] Stdin is not available or destroyed");
+        } else {
+          safeConsole.log("[MCP] Stdin is ready");
+        }
+        this.process.on("error", (error) => {
+          safeConsole.error("[MCP] Process spawn error:", error);
+          safeConsole.error("[MCP] This might be due to missing bun/npx. Browser will work without MCP tools.");
+          this.isRunning = false;
+          resolve();
+        });
+        this.process.on("exit", (code, signal) => {
+          safeConsole.log(`[MCP] Process exited with code ${code}, signal ${signal}`);
+          this.isRunning = false;
+          this.process = null;
+          for (const [id, pending] of this.pendingRequests.entries()) {
+            pending.reject(new Error("MCP process exited"));
+          }
+          this.pendingRequests.clear();
+        });
+        setTimeout(async () => {
+          try {
+            await this.initialize();
+            this.isRunning = true;
+            safeConsole.log("[MCP] Server initialized successfully");
+            resolve();
+          } catch (error) {
+            safeConsole.error("[MCP] Initialization failed:", error);
+            this.isRunning = false;
+            resolve();
+          }
+        }, 3e3);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  /**
+   * Initialize MCP connection - list available tools
+   */
+  async initialize() {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 3e3));
+      if (!this.process || this.process.killed) {
+        safeConsole.warn("[MCP] Process died before initialization");
+        return;
+      }
+      try {
+        const initResponse = await this.sendRequest("initialize", {
+          protocolVersion: "2024-11-05",
+          capabilities: {},
+          clientInfo: {
+            name: "cortex-desktop",
+            version: "1.0.0"
+          }
+        });
+        safeConsole.log("[MCP] Initialize response:", JSON.stringify(initResponse).substring(0, 200));
+        try {
+          const notifyRequest = {
+            jsonrpc: "2.0",
+            method: "notifications/initialized",
+            params: {}
+            // No 'id' field - this is a notification, not a request
+          };
+          const notifyLine = JSON.stringify(notifyRequest) + "\n";
+          if (this.process?.stdin && !this.process.stdin.destroyed) {
+            const written = this.process.stdin.write(notifyLine);
+            if (written) {
+              safeConsole.log("[MCP] Sent initialized notification");
+            } else {
+              safeConsole.warn("[MCP] Failed to write initialized notification (buffer full)");
+            }
+          }
+        } catch (error) {
+          safeConsole.warn("[MCP] Failed to send initialized notification:", error);
+        }
+      } catch (error) {
+        safeConsole.warn("[MCP] Initialize failed, trying without it:", error);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1e3));
+      const toolsResponse = await this.sendRequest("tools/list", {});
+      if (toolsResponse && toolsResponse.tools) {
+        this.tools = toolsResponse.tools;
+        safeConsole.log(`[MCP] Initialized with ${this.tools.length} tools:`, this.tools.map((t) => t.name).slice(0, 10));
+        this.isRunning = true;
+      } else {
+        safeConsole.warn("[MCP] No tools returned from server, response:", toolsResponse);
+        if (toolsResponse !== void 0) {
+          this.isRunning = true;
+        }
+      }
+    } catch (error) {
+      safeConsole.error("[MCP] Initialization error:", error);
+      safeConsole.log("[MCP] Continuing without tool initialization");
+    }
+  }
+  /**
+   * Retry initialization (called when browser tabs become available)
+   */
+  async retryInitialization() {
+    if (this.isRunning) {
+      safeConsole.log("[MCP] Already initialized, skipping retry");
+      return;
+    }
+    if (!this.process || this.process.killed) {
+      safeConsole.warn("[MCP] Cannot retry - process not running");
+      return;
+    }
+    safeConsole.log("[MCP] Retrying initialization now that browser tabs are available");
+    try {
+      await this.initialize();
+      if (this.isRunning) {
+        safeConsole.log("[MCP] Retry initialization successful");
+      }
+    } catch (error) {
+      safeConsole.error("[MCP] Retry initialization failed:", error);
+    }
+  }
+  /**
+   * Process incoming messages from MCP server
+   */
+  stdoutBuffer = "";
+  processMessages(data) {
+    this.stdoutBuffer += data;
+    const lines = this.stdoutBuffer.split("\n");
+    this.stdoutBuffer = lines.pop() || "";
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const message = JSON.parse(line);
+        if ("id" in message && ("result" in message || "error" in message)) {
+          const response = message;
+          const pending = this.pendingRequests.get(response.id);
+          if (pending) {
+            if (response.error) {
+              pending.reject(new Error(response.error.message || JSON.stringify(response.error)));
+            } else {
+              pending.resolve(response.result);
+            }
+          }
+        }
+        if ("method" in message && !("id" in message)) {
+        }
+      } catch (error) {
+      }
+    }
+  }
+  /**
+   * Handle MCP notifications (server-initiated messages)
+   */
+  handleNotification(notification) {
+    safeConsole.log("[MCP] Notification:", notification.method);
+  }
+  /**
+   * Send a JSON-RPC request to MCP server
+   */
+  async sendRequest(method, params) {
+    if (!this.process) {
+      throw new Error("MCP server process not started");
+    }
+    if (!this.process.stdin || this.process.stdin.destroyed) {
+      throw new Error("MCP server stdin not available");
+    }
+    const id = `req-${++this.requestIdCounter}`;
+    const request = {
+      jsonrpc: "2.0",
+      id,
+      method,
+      params
+    };
+    return new Promise((resolve, reject) => {
+      let timeout;
+      const cleanup = () => {
+        if (timeout) clearTimeout(timeout);
+        this.pendingRequests.delete(id);
+      };
+      this.pendingRequests.set(id, {
+        resolve: (value) => {
+          cleanup();
+          resolve(value);
+        },
+        reject: (error) => {
+          cleanup();
+          reject(error);
+        }
+      });
+      try {
+        const requestLine = JSON.stringify(request) + "\n";
+        this.process.stdin?.write(requestLine);
+      } catch (error) {
+        cleanup();
+        reject(new Error(`Failed to send request: ${error}`));
+        return;
+      }
+      timeout = setTimeout(() => {
+        if (this.pendingRequests.has(id)) {
+          cleanup();
+          reject(new Error(`Request timeout after 15s: ${method}`));
+        }
+      }, 15e3);
+    });
+  }
+  /**
+   * Call an MCP tool
+   */
+  async callTool(toolName, args) {
+    if (!this.process) {
+      throw new Error("MCP server process not started");
+    }
+    if (this.process.killed) {
+      throw new Error("MCP server process has been killed");
+    }
+    if (!toolName || typeof toolName !== "string") {
+      throw new Error("toolName is required and must be a string");
+    }
+    if (!args || typeof args !== "object") {
+      throw new Error("args must be an object");
+    }
+    if (this.tools.length === 0 && !this.isRunning) {
+      try {
+        await this.retryInitialization();
+      } catch (error) {
+      }
+    }
+    try {
+      safeConsole.log(`[MCP] Calling tool: ${toolName}`, JSON.stringify(args).substring(0, 100));
+      const response = await this.sendRequest("tools/call", {
+        name: toolName,
+        arguments: args || {}
+      });
+      safeConsole.log(`[MCP] Tool ${toolName} response received:`, typeof response === "object" ? JSON.stringify(response).substring(0, 200) : String(response).substring(0, 200));
+      if (response && typeof response === "object") {
+        if ("content" in response && Array.isArray(response.content)) {
+          const content = response.content[0];
+          if (content && "text" in content) {
+            return content.text;
+          }
+          return content || response;
+        }
+        if ("text" in response) {
+          return response.text;
+        }
+        if ("result" in response) {
+          return response.result;
+        }
+      }
+      return response;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("timeout")) {
+        safeConsole.error(`[MCP] Tool ${toolName} timed out. Check stderr for CDP connection issues.`);
+        throw new Error(`MCP tool call timed out. Make sure browser tabs exist and CDP is accessible at http://127.0.0.1:9222. Original error: ${error.message}`);
+      }
+      safeConsole.error(`[MCP] Tool ${toolName} error:`, error);
+      throw error;
+    }
+  }
+  /**
+   * List available tools
+   */
+  async listTools() {
+    if (!this.isRunning) {
+      return [];
+    }
+    try {
+      const response = await this.sendRequest("tools/list", {});
+      return response?.tools || this.tools;
+    } catch (error) {
+      safeConsole.error("[MCP] Failed to list tools:", error);
+      return this.tools;
+    }
+  }
+  /**
+   * Get MCP server status
+   */
+  getStatus() {
+    return {
+      running: this.isRunning,
+      toolCount: this.tools.length
+    };
+  }
+  /**
+   * Stop the MCP server
+   */
+  async stop() {
+    if (!this.process) return;
+    this.isRunning = false;
+    this.process.kill("SIGTERM");
+    setTimeout(() => {
+      if (this.process && !this.process.killed) {
+        this.process.kill("SIGKILL");
+      }
+    }, 5e3);
+    this.process = null;
+    this.pendingRequests.clear();
+  }
+}
+let mcpInstance = null;
+function getMCPInstance() {
+  if (!mcpInstance) {
+    mcpInstance = new ChromeDevToolsMCP();
+  }
+  return mcpInstance;
+}
+const BROWSER_CREATE_TAB_CHANNEL = "browser:createTab";
+const BROWSER_CLOSE_TAB_CHANNEL = "browser:closeTab";
+const BROWSER_SWITCH_TAB_CHANNEL = "browser:switchTab";
+const BROWSER_NAVIGATE_TAB_CHANNEL = "browser:navigateTab";
+const BROWSER_GO_BACK_CHANNEL = "browser:goBack";
+const BROWSER_GO_FORWARD_CHANNEL = "browser:goForward";
+const BROWSER_RELOAD_TAB_CHANNEL = "browser:reloadTab";
+const BROWSER_GET_ALL_TABS_CHANNEL = "browser:getAllTabs";
+const BROWSER_GET_TAB_CHANNEL = "browser:getTab";
+const BROWSER_CAPTURE_SCREENSHOT_CHANNEL = "browser:captureScreenshot";
+const BROWSER_UPDATE_BOUNDS_CHANNEL = "browser:updateBounds";
+const BROWSER_HIDE_TABS_CHANNEL = "browser:hideTabs";
+const BROWSER_SHOW_TABS_CHANNEL = "browser:showTabs";
+const MCP_CALL_TOOL_CHANNEL = "mcp:callTool";
+const MCP_LIST_TOOLS_CHANNEL = "mcp:listTools";
+const MCP_GET_STATUS_CHANNEL = "mcp:getStatus";
+let browserManager = null;
+let mcpClient = null;
+function getBrowserManager() {
+  return browserManager;
+}
+function setMCPClient(client) {
+  mcpClient = client;
+}
+function serializeTab(tab) {
+  return {
+    id: tab.id,
+    url: tab.url,
+    title: tab.title,
+    favicon: tab.favicon,
+    loading: tab.loading,
+    canGoBack: tab.canGoBack,
+    canGoForward: tab.canGoForward
+  };
+}
+function addBrowserEventListeners(mainWindow2) {
+  if (!browserManager) {
+    browserManager = new BrowserManager(mainWindow2);
+    require$$0.ipcMain.on("browser-event", (_event, data) => {
+      if (data.event === "tab-created") {
+        setTimeout(() => {
+          const mcpInstance2 = getMCPInstance();
+          if (mcpInstance2 && !mcpInstance2.getStatus().running) {
+            console.log("[MCP] Retrying initialization after tab creation");
+            mcpInstance2.retryInitialization().catch(console.error);
+          }
+        }, 2e3);
+      }
+    });
+  }
+  require$$0.ipcMain.handle(BROWSER_CREATE_TAB_CHANNEL, async (_event, url) => {
+    if (!browserManager) return null;
+    return browserManager.createTab(url);
+  });
+  require$$0.ipcMain.handle(BROWSER_SWITCH_TAB_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return;
+    browserManager.switchTab(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_CLOSE_TAB_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return;
+    await browserManager.closeTab(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_GET_TAB_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return null;
+    const tab = browserManager.getTab(tabId);
+    return tab ? serializeTab(tab) : null;
+  });
+  require$$0.ipcMain.handle(BROWSER_GET_ALL_TABS_CHANNEL, async () => {
+    if (!browserManager) return [];
+    return browserManager.getAllTabs().map(serializeTab);
+  });
+  require$$0.ipcMain.handle(BROWSER_NAVIGATE_TAB_CHANNEL, async (_event, tabId, url) => {
+    if (!browserManager) return;
+    browserManager.navigateTab(tabId, url);
+  });
+  require$$0.ipcMain.handle(BROWSER_RELOAD_TAB_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return;
+    browserManager.reloadTab(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_GO_BACK_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return;
+    browserManager.goBack(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_GO_FORWARD_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return;
+    browserManager.goForward(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_CAPTURE_SCREENSHOT_CHANNEL, async (_event, tabId) => {
+    if (!browserManager) return null;
+    return await browserManager.captureScreenshot(tabId);
+  });
+  require$$0.ipcMain.handle(BROWSER_UPDATE_BOUNDS_CHANNEL, async (_event, bounds) => {
+    if (!browserManager) return;
+    browserManager.updateBoundsManually(bounds);
+  });
+  require$$0.ipcMain.handle(BROWSER_HIDE_TABS_CHANNEL, async () => {
+    if (!browserManager) return;
+    browserManager.hideAllTabs();
+  });
+  require$$0.ipcMain.handle(BROWSER_SHOW_TABS_CHANNEL, async () => {
+    if (!browserManager) return;
+    browserManager.showActiveTab();
+  });
+  require$$0.ipcMain.handle(MCP_CALL_TOOL_CHANNEL, async (_event, toolName, args) => {
+    if (!mcpClient) {
+      throw new Error("MCP client not initialized");
+    }
+    return await mcpClient.callTool(toolName, args);
+  });
+  require$$0.ipcMain.handle(MCP_LIST_TOOLS_CHANNEL, async () => {
+    if (!mcpClient) {
+      return [];
+    }
+    return await mcpClient.listTools();
+  });
+  require$$0.ipcMain.handle(MCP_GET_STATUS_CHANNEL, async () => {
+    if (!mcpClient) {
+      return { running: false };
+    }
+    return await mcpClient.getStatus();
+  });
+}
 function registerListeners(mainWindow2) {
   addWindowEventListeners(mainWindow2);
   addThemeEventListeners();
@@ -846,6 +2018,306 @@ function registerListeners(mainWindow2) {
   addDatabaseEventListeners();
   addShellEventListeners();
   addObsidianEventListeners();
+  addBrowserEventListeners(mainWindow2);
+}
+let httpServer = null;
+let bridgePort = 0;
+async function checkCDPPages() {
+  try {
+    const cdpPort = process.env.ELECTRON_CDP_PORT || process.env.CDP_PORT || "9222";
+    const response = await fetch(`http://127.0.0.1:${cdpPort}/json/list`);
+    const pages = await response.json();
+    console.log(`[Bridge] CDP sees ${pages.length} pages:`, pages.map((p) => ({ id: p.id, url: p.url, title: p.title })));
+  } catch (error) {
+    console.error("[Bridge] Failed to check CDP pages:", error);
+  }
+}
+async function executeNativeBrowserTool(toolName, args) {
+  const browserManager2 = getBrowserManager();
+  if (!browserManager2) {
+    throw new Error("Browser not initialized");
+  }
+  const activeTab = browserManager2.getActiveTab();
+  if (!activeTab) {
+    throw new Error("No active browser tab");
+  }
+  switch (toolName) {
+    case "navigate_page": {
+      const url = args?.url;
+      if (!url) throw new Error("URL required for navigation");
+      const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
+      try {
+        await browserManager2.executeCDPCommand(activeTab.id, "Page.navigate", { url: normalizedUrl });
+        return { success: true, url: normalizedUrl, message: `Navigated to ${normalizedUrl}` };
+      } catch (error) {
+        browserManager2.navigateTab(activeTab.id, normalizedUrl);
+        return { success: true, url: normalizedUrl, message: `Navigated to ${normalizedUrl}` };
+      }
+    }
+    case "list_pages": {
+      const tabs = browserManager2.getAllTabs();
+      return tabs.map((tab, index) => ({
+        id: index,
+        url: tab.url,
+        title: tab.title,
+        isActive: tab.id === activeTab.id
+      }));
+    }
+    case "select_page": {
+      const tabs = browserManager2.getAllTabs();
+      let pageId = args?.pageId;
+      if (pageId === void 0 || pageId === null) {
+        const activeTab2 = browserManager2.getActiveTab();
+        if (activeTab2) {
+          pageId = tabs.findIndex((t) => t.id === activeTab2.id);
+          if (pageId < 0) pageId = 0;
+        } else {
+          pageId = 0;
+        }
+      }
+      if (pageId >= 0 && pageId < tabs.length) {
+        const tab = tabs[pageId];
+        browserManager2.switchTab(tab.id);
+        return { success: true, selected: pageId, url: tab.url };
+      }
+      return { success: false, error: `Invalid page ID: ${pageId}. Available pages: ${tabs.length}` };
+    }
+    case "take_screenshot": {
+      const screenshot = await browserManager2.captureScreenshot(activeTab.id);
+      return { screenshot };
+    }
+    case "take_snapshot": {
+      try {
+        const snapshot = await browserManager2.executeCDPCommand(activeTab.id, "DOMSnapshot.captureSnapshot", {
+          computedStyles: [],
+          includePaintOrder: false,
+          includeDOMRects: false
+        });
+        const textContent = await activeTab.view.webContents.executeJavaScript(`
+          (function() {
+            return {
+              url: window.location.href,
+              title: document.title,
+              text: document.body?.innerText?.substring(0, 5000) || '',
+            };
+          })()
+        `);
+        return textContent;
+      } catch (error) {
+        const content = await activeTab.view.webContents.executeJavaScript(`
+          (function() {
+            return {
+              url: window.location.href,
+              title: document.title,
+              text: document.body?.innerText?.substring(0, 5000) || '',
+            };
+          })()
+        `);
+        return content;
+      }
+    }
+    case "click": {
+      const uid = args?.uid;
+      if (!uid) throw new Error("UID required for click");
+      try {
+        const accessibilityTree = await browserManager2.executeCDPCommand(activeTab.id, "Accessibility.getFullAXTree", {});
+        const findNodeByUid = (nodes, targetUid) => {
+          for (const node2 of nodes) {
+            const nodeId = node2.nodeId?.toString() || node2.backendDOMNodeId?.toString();
+            if (nodeId === targetUid || nodeId?.endsWith(`_${targetUid.split("_")[1]}`)) {
+              return node2;
+            }
+            if (node2.children) {
+              const found = findNodeByUid(node2.children, targetUid);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const targetNode = findNodeByUid(accessibilityTree.nodes || [], uid);
+        if (!targetNode || !targetNode.backendDOMNodeId) {
+          throw new Error(`Element with uid ${uid} not found in accessibility tree`);
+        }
+        const domNode = await browserManager2.executeCDPCommand(activeTab.id, "DOM.describeNode", {
+          backendNodeId: targetNode.backendDOMNodeId
+        });
+        const boxModel = await browserManager2.executeCDPCommand(activeTab.id, "DOM.getBoxModel", {
+          backendNodeId: targetNode.backendDOMNodeId
+        });
+        if (!boxModel.model || !boxModel.model.content) {
+          throw new Error(`Could not get bounding box for element ${uid}`);
+        }
+        const content = boxModel.model.content;
+        const centerX = (content[0] + content[2]) / 2;
+        const centerY = (content[1] + content[5]) / 2;
+        await browserManager2.executeCDPCommand(activeTab.id, "Input.dispatchMouseEvent", {
+          type: "mousePressed",
+          x: Math.round(centerX),
+          y: Math.round(centerY),
+          button: "left",
+          clickCount: args?.dblClick ? 2 : 1
+        });
+        await browserManager2.executeCDPCommand(activeTab.id, "Input.dispatchMouseEvent", {
+          type: "mouseReleased",
+          x: Math.round(centerX),
+          y: Math.round(centerY),
+          button: "left",
+          clickCount: args?.dblClick ? 2 : 1
+        });
+        return { success: true, clicked: uid, position: { x: Math.round(centerX), y: Math.round(centerY) } };
+      } catch (error) {
+        try {
+          await activeTab.view.webContents.executeJavaScript(`
+            (function() {
+              // Try to find and click element - this is a fallback
+              const links = Array.from(document.querySelectorAll('a'));
+              const targetLink = links.find(link => link.href && link.textContent.trim().toLowerCase().includes('base'));
+              if (targetLink) {
+                targetLink.click();
+                return { success: true, method: 'javascript_fallback' };
+              }
+              throw new Error('Could not find element to click');
+            })()
+          `);
+          return { success: true, method: "javascript_fallback" };
+        } catch (fallbackError) {
+          throw new Error(`Click failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
+        }
+      }
+    }
+    case "fill": {
+      const uid = args?.uid;
+      const value = args?.value;
+      if (!uid || !value) throw new Error("UID and value required for fill");
+      await browserManager2.executeCDPCommand(activeTab.id, "Input.insertText", { text: value });
+      return { success: true };
+    }
+    default:
+      throw new Error(`Tool ${toolName} not supported in native mode. Use MCP for advanced features.`);
+  }
+}
+async function startBrowserBridge() {
+  if (httpServer) {
+    return bridgePort;
+  }
+  bridgePort = await findAvailablePort$1(3001);
+  httpServer = http.createServer(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+    if (req.method !== "POST" || req.url !== "/browser-tool") {
+      res.writeHead(404);
+      res.end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
+    try {
+      let body = "";
+      for await (const chunk of req) {
+        body += chunk.toString();
+      }
+      const { toolName, args } = JSON.parse(body);
+      if (!toolName || typeof toolName !== "string") {
+        throw new Error("toolName is required and must be a string");
+      }
+      const browserManager2 = getBrowserManager();
+      const tabs = browserManager2 ? browserManager2.getAllTabs() : [];
+      if (tabs.length === 0) {
+        throw new Error("No browser tabs open");
+      }
+      const activeTab = browserManager2.getActiveTab();
+      if (!activeTab && tabs.length > 0) {
+        browserManager2.switchTab(tabs[0].id);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (toolName === "list_pages" || toolName === "navigate_page") {
+        await checkCDPPages();
+      }
+      let result;
+      const mcpInstance2 = getMCPInstance();
+      const mcpStatus = mcpInstance2.getStatus();
+      if (mcpStatus.running) {
+        try {
+          console.log(`[Bridge] Attempting MCP call for ${toolName}...`);
+          result = await Promise.race([
+            mcpInstance2.callTool(toolName, args || {}),
+            new Promise(
+              (_2, reject) => setTimeout(() => reject(new Error("MCP_TIMEOUT")), 1e4)
+              // Increased to 10s for CDP discovery
+            )
+          ]);
+          console.log(`[Bridge] MCP call succeeded for ${toolName}`);
+        } catch (mcpError) {
+          console.warn(`[Bridge] MCP failed (${mcpError?.message}), using native Electron debugger API for ${toolName}`);
+          console.warn(`[Bridge] Note: WebContentsView tabs aren't visible to chrome-devtools-mcp via CDP`);
+          try {
+            result = await executeNativeBrowserTool(toolName, args || {});
+            console.log(`[Bridge] Native tool execution succeeded for ${toolName}`);
+          } catch (nativeError) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: false, error: nativeError.message }));
+            return;
+          }
+        }
+      } else {
+        console.log(`[Bridge] MCP not running, using native Electron debugger API for ${toolName}`);
+        try {
+          result = await executeNativeBrowserTool(toolName, args || {});
+        } catch (nativeError) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: false, error: nativeError.message }));
+          return;
+        }
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, result }));
+    } catch (error) {
+      const errorMessage = error?.message || error?.toString() || "Unknown error";
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        success: false,
+        error: errorMessage
+      }));
+    }
+  });
+  return new Promise((resolve, reject) => {
+    httpServer.listen(bridgePort, "127.0.0.1", () => {
+      console.log(`[Browser Bridge] HTTP server listening on port ${bridgePort}`);
+      resolve(bridgePort);
+    });
+    httpServer.on("error", (error) => {
+      console.error("[Browser Bridge] Server error:", error);
+      reject(error);
+    });
+  });
+}
+function stopBrowserBridge() {
+  if (httpServer) {
+    httpServer.close();
+    httpServer = null;
+    bridgePort = 0;
+  }
+}
+function findAvailablePort$1(startPort) {
+  return new Promise((resolve, reject) => {
+    const server = net__namespace.createServer();
+    server.listen(startPort, "127.0.0.1", () => {
+      const address = server.address();
+      const port = address.port;
+      server.close(() => resolve(port));
+    });
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        resolve(findAvailablePort$1(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
 }
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var dist$1 = {};
@@ -11385,6 +12857,7 @@ const inDevelopment = process.env.NODE_ENV === "development";
 let mainWindow = null;
 let serverProcess = null;
 let serverPort = 3e3;
+let remoteDebugPort = 9222;
 async function findAvailablePort(startPort = 3e3) {
   return new Promise((resolve, reject) => {
     const server = net__namespace.createServer();
@@ -11401,6 +12874,22 @@ async function findAvailablePort(startPort = 3e3) {
       }
     });
   });
+}
+async function setupRemoteDebuggingPort() {
+  try {
+    const port = await findAvailablePort(9222);
+    remoteDebugPort = port;
+    require$$0.app.commandLine.appendSwitch("remote-debugging-port", String(port));
+    process.env.ELECTRON_CDP_PORT = String(port);
+    console.log(`[MCP] Using Electron CDP port ${port}`);
+    return port;
+  } catch (error) {
+    console.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
+    remoteDebugPort = 9222;
+    require$$0.app.commandLine.appendSwitch("remote-debugging-port", "9222");
+    process.env.ELECTRON_CDP_PORT = "9222";
+    return 9222;
+  }
 }
 async function waitForServer(port, maxAttempts = 30) {
   for (let i = 0; i < maxAttempts; i++) {
@@ -11608,7 +13097,9 @@ if (!gotTheLock) {
   if (url) {
     handleDeepLink(url);
   }
-  require$$0.app.whenReady().then(async () => {
+  const startApp = async () => {
+    await setupRemoteDebuggingPort();
+    await require$$0.app.whenReady();
     if (process.platform === "darwin") {
       const iconPath = inDevelopment ? path.join(process.cwd(), "images", "icon.png") : path.join(process.resourcesPath, "images", "icon.png");
       try {
@@ -11626,6 +13117,19 @@ if (!gotTheLock) {
     } catch (error) {
       console.error("Failed to start API server:", error);
     }
+    try {
+      const mcpInstance2 = getMCPInstance();
+      mcpInstance2.start().catch((error) => {
+        console.error("[MCP] Failed to start MCP server:", error);
+        console.log("[MCP] Browser will work, but MCP tools may not be available");
+      });
+      setMCPClient(mcpInstance2);
+      console.log("[MCP] Chrome DevTools MCP server starting...");
+      const bridgePort2 = await startBrowserBridge();
+      process.env.BROWSER_BRIDGE_PORT = bridgePort2.toString();
+    } catch (error) {
+      console.error("[MCP] Failed to start MCP components:", error);
+    }
     createWindow();
     if (mainWindow) {
       mainWindow.webContents.on("did-finish-load", () => {
@@ -11633,10 +13137,16 @@ if (!gotTheLock) {
       });
     }
     installExtensions();
+  };
+  startApp().catch((error) => {
+    console.error("Failed to start app:", error);
   });
 }
-require$$0.app.on("before-quit", () => {
+require$$0.app.on("before-quit", async () => {
   stopServer();
+  stopBrowserBridge();
+  const mcpInstance2 = getMCPInstance();
+  await mcpInstance2.stop();
 });
 require$$0.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

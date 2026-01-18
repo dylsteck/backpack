@@ -123,6 +123,10 @@ class App {
         render: (params) => this.layout?.showRoute('app-detail', params),
       },
       {
+        path: '/browser',
+        render: () => this.layout?.showRoute('browser'),
+      },
+      {
         path: '/onboarding',
         render: () => this.layout?.showRoute('onboarding'),
       },

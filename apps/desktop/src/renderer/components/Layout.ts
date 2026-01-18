@@ -14,8 +14,9 @@ import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
 import { TopbarTitle } from './TopbarTitle';
 import { ChatSidebar } from './ChatSidebar';
+import { Browser } from './Browser';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -28,9 +29,18 @@ export class Layout extends Component {
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
   private lastViewWasOnboarding: boolean = false;
+  private lastView: RouteView | null = null;
   
   async init(): Promise<void> {
     this.render();
+    
+    // CRITICAL: Hide browser tabs on initial load if not on browser route
+    const currentPath = router.getCurrentPath();
+    if (currentPath !== '/browser' && window.browser && window.browser.hideTabs) {
+      window.browser.hideTabs().catch((error: any) => {
+        console.error('[Layout] Failed to hide browser tabs on init:', error);
+      });
+    }
     
     // Subscribe to sidebar states
     this.subscribe(store.sidebarCollapsed, () => this.updateSidebarState());
@@ -120,6 +130,12 @@ export class Layout extends Component {
       className: 'w-64 h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-300',
       dataset: { state: 'expanded', sidebar: 'true' },
     });
+    (this.sidebarContainer as HTMLElement).style.cssText += `
+      z-index: 100;
+      position: relative;
+      overflow: visible;
+      background-color: var(--bg-primary);
+    `;
     this.container.appendChild(this.sidebarContainer);
     this.sidebar = new Sidebar(this.sidebarContainer);
     this.sidebar.init();
@@ -128,10 +144,28 @@ export class Layout extends Component {
     const mainWrapper = createElement('div', {
       className: 'flex flex-row h-screen overflow-hidden flex-1 bg-gradient-soft',
     });
+    (mainWrapper as HTMLElement).style.cssText = `
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      overflow: hidden;
+      flex: 1 1 0%;
+      min-width: 0;
+      max-width: 100%;
+    `;
     
     const contentStack = createElement('div', {
       className: 'flex flex-col flex-1 min-w-0',
     });
+    (contentStack as HTMLElement).style.cssText = `
+      flex: 1 1 0%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: hidden;
+      position: relative;
+    `;
 
     // Drag region
     const dragRegion = createElement('div', {
@@ -141,9 +175,16 @@ export class Layout extends Component {
     
     // Content container
     this.contentContainer = createElement('div', {
-      className: 'w-full flex-1 overflow-y-auto min-h-0',
+      className: 'flex-1 overflow-y-auto min-h-0',
     });
-    this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
+    this.contentContainer.style.cssText = `
+      flex: 1 1 0%;
+      overflow-y: auto;
+      min-height: 0;
+      position: relative;
+      min-width: 0;
+      max-width: 100%;
+    `;
     contentStack.appendChild(this.contentContainer);
     
     mainWrapper.appendChild(contentStack);
@@ -152,9 +193,17 @@ export class Layout extends Component {
     this.chatSidebarContainer = createElement('aside', {
       className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative',
     });
+    // CRITICAL: Set high z-index immediately to ensure it's above browser
     (this.chatSidebarContainer as HTMLElement).style.cssText = `
       min-width: 0;
       overflow: hidden;
+      z-index: 10000;
+      position: relative;
+      isolation: isolate;
+      background-color: var(--bg-primary);
+      background: linear-gradient(180deg, rgba(18, 18, 26, 0.98) 0%, rgba(10, 10, 15, 0.98) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     `;
     mainWrapper.appendChild(this.chatSidebarContainer);
     
@@ -191,7 +240,37 @@ export class Layout extends Component {
       // Only set width if not already set by resize handle
       if (!this.chatSidebarContainer.dataset.resized) {
         this.chatSidebarContainer.style.width = open ? chatWidth : '0';
+        // CRITICAL: Force a reflow to ensure width is applied immediately
+        this.chatSidebarContainer.offsetWidth; // Force reflow
       }
+      
+      // CRITICAL: Ensure sidebar has proper z-index to be above browser content
+      this.chatSidebarContainer.style.zIndex = '10000'; // Much higher z-index (increased from 1000)
+      this.chatSidebarContainer.style.position = 'relative';
+      this.chatSidebarContainer.style.overflow = 'visible';
+      // Ensure sidebar background is opaque
+      this.chatSidebarContainer.style.backgroundColor = 'var(--bg-primary)';
+      // Ensure sidebar is above everything
+      this.chatSidebarContainer.style.isolation = 'isolate';
+      // CRITICAL: Ensure sidebar is positioned correctly
+      this.chatSidebarContainer.style.flexShrink = '0';
+      this.chatSidebarContainer.style.minWidth = open ? chatWidth : '0';
+      
+      // CRITICAL: Trigger browser bounds update after sidebar state changes
+      // Use multiple timeouts to catch CSS transitions
+      setTimeout(() => {
+        // Dispatch a custom event that browser can listen to
+        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', { 
+          detail: { open, width: open ? 320 : 0 } 
+        }));
+      }, 0);
+      
+      // Also trigger after a short delay to catch any CSS transitions
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', { 
+          detail: { open, width: open ? 320 : 0 } 
+        }));
+      }, 100);
 
       if (open && !this.chatSidebar) {
         this.chatSidebar = new ChatSidebar(this.chatSidebarContainer);
@@ -232,7 +311,24 @@ export class Layout extends Component {
     
     // Restore scroll styles
     this.contentContainer.className = 'w-full flex-1 overflow-y-auto min-h-0';
-    this.contentContainer.style.cssText = 'width: 100%; flex: 1 1 0%; overflow-y: auto; min-height: 0;';
+    this.contentContainer.style.cssText = `
+      width: 100%;
+      flex: 1 1 0%;
+      overflow-y: auto;
+      min-height: 0;
+      max-width: 100%;
+      position: relative;
+    `;
+    
+    // CRITICAL: Always hide browser tabs when NOT on browser route
+    // This ensures tabs are hidden even if lastView is null or incorrect
+    if (view !== 'browser') {
+      if (window.browser && window.browser.hideTabs) {
+        window.browser.hideTabs().catch((error: any) => {
+          console.error('[Layout] Failed to hide browser tabs:', error);
+        });
+      }
+    }
     
     // Create new view
     switch (view) {
@@ -245,12 +341,38 @@ export class Layout extends Component {
       case 'app-detail':
         this.currentView = new AppDetail(this.contentContainer, params?.appId);
         break;
+      case 'browser':
+        this.currentView = new Browser(this.contentContainer);
+        break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);
         break;
     }
     
     this.currentView?.init();
+    
+    // Show browser tabs ONLY when switching to browser route
+    if (view === 'browser') {
+      if (window.browser && window.browser.showTabs) {
+        setTimeout(() => {
+          window.browser.showTabs().catch((error: any) => {
+            console.error('[Layout] Failed to show browser tabs:', error);
+          });
+        }, 100);
+      }
+    } else {
+      // Double-check: ensure tabs are hidden for non-browser routes
+      if (window.browser && window.browser.hideTabs) {
+        setTimeout(() => {
+          window.browser.hideTabs().catch((error: any) => {
+            console.error('[Layout] Failed to hide browser tabs (double-check):', error);
+          });
+        }, 50);
+      }
+    }
+    
+    // Store last view
+    this.lastView = view;
     
     // Update topbar
     this.topbar?.updateForRoute(view, params);

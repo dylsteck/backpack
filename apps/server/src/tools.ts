@@ -8,6 +8,7 @@ import { z } from "zod";
 import { ItemsService } from "@cortex/api/services/items/service";
 import { executeRawQuery, getDatabaseSchema } from "@cortex/db";
 import { obsidianTools } from "./tools/obsidian";
+import { browserTools } from "./tools/browser";
 
 // Define the input schema
 const searchItemsSchema = z.object({
@@ -181,4 +182,5 @@ export const tools = {
     analyzeAllItems: analyzeAllItemsTool,
     querySQLite: querySQLiteTool,
     ...obsidianTools,
+    ...browserTools,
 };

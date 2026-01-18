@@ -123,6 +123,53 @@ function exposeObsidianContext() {
     searchNotes: (vaultPath, query) => ipcRenderer.invoke(OBSIDIAN_SEARCH_NOTES_CHANNEL, vaultPath, query)
   });
 }
+const BROWSER_CREATE_TAB_CHANNEL = "browser:createTab";
+const BROWSER_CLOSE_TAB_CHANNEL = "browser:closeTab";
+const BROWSER_SWITCH_TAB_CHANNEL = "browser:switchTab";
+const BROWSER_NAVIGATE_TAB_CHANNEL = "browser:navigateTab";
+const BROWSER_GO_BACK_CHANNEL = "browser:goBack";
+const BROWSER_GO_FORWARD_CHANNEL = "browser:goForward";
+const BROWSER_RELOAD_TAB_CHANNEL = "browser:reloadTab";
+const BROWSER_GET_ALL_TABS_CHANNEL = "browser:getAllTabs";
+const BROWSER_GET_TAB_CHANNEL = "browser:getTab";
+const BROWSER_CAPTURE_SCREENSHOT_CHANNEL = "browser:captureScreenshot";
+const BROWSER_EVENT_CHANNEL = "browser-event";
+const BROWSER_UPDATE_BOUNDS_CHANNEL = "browser:updateBounds";
+const BROWSER_HIDE_TABS_CHANNEL = "browser:hideTabs";
+const BROWSER_SHOW_TABS_CHANNEL = "browser:showTabs";
+const MCP_CALL_TOOL_CHANNEL = "mcp:callTool";
+const MCP_LIST_TOOLS_CHANNEL = "mcp:listTools";
+const MCP_GET_STATUS_CHANNEL = "mcp:getStatus";
+function exposeBrowserContext() {
+  const electron2 = typeof window !== "undefined" && window.require ? window.require("electron") : require("electron");
+  const { contextBridge, ipcRenderer } = electron2;
+  contextBridge.exposeInMainWorld("browser", {
+    createTab: (url) => ipcRenderer.invoke(BROWSER_CREATE_TAB_CHANNEL, url),
+    closeTab: (tabId) => ipcRenderer.invoke(BROWSER_CLOSE_TAB_CHANNEL, tabId),
+    switchTab: (tabId) => ipcRenderer.invoke(BROWSER_SWITCH_TAB_CHANNEL, tabId),
+    navigateTab: (tabId, url) => ipcRenderer.invoke(BROWSER_NAVIGATE_TAB_CHANNEL, tabId, url),
+    goBack: (tabId) => ipcRenderer.invoke(BROWSER_GO_BACK_CHANNEL, tabId),
+    goForward: (tabId) => ipcRenderer.invoke(BROWSER_GO_FORWARD_CHANNEL, tabId),
+    reloadTab: (tabId) => ipcRenderer.invoke(BROWSER_RELOAD_TAB_CHANNEL, tabId),
+    getAllTabs: () => ipcRenderer.invoke(BROWSER_GET_ALL_TABS_CHANNEL),
+    getTab: (tabId) => ipcRenderer.invoke(BROWSER_GET_TAB_CHANNEL, tabId),
+    captureScreenshot: (tabId) => ipcRenderer.invoke(BROWSER_CAPTURE_SCREENSHOT_CHANNEL, tabId),
+    updateBounds: (bounds) => ipcRenderer.invoke(BROWSER_UPDATE_BOUNDS_CHANNEL, bounds),
+    hideTabs: () => ipcRenderer.invoke(BROWSER_HIDE_TABS_CHANNEL),
+    showTabs: () => ipcRenderer.invoke(BROWSER_SHOW_TABS_CHANNEL),
+    on: (callback) => {
+      ipcRenderer.on(BROWSER_EVENT_CHANNEL, (_event, data) => callback(data.event, ...data.args));
+    },
+    off: () => {
+      ipcRenderer.removeAllListeners(BROWSER_EVENT_CHANNEL);
+    }
+  });
+  contextBridge.exposeInMainWorld("mcp", {
+    callTool: (toolName, args) => ipcRenderer.invoke(MCP_CALL_TOOL_CHANNEL, toolName, args),
+    listTools: () => ipcRenderer.invoke(MCP_LIST_TOOLS_CHANNEL),
+    getStatus: () => ipcRenderer.invoke(MCP_GET_STATUS_CHANNEL)
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
@@ -133,5 +180,6 @@ function exposeContexts() {
   exposeDatabaseContext();
   exposeShellContext();
   exposeObsidianContext();
+  exposeBrowserContext();
 }
 exposeContexts();

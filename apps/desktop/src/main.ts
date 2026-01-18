@@ -4,6 +4,9 @@ import * as net from "net";
 import * as fs from "fs";
 import registerListeners from "./helpers/ipc/listeners-register";
 import { getDatabasePath, getDefaultDatabasePath, setServerPort } from "./helpers/ipc/database/database-listeners";
+import { getMCPInstance } from "./helpers/mcp/chrome-devtools";
+import { setMCPClient } from "./helpers/ipc/browser/browser-listeners";
+import { startBrowserBridge, stopBrowserBridge, getBridgePort } from "./helpers/browser/http-bridge";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
 import path from "path";
@@ -20,6 +23,7 @@ let mainWindow: BrowserWindow | null = null;
 // Server process management
 let serverProcess: ChildProcess | null = null;
 let serverPort: number = 3000;
+let remoteDebugPort: number = 9222;
 
 /**
  * Find an available port starting from the given port
@@ -43,6 +47,28 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
       }
     });
   });
+}
+
+/**
+ * Ensure remote debugging port is available (avoid conflicts with other browsers)
+ */
+async function setupRemoteDebuggingPort(): Promise<number> {
+  try {
+    const port = await findAvailablePort(9222);
+    remoteDebugPort = port;
+    // CRITICAL: Enable remote debugging BEFORE app is ready for CDP access
+    app.commandLine.appendSwitch("remote-debugging-port", String(port));
+    // Pass port to MCP server + bridge
+    process.env.ELECTRON_CDP_PORT = String(port);
+    console.log(`[MCP] Using Electron CDP port ${port}`);
+    return port;
+  } catch (error) {
+    console.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
+    remoteDebugPort = 9222;
+    app.commandLine.appendSwitch("remote-debugging-port", "9222");
+    process.env.ELECTRON_CDP_PORT = "9222";
+    return 9222;
+  }
 }
 
 /**
@@ -330,7 +356,11 @@ if (!gotTheLock) {
     handleDeepLink(url);
   }
 
-  app.whenReady().then(async () => {
+  const startApp = async (): Promise<void> => {
+    // Ensure we use a free CDP port so Electron doesn't attach to an existing browser
+    await setupRemoteDebuggingPort();
+    await app.whenReady();
+
     if (process.platform === "darwin") {
       const iconPath = inDevelopment
         ? path.join(process.cwd(), "images", "icon.png")
@@ -356,6 +386,28 @@ if (!gotTheLock) {
       // Continue anyway - might be running separately in development
     }
     
+    // Start MCP server for browser control
+    // Note: MCP server needs at least one browser tab to connect to CDP
+    // So we start it but it won't work until a tab is created
+    try {
+      const mcpInstance = getMCPInstance();
+      // Start MCP server (it will initialize when browser tabs are available)
+      mcpInstance.start().catch((error) => {
+        console.error('[MCP] Failed to start MCP server:', error);
+        console.log('[MCP] Browser will work, but MCP tools may not be available');
+      });
+      setMCPClient(mcpInstance);
+      console.log('[MCP] Chrome DevTools MCP server starting...');
+      
+      // Start HTTP bridge for server to call browser tools
+      const bridgePort = await startBrowserBridge();
+      // Set environment variable so server knows the bridge port
+      process.env.BROWSER_BRIDGE_PORT = bridgePort.toString();
+    } catch (error) {
+      console.error('[MCP] Failed to start MCP components:', error);
+      // Continue anyway - browser will work without MCP
+    }
+    
     createWindow();
     
     // Send server port to renderer once loaded
@@ -366,12 +418,19 @@ if (!gotTheLock) {
     }
     
     installExtensions();
+  };
+
+  startApp().catch((error) => {
+    console.error("Failed to start app:", error);
   });
 }
 
 // Clean up server on quit
-app.on("before-quit", () => {
+app.on("before-quit", async () => {
   stopServer();
+  stopBrowserBridge();
+  const mcpInstance = getMCPInstance();
+  await mcpInstance.stop();
 });
 
 //osX only

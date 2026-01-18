@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { drizzle, BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema/mcp";
+import * as browserSchema from "./schema/browser";
 import path from "path";
 import fs from "fs";
 
@@ -103,8 +104,55 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
 			CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
 			CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
+			
+			CREATE TABLE IF NOT EXISTS "browser_history" (
+				"id" text PRIMARY KEY NOT NULL,
+				"url" text NOT NULL,
+				"title" text,
+				"favicon" text,
+				"visited_at" integer NOT NULL,
+				"source" text DEFAULT 'browser' NOT NULL,
+				"created_at" integer NOT NULL
+			);
+			
+			CREATE TABLE IF NOT EXISTS "browser_sessions" (
+				"id" text PRIMARY KEY NOT NULL,
+				"tabs" text,
+				"active_tab_id" text,
+				"created_at" integer NOT NULL,
+				"updated_at" integer NOT NULL
+			);
+			
+			CREATE INDEX IF NOT EXISTS "browser_history_url_idx" ON "browser_history"("url");
+			CREATE INDEX IF NOT EXISTS "browser_history_visited_at_idx" ON "browser_history"("visited_at");
+			CREATE INDEX IF NOT EXISTS "browser_history_source_idx" ON "browser_history"("source");
 		`);
 	}
+	
+	// Always ensure browser tables exist (for existing databases)
+	sqliteDb.exec(`
+		CREATE TABLE IF NOT EXISTS "browser_history" (
+			"id" text PRIMARY KEY NOT NULL,
+			"url" text NOT NULL,
+			"title" text,
+			"favicon" text,
+			"visited_at" integer NOT NULL,
+			"source" text DEFAULT 'browser' NOT NULL,
+			"created_at" integer NOT NULL
+		);
+		
+		CREATE TABLE IF NOT EXISTS "browser_sessions" (
+			"id" text PRIMARY KEY NOT NULL,
+			"tabs" text,
+			"active_tab_id" text,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+		
+		CREATE INDEX IF NOT EXISTS "browser_history_url_idx" ON "browser_history"("url");
+		CREATE INDEX IF NOT EXISTS "browser_history_visited_at_idx" ON "browser_history"("visited_at");
+		CREATE INDEX IF NOT EXISTS "browser_history_source_idx" ON "browser_history"("source");
+	`);
 	
 	// Always ensure chat tables exist (for existing databases)
 	sqliteDb.exec(`
@@ -208,8 +256,10 @@ Database Tables:
 - items: id (text PK), source (e.g. 'farcaster', 'teller'), type (e.g. 'cast', 'transaction'), timestamp (unix ms), data (JSON text), created_at, updated_at
 - chat_sessions: id (text PK), title, created_at, updated_at
 - chat_messages: id (text PK), session_id, role, content, created_at
+- browser_history: id (text PK), url, title, favicon, visited_at (unix ms), source (default 'browser'), created_at
+- browser_sessions: id (text PK), tabs (JSON array), active_tab_id, created_at, updated_at
 
-Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source.
+Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source. Browser history entries can appear in the timeline when source='browser'.
 `.trim();
 }
 
@@ -219,6 +269,7 @@ export { db };
 
 // Export schemas
 export * from "./schema/mcp";
+export * from "./schema/browser";
 
 // Export seed function
 export { seedDatabase, DEFAULT_APPS } from "./seed";

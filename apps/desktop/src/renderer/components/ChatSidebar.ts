@@ -1243,12 +1243,29 @@ export class ChatSidebar extends Component {
       }
     }
 
-    // Remove all tool markers from content for text rendering
-    const cleanContent = content
+    // Remove all tool markers from content for text rendering - be more aggressive
+    let cleanContent = content
       .replace(/\[TOOL_START:[^\]]+\]/g, '')
       .replace(/\[TOOL_INPUT:[^\]]*\]/g, '')
       .replace(/\[TOOL_RESULT:[^\]]*\]/g, '')
-      .replace(/\[Using tool: [^\]]+\]/g, '');
+      .replace(/\[Using tool: [^\]]+\]/g, '')
+      .replace(/"imageDataUrl"\s*:\s*"[^"]+"/g, '')
+      .replace(/data:image\/png;base64,[A-Za-z0-9+/=]+/g, '')
+      .replace(/Let me try again with the proper URL parameter:/g, '')
+      .replace(/Let me try again:/g, '')
+      .trim();
+    
+    // Remove common AI "thinking" phrases that clutter the UI
+    cleanContent = cleanContent
+      .replace(/^I'll navigate to [^.]+\.[^.]+\s*/gim, '')
+      .replace(/^I'll [^.]+\s*/gim, '')
+      .replace(/^Let me [^.]+\s*/gim, '')
+      .replace(/^I'm [^.]+\s*/gim, '')
+      .replace(/^I can [^.]+\s*/gim, '')
+      .replace(/^I'll help you [^.]+\s*/gim, '')
+      .replace(/^I'll [^.]+\s*/gim, '')
+      .replace(/^Let me [^.]+\s*/gim, '')
+      .trim();
 
     // Render tool indicators first if we have any
     if (toolData.size > 0) {
@@ -1270,9 +1287,47 @@ export class ChatSidebar extends Component {
       }
     }
 
-    // Render remaining text content
+    // If screenshot data is present, render it below tool indicators
+    const screenshotToolPresent = Array.from(toolData.values()).some(data => data.name === 'browser_screenshot');
+    const normalizedContent = content.replace(/\\\//g, '/');
+    const imageDataUrlMatch = normalizedContent.match(/"imageDataUrl"\s*:\s*"([^"]+)"/);
+    const screenshotDataUrlMatch = normalizedContent.match(/"screenshot"\s*:\s*"(data:image\/[^"]+)"/);
+    const screenshotMatch =
+      normalizedContent.match(/"type"\s*:\s*"image"[^}]*"data"\s*:\s*"([^"]+)"/) ||
+      normalizedContent.match(/data:image\/png;base64,([^"\s]+)/);
+    const screenshotBase64 = screenshotMatch?.[1];
+    const imgSrc =
+      (imageDataUrlMatch?.[1] && imageDataUrlMatch[1].startsWith('data:image'))
+        ? imageDataUrlMatch[1]
+        : screenshotDataUrlMatch?.[1] ||
+          (screenshotMatch?.[0]?.startsWith('data:image')
+            ? screenshotMatch[0]
+            : screenshotBase64
+              ? `data:image/png;base64,${screenshotBase64}`
+              : null);
+
+    if (screenshotToolPresent && imgSrc) {
+      const img = createElement('img', {
+        attributes: {
+          src: imgSrc,
+          alt: 'Browser screenshot',
+        },
+      });
+      (img as HTMLImageElement).style.cssText = `
+        margin-top: 8px;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(0, 0, 0, 0.2);
+      `;
+      bubble.appendChild(img);
+    }
+
+    // Render remaining text content - only if there's meaningful content
     const textContent = cleanContent.trim();
-    if (textContent) {
+    // Filter out empty or very short messages that are just tool noise
+    if (textContent && textContent.length > 3 && !textContent.match(/^(I'll|Let me|I'm|I can)[\s\.,!]*$/i)) {
       const textDiv = createElement('div', {
         className: 'markdown-content',
       });
@@ -1357,6 +1412,18 @@ export class ChatSidebar extends Component {
       else if (toolName === 'obsidian_update_note') label = 'Updating note';
       else if (toolName === 'obsidian_search') label = 'Searching notes';
       else label = 'Obsidian';
+    } else if (toolName.startsWith('browser_')) {
+      icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+      iconColor = 'rgba(99, 102, 241, 0.9)';
+      if (toolName === 'browser_navigate') label = 'Navigating';
+      else if (toolName === 'browser_click') label = 'Clicking';
+      else if (toolName === 'browser_fill') label = 'Filling form';
+      else if (toolName === 'browser_screenshot') label = 'Taking screenshot';
+      else if (toolName === 'browser_snapshot') label = 'Reading page';
+      else if (toolName === 'browser_network') label = 'Checking network';
+      else if (toolName === 'browser_evaluate') label = 'Running script';
+      else if (toolName === 'browser_wait') label = 'Waiting';
+      else label = 'Browser';
     }
 
     // Icon container
@@ -1498,16 +1565,79 @@ export class ChatSidebar extends Component {
       `;
       resultSection.appendChild(resultLabel);
 
-      const resultValue = createElement('div', {
-        textContent: toolResult,
-      });
-      (resultValue as HTMLElement).style.cssText = `
-        font-family: var(--cc-font-body, 'Archivo', sans-serif);
-        font-size: 10px;
-        color: ${iconColor};
-        font-weight: 500;
-      `;
-      resultSection.appendChild(resultValue);
+      // Special rendering for browser screenshot
+      if (toolName === 'browser_screenshot' && toolResult.startsWith('data:image')) {
+        const imgWrapper = createElement('div', {});
+        imgWrapper.style.cssText = `
+          margin-top: 8px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+        `;
+        
+        const img = createElement('img', {
+          attributes: {
+            src: toolResult,
+            alt: 'Browser screenshot',
+          },
+        });
+        img.style.cssText = `
+          width: 100%;
+          height: auto;
+          display: block;
+        `;
+        
+        imgWrapper.appendChild(img);
+        
+        // Click to expand
+        let expanded = false;
+        this.addListener(imgWrapper, 'click', () => {
+          if (!expanded) {
+            imgWrapper.style.position = 'fixed';
+            imgWrapper.style.top = '50%';
+            imgWrapper.style.left = '50%';
+            imgWrapper.style.transform = 'translate(-50%, -50%)';
+            imgWrapper.style.maxWidth = '90vw';
+            imgWrapper.style.maxHeight = '90vh';
+            imgWrapper.style.zIndex = '10000';
+            imgWrapper.style.background = 'rgba(0, 0, 0, 0.9)';
+            imgWrapper.style.padding = '20px';
+            expanded = true;
+          } else {
+            imgWrapper.style.position = '';
+            imgWrapper.style.top = '';
+            imgWrapper.style.left = '';
+            imgWrapper.style.transform = '';
+            imgWrapper.style.maxWidth = '';
+            imgWrapper.style.maxHeight = '';
+            imgWrapper.style.zIndex = '';
+            imgWrapper.style.background = '';
+            imgWrapper.style.padding = '';
+            expanded = false;
+          }
+        });
+        
+        resultSection.appendChild(imgWrapper);
+      } else {
+        // Regular text result
+        const resultValue = createElement('div', {
+          textContent: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2),
+        });
+        (resultValue as HTMLElement).style.cssText = `
+          font-family: var(--cc-font-body, 'Archivo', sans-serif);
+          font-size: 10px;
+          color: ${iconColor};
+          font-weight: 500;
+          max-height: 200px;
+          overflow-y: auto;
+          white-space: pre-wrap;
+          word-break: break-word;
+        `;
+        resultSection.appendChild(resultValue);
+      }
+      
       detailsInner.appendChild(resultSection);
     }
 
@@ -1637,7 +1767,8 @@ export class ChatSidebar extends Component {
           bubble.removeChild(bubble.firstChild);
         }
 
-        if (content.includes('[Using tool:')) {
+        // Check for tool markers (both old and new formats)
+        if (content.includes('[Using tool:') || content.includes('[TOOL_START:')) {
           this.renderMessageWithTools(bubble as HTMLElement, content);
         } else {
           bubble.innerHTML = parseMarkdown(content);
