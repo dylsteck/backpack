@@ -17,6 +17,7 @@
     "@cortex/db": "workspace:*",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/trpc": "^1.1.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "@openrouter/ai-sdk-provider": "^1.5.4",
     "@sinclair/typebox": "^0.34.0",
     "@trpc/server": "catalog:",

@@ -9,6 +9,7 @@ import { chatRoutes } from "./routes/chat";
 import { tellerRoutes } from "./routes/teller";
 import { openrouterRoutes } from "./routes/openrouter";
 import { anthropicRoutes } from "./routes/anthropic";
+import { mcpServerRoutes } from "./routes/mcp-server";
 import { SyncService } from "@cortex/api/services/sync/service";
 import { initDatabase, databaseExists, seedDatabase } from "@cortex/db";
 import path from "path";
@@ -84,6 +85,7 @@ const app = new Elysia()
 	.use(tellerRoutes)
 	.use(openrouterRoutes)
 	.use(anthropicRoutes)
+	.use(mcpServerRoutes)
 	.all("/trpc/*", async (context) => {
 		// Check if database is ready for tRPC calls
 		if (!dbReady) {
@@ -105,6 +107,7 @@ const app = new Elysia()
 	.get("/", () => "OK")
 	.listen(port, () => {
 		console.log(`Server is running on http://localhost:${port}`);
+		console.log(`[MCP Server] Available at http://localhost:${port}/mcp (SSE: /mcp/sse)`);
 		
 		// Only start sync if database is ready
 		if (dbReady) {

@@ -694,7 +694,7 @@ function addObsidianEventListeners() {
         noteCount: notes.length
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_READ_VAULT_CHANNEL, (_event, vaultPath) => {
@@ -705,7 +705,7 @@ function addObsidianEventListeners() {
       const notes = readVaultNotes(vaultPath);
       return { success: true, notes, noteCount: notes.length };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_READ_NOTE_CHANNEL, (_event, notePath) => {
@@ -733,7 +733,7 @@ function addObsidianEventListeners() {
         }
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_CREATE_NOTE_CHANNEL, (_event, vaultPath, title, content, frontmatter) => {
@@ -774,7 +774,7 @@ function addObsidianEventListeners() {
         }
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_UPDATE_NOTE_CHANNEL, (_event, notePath, content, mode) => {
@@ -812,7 +812,7 @@ function addObsidianEventListeners() {
         }
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_SEARCH_NOTES_CHANNEL, (_event, vaultPath, query) => {
@@ -823,7 +823,7 @@ function addObsidianEventListeners() {
       const notes = searchNotes(vaultPath, query);
       return { success: true, notes };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
   require$$0.ipcMain.handle(OBSIDIAN_DELETE_NOTE_CHANNEL, (_event, notePath) => {
@@ -831,11 +831,10 @@ function addObsidianEventListeners() {
       if (!fs__namespace.existsSync(notePath)) {
         return { success: false, error: "Note does not exist" };
       }
-      const { shell } = require("electron");
-      shell.trashItem(notePath);
+      require$$0.shell.trashItem(notePath);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 }

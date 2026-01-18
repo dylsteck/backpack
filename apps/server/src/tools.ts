@@ -50,13 +50,13 @@ export const searchItemsTool = tool({
     inputSchema: searchItemsSchema,
     execute: async (
         input: z.infer<typeof searchItemsSchema>
-    ): Promise<{ items: Array<{ id: string; source: string; type: string; timestamp: string; data: Record<string, unknown> }>; totalFound: number }> => {
+    ): Promise<{ items: Array<{ id: string; source: string; type: string; timestamp: string; data: Record<string, unknown> }>; totalFound: number; available?: string }> => {
         const { query, source, type, limit } = input;
         const itemsService = new ItemsService();
         const result = await itemsService.getItems({
             source,
             type,
-            limit: limit || 5,
+            limit: limit || 50,
         });
 
         // Filter by query if provided (simple text match)
@@ -67,6 +67,16 @@ export const searchItemsTool = tool({
                 const dataStr = JSON.stringify(item.data).toLowerCase();
                 return dataStr.includes(lowerQuery);
             });
+        }
+
+        // If no results, include a summary of what data IS available
+        if (items.length === 0) {
+            const summary = await itemsService.getSourceSummary();
+            return {
+                items: [],
+                totalFound: 0,
+                available: summary,
+            };
         }
 
         return {

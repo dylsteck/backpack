@@ -1,5 +1,5 @@
 import { getDatabase, items } from "@cortex/db";
-import { eq, and, desc, lt, gte } from "drizzle-orm";
+import { eq, and, desc, lt } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 export interface CreateItemParams {
@@ -78,6 +78,7 @@ export class ItemsService {
 		const hasMore = results.length > limit;
 		const itemsList = hasMore ? results.slice(0, limit) : results;
 
+		const lastItem = itemsList[itemsList.length - 1];
 		return {
 			items: itemsList.map((item) => ({
 				id: item.id,
@@ -86,7 +87,7 @@ export class ItemsService {
 				timestamp: item.timestamp,
 				data: item.data as Record<string, any>,
 			})),
-			nextCursor: hasMore && itemsList.length > 0 ? itemsList[itemsList.length - 1].timestamp.toISOString() : undefined,
+			nextCursor: hasMore && lastItem ? lastItem.timestamp.toISOString() : undefined,
 		};
 	}
 
@@ -108,6 +109,26 @@ export class ItemsService {
 
 		const result = await query;
 		return result[0]?.count || 0;
+	}
+
+	async getSourceSummary(): Promise<string> {
+		const db = getDatabase();
+		const result = await db
+			.select({
+				source: items.source,
+				type: items.type,
+				count: sql<number>`count(*)`
+			})
+			.from(items)
+			.groupBy(items.source, items.type);
+
+		if (result.length === 0) {
+			return "No data available yet";
+		}
+
+		return result
+			.map((r) => `${r.count} ${r.source} ${r.type}s`)
+			.join(", ");
 	}
 
 }

@@ -231,17 +231,43 @@ export const obsidianReadNoteTool = tool({
 		// If notePath doesn't include the vault path, try to find the note
 		let fullPath = notePath;
 		if (!fs.existsSync(notePath)) {
-			// Search for the note by title
 			const notes = readVaultNotes(vaultPath);
-			const found = notes.find(
-				(n) => n.title.toLowerCase() === notePath.toLowerCase() || n.path.endsWith(`${notePath}.md`)
+			
+			// Strip folder prefixes and .md extension for fuzzy matching
+			const searchTitle = notePath.replace(/^.*\//, '').replace(/\.md$/i, '').toLowerCase();
+			
+			// Try exact title match first
+			let found = notes.find(
+				(n) => n.title.toLowerCase() === searchTitle || n.path.endsWith(`${notePath}.md`)
 			);
+			
+			// Try partial/fuzzy match if exact match fails
+			if (!found) {
+				found = notes.find((n) => n.title.toLowerCase().includes(searchTitle));
+			}
+			
+			// Try matching first word of search
+			if (!found) {
+				const firstWord = searchTitle.split(/[\s\-_]/)[0];
+				if (firstWord && firstWord.length > 2) {
+					found = notes.find((n) => n.title.toLowerCase().includes(firstWord));
+				}
+			}
+
 			if (found) {
 				fullPath = found.path;
 			} else {
+				// Find similar notes to suggest
+				const searchWords = searchTitle.split(/[\s\-_]/).filter(w => w.length > 2);
+				const similar = notes
+					.filter((n) => searchWords.some(word => n.title.toLowerCase().includes(word)))
+					.slice(0, 3)
+					.map(n => n.title);
+				
 				return {
 					success: false,
 					error: `Note not found: ${notePath}`,
+					suggestions: similar.length > 0 ? similar : undefined,
 				};
 			}
 		}
