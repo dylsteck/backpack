@@ -286,10 +286,10 @@
     --gradient-social: linear-gradient(135deg, hsl(220, 75%, 58%), hsl(200, 80%, 55%));
     --gradient-browser: linear-gradient(135deg, hsl(240, 5%, 50%), hsl(240, 10%, 40%));
 
-    /* Surface layers for depth */
-    --surface-1: hsl(0, 0%, 99%);
-    --surface-2: hsl(240, 5%, 97%);
-    --surface-3: hsl(240, 5%, 95%);
+    /* Surface layers for depth (dark mode) */
+    --surface-1: hsl(0, 0%, 4%);
+    --surface-2: hsl(0, 0%, 6%);
+    --surface-3: hsl(0, 0%, 8%);
 
     /* Semantic colors with gradients */
     --success: 142 71% 45%;
@@ -304,23 +304,23 @@
   }
 
   .dark {
-    /* Dark Theme - Deep, rich, elegant */
-    --background: 240 12% 6%;
+    /* Dark Theme - Pure black background */
+    --background: 0 0% 0%;
     --foreground: 240 5% 96%;
 
-    --card: 240 10% 11%;
+    --card: 0 0% 6%;
     --card-foreground: 240 5% 96%;
 
-    --popover: 240 10% 11%;
+    --popover: 0 0% 6%;
     --popover-foreground: 240 5% 96%;
 
     --primary: 220 85% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 10% 16%;
+    --secondary: 0 0% 8%;
     --secondary-foreground: 240 5% 80%;
 
-    --muted: 240 10% 16%;
+    --muted: 0 0% 8%;
     --muted-foreground: 240 5% 55%;
 
     --accent: 220 60% 20%;
@@ -329,8 +329,8 @@
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 18%;
-    --input: 240 10% 18%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
     --ring: 220 85% 62%;
 
     /* Status colors */
@@ -359,9 +359,9 @@
     --gradient-browser: linear-gradient(135deg, hsl(240, 10%, 35%), hsl(240, 15%, 30%));
 
     /* Surface layers for depth (dark) */
-    --surface-1: hsl(240, 10%, 13%);
-    --surface-2: hsl(240, 10%, 15%);
-    --surface-3: hsl(240, 10%, 18%);
+    --surface-1: hsl(0, 0%, 4%);
+    --surface-2: hsl(0, 0%, 6%);
+    --surface-3: hsl(0, 0%, 8%);
 
     /* Semantic colors with gradients (dark) */
     --success: 142 71% 45%;

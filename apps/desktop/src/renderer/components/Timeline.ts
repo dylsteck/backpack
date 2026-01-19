@@ -11,8 +11,9 @@ import { createElement, clearChildren, formatTime, formatFullDate, groupByDate, 
 import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 import { DetailModal } from './DetailModal';
 import { parseMarkdown, isMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
-
-type ViewMode = 'timeline' | 'overview';
+import { decryptApiKeyForProvider, hasApiKeyForProvider } from '../utils/crypto';
+import { getChatStateManager } from '../utils/chat-state';
+import type { Provider } from '../utils/providers';
 
 interface DayGroup {
   date: Date;
@@ -25,28 +26,32 @@ interface DayGroup {
 
 export class Timeline extends Component {
   private itemsContainer: HTMLElement | null = null;
+  private briefingContainer: HTMLElement | null = null;
   private loadMoreRef: HTMLElement | null = null;
   private observer: IntersectionObserver | null = null;
   private isLoadingMore = false;
   private iconUrls: Record<string, string | undefined> = {};
-  
-  // View mode state
-  private viewMode: ViewMode = 'overview';
-  private viewToggleContainer: HTMLElement | null = null;
-  
+  private briefingContent: string | null = null;
+  private briefingLastUpdated: Date | null = null;
   
   async init(): Promise<void> {
-    const savedViewMode = localStorage.getItem('cortex-view-mode') as ViewMode;
-    if (savedViewMode) this.viewMode = savedViewMode;
-    
     this.render();
     this.setupEventDelegation();
     await this.loadAppsData();
     await this.loadInitialData();
     this.setupInfiniteScroll();
     
+    // Load briefing after a short delay to let timeline load first
+    setTimeout(() => {
+      this.loadBriefing();
+    }, 500);
+    
     // Subscriptions
-    this.subscribe(store.timelineItems, () => this.renderItems());
+    this.subscribe(store.timelineItems, () => {
+      this.renderItems();
+      // Regenerate briefing when timeline updates (debounced)
+      this.debouncedRefreshBriefing();
+    });
     this.subscribe(store.selectedSources, () => this.renderItems());
     this.subscribe(store.obsidianNotes, () => this.renderItems());
     this.subscribe(store.timelineLoading, (loading) => {
@@ -55,6 +60,16 @@ export class Timeline extends Component {
     });
     
     this.loadBrowserHistory();
+  }
+  
+  private briefingRefreshTimeout: NodeJS.Timeout | null = null;
+  private debouncedRefreshBriefing(): void {
+    if (this.briefingRefreshTimeout) {
+      clearTimeout(this.briefingRefreshTimeout);
+    }
+    this.briefingRefreshTimeout = setTimeout(() => {
+      this.loadBriefing(true);
+    }, 5000); // Wait 5 seconds after timeline updates
   }
   
   render(): void {
@@ -78,6 +93,15 @@ export class Timeline extends Component {
       className: 'max-w-5xl mx-auto pb-32 px-6 md:px-10 relative w-full',
     });
     
+    // Briefing section (at top) - minimal spacing, brought up slightly
+    this.briefingContainer = createElement('div', {
+      className: 'briefing-section mb-12',
+    });
+    (this.briefingContainer as HTMLElement).style.cssText = `
+      margin-top: -1rem;
+    `;
+    wrapper.appendChild(this.briefingContainer);
+    
     this.itemsContainer = createElement('div', {
       className: 'timeline-items relative',
     });
@@ -98,49 +122,7 @@ export class Timeline extends Component {
       className: 'flex items-center justify-between px-8 py-6 z-20',
     });
     
-    const leftSide = createElement('div', { className: 'flex flex-col gap-1' });
-    
-    const greeting = createElement('h1', {
-      className: 'text-3xl font-semibold tracking-tight text-foreground/90',
-      textContent: this.getGreeting(),
-    });
-    leftSide.appendChild(greeting);
-    
-    const subGreeting = createElement('p', {
-      className: 'text-sm text-muted-foreground font-medium',
-      textContent: 'What would you like to explore today?',
-    });
-    leftSide.appendChild(subGreeting);
-    
-    header.appendChild(leftSide);
-    
-    // View Toggle with glass morphism
-    this.viewToggleContainer = createElement('div', {
-      className: 'glass-panel flex items-center gap-1.5 p-1.5 rounded-2xl',
-    });
-    
-    const modes: Array<{ id: ViewMode; icon: string }> = [
-      { 
-        id: 'overview', 
-        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>` 
-      },
-      { 
-        id: 'timeline', 
-        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>` 
-      }
-    ];
-    
-    for (const mode of modes) {
-      const btn = createElement('button', {
-        className: `p-2.5 rounded-xl transition-all duration-300 ${this.viewMode === mode.id ? 'bg-card shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`,
-        innerHTML: mode.icon,
-        attributes: { 'data-view': mode.id },
-      });
-      this.addListener(btn, 'click', () => this.setViewMode(mode.id));
-      this.viewToggleContainer.appendChild(btn);
-    }
-    
-    header.appendChild(this.viewToggleContainer);
+    // Empty header - briefing section handles the greeting
     return header;
   }
   
@@ -151,17 +133,317 @@ export class Timeline extends Component {
     return 'Good evening';
   }
   
-  private setViewMode(mode: ViewMode): void {
-    if (this.viewMode === mode) return;
-    this.viewMode = mode;
-    localStorage.setItem('cortex-view-mode', mode);
+  // ============================================
+  // BRIEFING SECTION
+  // ============================================
+  
+  private async loadBriefing(forceRefresh = false): Promise<void> {
+    if (!this.briefingContainer) return;
     
-    this.viewToggleContainer?.querySelectorAll('[data-view]').forEach(btn => {
-      const isMatch = (btn as HTMLElement).dataset.view === mode;
-      btn.className = `p-2.5 rounded-xl transition-all duration-300 ${isMatch ? 'bg-card shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`;
+    // Check cache (skip if forceRefresh is true)
+    const cacheKey = 'cortex-daily-briefing';
+    const cached = localStorage.getItem(cacheKey);
+    const now = new Date();
+    
+    if (!forceRefresh && cached) {
+      try {
+        const { content, timestamp } = JSON.parse(cached);
+        const cacheDate = new Date(timestamp);
+        const hoursSinceUpdate = (now.getTime() - cacheDate.getTime()) / (1000 * 60 * 60);
+        
+        // Use cache if less than 6 hours old
+        if (hoursSinceUpdate < 6) {
+          this.briefingContent = content;
+          this.briefingLastUpdated = cacheDate;
+          this.renderBriefing();
+          return;
+        }
+      } catch (e) {
+        console.warn('[Timeline] Failed to parse cached briefing:', e);
+      }
+    }
+    
+    // Generate new briefing (forceRefresh bypasses cache)
+    await this.generateBriefing();
+  }
+  
+  private async generateBriefing(): Promise<void> {
+    if (!this.briefingContainer) return;
+    
+    // Check if API key is available
+    const stateManager = getChatStateManager();
+    const provider: Provider = stateManager.getProvider();
+    
+    if (!hasApiKeyForProvider(provider)) {
+      this.renderBriefingPlaceholder();
+      return;
+    }
+    
+    try {
+      const apiKey = await decryptApiKeyForProvider(provider);
+      if (!apiKey) {
+        this.renderBriefingPlaceholder();
+        return;
+      }
+      
+      // Get recent timeline items for context
+      const allItems = this.getAllItems();
+      const recentItems = allItems.slice(0, 20);
+      
+      // Build context from recent items
+      const context = recentItems.map(item => {
+        const time = formatTime(item.timestamp);
+        const source = item.source;
+        const preview = this.extractPreviewText(item) || '';
+        return `[${time}] ${source}: ${preview.substring(0, 100)}`;
+      }).join('\n');
+      
+      const endpoint = stateManager.getEndpoint(provider, await this.getServerPort());
+      const model = stateManager.getModel(provider);
+      
+      const greeting = this.getGreeting();
+      const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      const prompt = `Generate a concise daily briefing for ${greeting.toLowerCase()}, ${dateStr}. 
+
+Based on this recent activity:
+${context}
+
+Write 3-4 short paragraphs summarizing:
+1. Key meetings or important events coming up
+2. Notable activity or updates from connected services
+3. Any tasks or items that need attention
+4. A brief overall assessment of the day
+
+Write in a natural, conversational tone. Be specific but concise. Format as plain text paragraphs (no markdown, no lists).`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant that generates concise daily briefings.' },
+            { role: 'user', content: prompt }
+          ],
+          model,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      // Read entire streamed response before displaying
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+      
+      const decoder = new TextDecoder();
+      let content = '';
+      
+      // Read all chunks from the stream and accumulate text
+      // AI SDK streams plain text chunks, so we just concatenate them
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        // Accumulate all text chunks
+        content += chunk;
+      }
+      
+      // Clean up any streaming artifacts or extra whitespace
+      content = content.trim();
+      
+      // Set content and render once (no incremental updates)
+      this.briefingContent = content;
+      this.briefingLastUpdated = new Date();
+      this.renderBriefing();
+      
+      // Cache the briefing for 6 hours
+      localStorage.setItem('cortex-daily-briefing', JSON.stringify({
+        content,
+        timestamp: this.briefingLastUpdated.toISOString(),
+      }));
+      
+    } catch (error) {
+      console.error('[Timeline] Failed to generate briefing:', error);
+      this.renderBriefingPlaceholder();
+    }
+  }
+  
+  private async getServerPort(): Promise<number> {
+    if (typeof window !== 'undefined' && window.serverApi) {
+      try {
+        const port = await window.serverApi.getPort();
+        return port || 3000;
+      } catch {
+        return 3000;
+      }
+    }
+    return 3000;
+  }
+  
+  private renderBriefingPlaceholder(): void {
+    if (!this.briefingContainer) return;
+    
+    const greeting = this.getGreeting();
+    const hour = new Date().getHours();
+    const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    
+    this.briefingContent = `Good ${timeOfDay}. Your timeline is ready. Connect services to see personalized insights and updates here.`;
+    this.briefingLastUpdated = new Date();
+    this.renderBriefing();
+  }
+  
+  private renderBriefing(): void {
+    if (!this.briefingContainer) return;
+    
+    clearChildren(this.briefingContainer);
+    
+    // Minimal wrapper - no card styling
+    const wrapper = createElement('div', {
+      className: 'briefing-wrapper',
+    });
+    (wrapper as HTMLElement).style.cssText = `
+      padding: 0;
+      animation: fade-in 0.4s ease-out;
+    `;
+    
+    // Header with icon and greeting - minimal
+    const header = createElement('div', {
+      className: 'flex items-center gap-3 mb-8',
     });
     
-    this.renderItems();
+    // Simple sun/icon - no background
+    const iconWrapper = createElement('div', {
+      className: 'flex-shrink-0',
+    });
+    (iconWrapper as HTMLElement).style.cssText = `
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted-foreground);
+      opacity: 0.6;
+    `;
+    const hour = new Date().getHours();
+    const isMorning = hour < 12;
+    const isAfternoon = hour >= 12 && hour < 17;
+    iconWrapper.innerHTML = isMorning 
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`
+      : isAfternoon
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a6 6 0 0 0-6 6c0 1.5.5 3 1.5 4L12 22l4.5-8A6 6 0 0 0 12 2Z"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+    header.appendChild(iconWrapper);
+    
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const greetingText = createElement('h2', {
+      textContent: `${this.getGreeting()}, ${dateStr}.`,
+    });
+    (greetingText as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--foreground);
+      margin: 0;
+      line-height: 1.4;
+    `;
+    header.appendChild(greetingText);
+    
+    wrapper.appendChild(header);
+    
+    // Briefing content - plain text paragraphs
+    if (this.briefingContent) {
+      const contentWrapper = createElement('div', {
+        className: 'briefing-content',
+      });
+      (contentWrapper as HTMLElement).style.cssText = `
+        font-family: var(--font-sans, 'Manrope', sans-serif);
+        font-size: 0.9375rem;
+        line-height: 1.8;
+        color: var(--foreground);
+        margin-bottom: 2rem;
+      `;
+      
+      // Split into paragraphs
+      const paragraphs = this.briefingContent.split('\n\n').filter(p => p.trim());
+      paragraphs.forEach((para, index) => {
+        const p = createElement('p', {
+          textContent: para.trim(),
+        });
+        (p as HTMLElement).style.cssText = `
+          margin-bottom: ${index < paragraphs.length - 1 ? '1.25rem' : '0'};
+          color: var(--foreground);
+          animation: fade-in 0.4s ease-out ${index * 0.1}s both;
+        `;
+        contentWrapper.appendChild(p);
+      });
+      
+      wrapper.appendChild(contentWrapper);
+    }
+    
+    // Footer - minimal, centered
+    const footer = createElement('div', {
+      className: 'flex flex-col items-center gap-1',
+    });
+    (footer as HTMLElement).style.cssText = `
+      padding-top: 0.5rem;
+    `;
+    
+    const timestamp = createElement('div', {
+      className: 'text-xs',
+    });
+    (timestamp as HTMLElement).style.cssText = `
+      color: var(--muted-foreground);
+      opacity: 0.5;
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+    `;
+    if (this.briefingLastUpdated) {
+      const hours = Math.floor((new Date().getTime() - this.briefingLastUpdated.getTime()) / (1000 * 60 * 60));
+      const minutes = Math.floor((new Date().getTime() - this.briefingLastUpdated.getTime()) / (1000 * 60));
+      if (hours > 0) {
+        timestamp.textContent = `Last updated: ${hours}h ago`;
+      } else if (minutes > 0) {
+        timestamp.textContent = `Last updated: ${minutes}m ago`;
+      } else {
+        timestamp.textContent = `Last updated: just now`;
+      }
+    }
+    footer.appendChild(timestamp);
+    
+    const refreshBtn = createElement('button', {
+      className: 'text-xs',
+    });
+    (refreshBtn as HTMLElement).style.cssText = `
+      color: var(--muted-foreground);
+      opacity: 0.6;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    `;
+    refreshBtn.textContent = 'Refresh';
+    refreshBtn.addEventListener('mouseenter', () => {
+      (refreshBtn as HTMLElement).style.opacity = '1';
+    });
+    refreshBtn.addEventListener('mouseleave', () => {
+      (refreshBtn as HTMLElement).style.opacity = '0.6';
+    });
+    this.addListener(refreshBtn, 'click', () => {
+      this.loadBriefing(true);
+    });
+    footer.appendChild(refreshBtn);
+    
+    wrapper.appendChild(footer);
+    this.briefingContainer.appendChild(wrapper);
   }
   
   private renderItems(): void {
@@ -180,11 +462,7 @@ export class Timeline extends Component {
       return;
     }
     
-    if (this.viewMode === 'overview') {
-      this.renderOverview(filteredItems);
-    } else {
-      this.renderTimeline(filteredItems);
-    }
+    this.renderTimeline(filteredItems);
   }
   
   // ============================================
@@ -342,84 +620,225 @@ export class Timeline extends Component {
   
   private renderTimeline(items: TimelineItem[]): void {
     const grouped = groupByDate(items);
-    const container = createElement('div', { className: 'space-y-10' });
+    const container = createElement('div', { className: 'space-y-8' });
     
     for (const [dateKey, dayItems] of grouped) {
       const dayWrapper = createElement('div', { className: 'relative' });
       
-      const dateHeader = createElement('div', {
-        className: 'flex flex-col gap-3 mb-10',
-      });
-      dateHeader.innerHTML = `
-        <h2 style="font-family: var(--font-display); font-weight: 700; font-size: 2.5rem; letter-spacing: -0.02em; line-height: 1.1;" class="text-foreground">${formatFullDate(new Date(dateKey))}</h2>
-        <div class="flex items-center gap-4">
-          <div class="flex-1 h-[2px] bg-linear-to-r from-primary/40 via-primary/20 to-transparent"></div>
-          <span class="text-xs uppercase tracking-[0.15em] text-muted-foreground/50 font-medium" style="font-family: var(--font-sans);">${dayItems.length} ${dayItems.length === 1 ? 'item' : 'items'}</span>
-        </div>
-      `;
-      dayWrapper.appendChild(dateHeader);
+      // Minimal date header - very subtle, only show if not today
+      const today = new Date().toDateString();
+      const dateKeyDate = new Date(dateKey).toDateString();
+      if (dateKeyDate !== today) {
+        const dateHeader = createElement('div', {
+          className: 'mb-5',
+        });
+        const dateLabel = formatFullDate(new Date(dateKey));
+        dateHeader.innerHTML = `
+          <h2 style="font-family: var(--font-sans, 'Manrope', sans-serif); font-weight: 500; font-size: 0.8125rem; letter-spacing: 0.03em; text-transform: uppercase;" class="text-muted-foreground/40">${dateLabel}</h2>
+        `;
+        dayWrapper.appendChild(dateHeader);
+      }
       
-      const itemsList = createElement('div', { className: 'space-y-12 relative' });
+      const itemsList = createElement('div', { className: 'space-y-4 relative' });
       
       dayItems.forEach((item, index) => {
-        // Determine pattern variation (cycle through 3 patterns)
-        const patternIndex = index % 3;
-        const patternClass = `timeline-entry-pattern-${['a', 'b', 'c'][patternIndex]}`;
-
-        // Determine source type for contextual styling
-        const sourceType = item.source === 'farcaster' ? 'social' :
-                          item.source === 'obsidian' ? 'notes' :
-                          item.source === 'teller' ? 'financial' : 'browser';
-
-        const entry = createElement('div', {
-          className: `timeline-entry relative pl-16 min-h-[80px] ${patternClass} stagger-item`,
-          dataset: {
-            entryId: item.id,
-            index: index.toString(),
-            sourceType: sourceType
-          },
+        // Message bubble - very subtle background
+        const messageWrapper = createElement('div', {
+          className: 'flex items-start gap-4 group relative',
         });
+        (messageWrapper as HTMLElement).style.cssText = `
+          padding-left: 1.5rem;
+        `;
 
-        // Timeline connecting line with gradient fade
-        if (index < dayItems.length - 1) {
-          const line = createElement('div', { className: 'timeline-line' });
-          entry.appendChild(line);
+        // Timeline dot indicator - very subtle
+        const dot = createElement('div', {
+          className: 'absolute left-5 top-3',
+        });
+        (dot as HTMLElement).style.cssText = `
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.08);
+          transform: translateX(-50%);
+        `;
+        messageWrapper.appendChild(dot);
+
+        // Message bubble - very subtle, minimal styling
+        const bubble = createElement('div', {
+          className: 'flex-1 cursor-pointer',
+        });
+        (bubble as HTMLElement).style.cssText = `
+          background: rgba(255, 255, 255, 0.01);
+          border-radius: 0.5rem;
+          padding: 0.75rem 1rem;
+          transition: background 0.15s ease;
+        `;
+        bubble.addEventListener('mouseenter', () => {
+          (bubble as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
+        });
+        bubble.addEventListener('mouseleave', () => {
+          (bubble as HTMLElement).style.background = 'rgba(255, 255, 255, 0.01)';
+        });
+        this.addListener(bubble, 'click', () => this.openItemDetail(item));
+
+        // Content text
+        const content = this.renderItemContent(item);
+        (content as HTMLElement).style.cssText = `
+          font-family: var(--font-sans, 'Manrope', sans-serif);
+          font-size: 0.875rem;
+          line-height: 1.65;
+          color: var(--foreground);
+          margin-bottom: 0.625rem;
+        `;
+        bubble.appendChild(content);
+        
+        // Check if item has linked todos or actionable items
+        // For now, detect if content mentions Linear tickets or similar patterns
+        const contentText = this.extractPreviewText(item) || '';
+        const hasLinkedTodos = contentText.toLowerCase().includes('linear') || 
+                               contentText.toLowerCase().includes('des-') ||
+                               item.type === 'obsidian-note';
+        
+        if (hasLinkedTodos) {
+          const todosSection = createElement('div', {
+            className: 'mt-3 pt-3 border-t border-white/5',
+          });
+          
+          const todosHeader = createElement('div', {
+            className: 'text-xs mb-2',
+          });
+          (todosHeader as HTMLElement).style.cssText = `
+            color: var(--muted-foreground);
+            opacity: 0.5;
+            font-weight: 500;
+          `;
+          todosHeader.textContent = 'Linked todos';
+          todosSection.appendChild(todosHeader);
+          
+          // Extract todo items from content (simplified - could be enhanced)
+          const todoItems = this.extractTodoItems(contentText);
+          todoItems.forEach((todo, todoIndex) => {
+            const todoItem = createElement('div', {
+              className: 'flex items-center gap-2 py-1',
+            });
+            
+            const checkbox = createElement('div', {
+              className: 'flex-shrink-0',
+            });
+            (checkbox as HTMLElement).style.cssText = `
+              width: 16px;
+              height: 16px;
+              border-radius: 0.25rem;
+              border: 1.5px solid rgba(255, 255, 255, 0.2);
+              cursor: pointer;
+              transition: all 0.15s;
+              flex-shrink: 0;
+            `;
+            checkbox.addEventListener('mouseenter', () => {
+              (checkbox as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.6)';
+              (checkbox as HTMLElement).style.background = 'rgba(99, 102, 241, 0.1)';
+            });
+            checkbox.addEventListener('mouseleave', () => {
+              (checkbox as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              (checkbox as HTMLElement).style.background = 'transparent';
+            });
+            
+            const todoText = createElement('span', {
+              className: 'text-sm',
+            });
+            (todoText as HTMLElement).style.cssText = `
+              color: var(--foreground);
+              opacity: ${todoIndex === 0 ? '1' : '0.7'};
+              font-weight: ${todoIndex === 0 ? '500' : '400'};
+            `;
+            todoText.textContent = todo;
+            todoItem.appendChild(checkbox);
+            todoItem.appendChild(todoText);
+            todosSection.appendChild(todoItem);
+          });
+          
+          bubble.appendChild(todosSection);
         }
 
-        // Enhanced timeline dot with contextual styling
-        const dotClasses = `timeline-dot timeline-dot-${sourceType} hover:glow-primary transition-all shadow-lg shadow-primary/20 relative ring-pulse`;
-        const dot = createElement('div', { className: dotClasses });
-        dot.innerHTML = this.getSourceIconLarge(item.source);
-        entry.appendChild(dot);
-
-        // Timeline card with editorial lift effect
-        const card = createElement('div', {
-          className: 'card-modern card-elevated hover-editorial group cursor-pointer transition-smooth relative texture-noise',
-          dataset: { clickable: 'true' },
+        // Footer with sender, time, and source badge
+        const footer = createElement('div', {
+          className: 'flex items-center gap-2 mt-2',
         });
-
-        // Card header with enhanced typography
-        const header = createElement('div', { className: 'flex items-center justify-between mb-5' });
-        header.innerHTML = `
-          <div class="flex items-center gap-3">
-            <span class="font-body text-xs font-bold text-primary uppercase tracking-[0.12em] px-2 py-1 bg-primary/10 rounded-lg">${item.type}</span>
-            <span class="text-muted-foreground/40">•</span>
-            <span class="font-body text-xs font-medium text-muted-foreground">${formatTime(item.timestamp)}</span>
-          </div>
-          <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </div>
+        
+        // Sender name (if available) or source
+        const senderName = createElement('span', {
+          className: 'text-xs font-medium',
+        });
+        (senderName as HTMLElement).style.cssText = `
+          color: var(--muted-foreground);
+          opacity: 0.7;
         `;
-        card.appendChild(header);
+        
+        // Try to extract sender name from item data
+        let displayName = item.source;
+        if (item.type === 'cast' && (item.data as FarcasterCast).author) {
+          displayName = (item.data as FarcasterCast).author.display_name || displayName;
+        }
+        senderName.textContent = displayName;
+        footer.appendChild(senderName);
+        
+        // Time badge
+        const timeBadge = createElement('span', {
+          className: 'text-xs',
+        });
+        (timeBadge as HTMLElement).style.cssText = `
+          color: var(--muted-foreground);
+          opacity: 0.5;
+        `;
+        const timeAgo = this.getRelativeTime(item.timestamp);
+        timeBadge.textContent = timeAgo;
+        footer.appendChild(timeBadge);
+        
+        // Source badge ("using X") with icon
+        const sourceBadge = createElement('span', {
+          className: 'inline-flex items-center gap-1.5 ml-auto',
+        });
+        (sourceBadge as HTMLElement).style.cssText = `
+          font-size: 0.625rem;
+          font-weight: 500;
+          color: var(--muted-foreground);
+          opacity: 0.5;
+        `;
+        
+        const sourceIconSpan = createElement('span');
+        sourceIconSpan.innerHTML = this.getSourceIconSmall(item.source);
+        sourceBadge.appendChild(sourceIconSpan);
+        
+        const usingText = createElement('span', {
+          textContent: 'using',
+        });
+        sourceBadge.appendChild(usingText);
+        
+        const sourceNameSpan = createElement('span', {
+          className: 'font-semibold',
+          textContent: item.source.charAt(0).toUpperCase() + item.source.slice(1),
+        });
+        sourceBadge.appendChild(sourceNameSpan);
+        footer.appendChild(sourceBadge);
 
-        // Content with pattern-specific layout
-        const contentWrapper = createElement('div', { className: 'timeline-content' });
-        const content = this.renderItemContent(item);
-        contentWrapper.appendChild(content);
-        card.appendChild(contentWrapper);
+        bubble.appendChild(footer);
+        messageWrapper.appendChild(bubble);
 
-        entry.appendChild(card);
-        itemsList.appendChild(entry);
+        // Right-side absolute timestamp
+        const absoluteTime = createElement('div', {
+          className: 'absolute right-0 top-2',
+        });
+        (absoluteTime as HTMLElement).style.cssText = `
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.75rem;
+          color: var(--muted-foreground);
+          opacity: 0.4;
+          white-space: nowrap;
+        `;
+        absoluteTime.textContent = formatTime(item.timestamp);
+        messageWrapper.appendChild(absoluteTime);
+
+        itemsList.appendChild(messageWrapper);
       });
       
       dayWrapper.appendChild(itemsList);
@@ -427,6 +846,35 @@ export class Timeline extends Component {
     }
     
     this.itemsContainer?.appendChild(container);
+  }
+  
+  private getRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMins < 1) return 'Now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatTime(date);
+  }
+  
+  private extractTodoItems(text: string): string[] {
+    // Extract todo items from text (e.g., "Linear DES-16 — ...")
+    const todoPattern = /(?:Linear\s+)?(DES-\d+[^•\n]+)/gi;
+    const matches = text.match(todoPattern);
+    if (matches) {
+      return matches.slice(0, 4).map(m => m.trim());
+    }
+    // Fallback: if text mentions todos, create placeholder items
+    if (text.toLowerCase().includes('todo') || text.toLowerCase().includes('ticket')) {
+      return ['Task item 1', 'Task item 2'];
+    }
+    return [];
   }
   
   // ============================================

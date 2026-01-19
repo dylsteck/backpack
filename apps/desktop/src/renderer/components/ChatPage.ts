@@ -639,7 +639,7 @@ export class ChatPage extends Component {
 
         // Header
         const header = createElement('div', {
-            className: 'text-center mb-12',
+            className: 'text-center mb-8',
         });
 
         const icon = createElement('div', {
@@ -683,7 +683,7 @@ export class ChatPage extends Component {
         ];
 
         const questionsGrid = createElement('div', {
-            className: 'grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 w-full',
+            className: 'grid grid-cols-1 md:grid-cols-2 gap-3 w-full',
         });
 
         starterQuestions.forEach((question, index) => {
@@ -745,134 +745,6 @@ export class ChatPage extends Component {
         });
 
         welcome.appendChild(questionsGrid);
-
-        // Recent sessions (collapsible)
-        if (this.sessions.length > 0) {
-            const sessionsWrapper = createElement('div', {
-                className: 'w-full',
-            });
-
-            let isExpanded = false;
-            const visibleCount = 2;
-
-            const sessionsHeader = createElement('button', {
-                className: 'flex items-center justify-between w-full px-4 py-3 rounded-xl mb-3',
-            });
-            (sessionsHeader as HTMLElement).style.cssText = `
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          cursor: pointer;
-          transition: all 0.2s;
-        `;
-            sessionsHeader.addEventListener('mouseenter', () => {
-                (sessionsHeader as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
-            });
-            sessionsHeader.addEventListener('mouseleave', () => {
-                (sessionsHeader as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
-            });
-
-            const sessionsLabel = createElement('span', {
-                className: 'text-sm font-medium flex items-center gap-2',
-            });
-            (sessionsLabel as HTMLElement).style.color = 'var(--cc-text-primary)';
-            sessionsLabel.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--cc-text-muted);">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span>Recent conversations</span>
-              <span style="color: var(--cc-text-muted); font-weight: normal;">(${this.sessions.length})</span>
-            `;
-            sessionsHeader.appendChild(sessionsLabel);
-
-            const expandIcon = createElement('span', {
-                className: 'transition-transform',
-            });
-            expandIcon.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--cc-text-muted);">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            `;
-            sessionsHeader.appendChild(expandIcon);
-
-            const sessionsList = createElement('div', {
-                className: 'space-y-2 overflow-hidden transition-all duration-300',
-            });
-            (sessionsList as HTMLElement).style.maxHeight = `${visibleCount * 60}px`;
-
-            const renderSessions = (count: number) => {
-                sessionsList.innerHTML = '';
-                this.sessions.slice(0, count).forEach(session => {
-                    const sessionBtn = createElement('button', {
-                        className: 'w-full px-4 py-3 rounded-xl text-left flex items-center gap-3',
-                    });
-                    (sessionBtn as HTMLElement).style.cssText = `
-              background: rgba(255, 255, 255, 0.02);
-              border: 1px solid rgba(255, 255, 255, 0.04);
-              cursor: pointer;
-              transition: all 0.2s;
-            `;
-                    sessionBtn.addEventListener('mouseenter', () => {
-                        (sessionBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
-                        (sessionBtn as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    });
-                    sessionBtn.addEventListener('mouseleave', () => {
-                        (sessionBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
-                        (sessionBtn as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.04)';
-                    });
-
-                    const sessionIcon = createElement('div', {
-                        className: 'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                    });
-                    (sessionIcon as HTMLElement).style.cssText = `
-              background: rgba(99, 102, 241, 0.1);
-              color: #6366f1;
-            `;
-                    sessionIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
-                    sessionBtn.appendChild(sessionIcon);
-
-                    const sessionInfo = createElement('div', {
-                        className: 'flex-1 min-w-0',
-                    });
-                    const sessionTitle = createElement('p', {
-                        className: 'text-sm font-medium truncate',
-                        textContent: session.title || 'Untitled chat',
-                    });
-                    (sessionTitle as HTMLElement).style.color = 'var(--cc-text-primary)';
-                    sessionInfo.appendChild(sessionTitle);
-
-                    const sessionDate = createElement('p', {
-                        className: 'text-xs',
-                        textContent: this.formatRelativeTime(session.updatedAt),
-                    });
-                    (sessionDate as HTMLElement).style.color = 'var(--cc-text-muted)';
-                    sessionInfo.appendChild(sessionDate);
-
-                    sessionBtn.appendChild(sessionInfo);
-
-                    this.addListener(sessionBtn, 'click', () => this.loadSession(session.id));
-                    sessionsList.appendChild(sessionBtn);
-                });
-            };
-
-            renderSessions(visibleCount);
-
-            this.addListener(sessionsHeader, 'click', () => {
-                isExpanded = !isExpanded;
-                if (isExpanded) {
-                    renderSessions(this.sessions.length);
-                    (sessionsList as HTMLElement).style.maxHeight = `${this.sessions.length * 60}px`;
-                    (expandIcon as HTMLElement).style.transform = 'rotate(180deg)';
-                } else {
-                    renderSessions(visibleCount);
-                    (sessionsList as HTMLElement).style.maxHeight = `${visibleCount * 60}px`;
-                    (expandIcon as HTMLElement).style.transform = 'rotate(0deg)';
-                }
-            });
-
-            sessionsWrapper.appendChild(sessionsHeader);
-            sessionsWrapper.appendChild(sessionsList);
-            welcome.appendChild(sessionsWrapper);
-        }
 
         this.messagesContainer.appendChild(welcome);
     }

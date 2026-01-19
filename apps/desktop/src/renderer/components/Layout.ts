@@ -27,6 +27,7 @@ export class Layout extends Component {
   private contentContainer: HTMLElement | null = null;
   private sidebarContainer: HTMLElement | null = null;
   private chatSidebarContainer: HTMLElement | null = null;
+  private chatToggleButton: HTMLElement | null = null;
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
   private lastViewWasOnboarding: boolean = false;
@@ -99,31 +100,55 @@ export class Layout extends Component {
     this.topbar = new TopbarTitle(this.topbarTitleEl);
     this.topbar.init();
 
-    // Chat Toggle (Top Right)
+    // Chat Toggle (Top Right) - Always visible like left sidebar toggle
     const chatToggle = document.createElement('button');
-    chatToggle.className = 'fixed top-[6px] right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors z-[9999] cursor-pointer';
-    chatToggle.style.cssText = '-webkit-app-region: no-drag; cursor: pointer;';
+    chatToggle.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary transition-colors';
+    chatToggle.setAttribute('aria-label', 'Toggle chat sidebar');
     chatToggle.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground">
         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
         <line x1="15" x2="15" y1="3" y2="21"/>
       </svg>
     `;
+
+    // Update toggle position based on sidebar state
+    const updateChatTogglePosition = () => {
+      const open = store.chatSidebarOpen.get();
+      const chatWidth = this.chatSidebarContainer?.offsetWidth || 320;
+      // Position toggle button: when open, position it at the left edge of sidebar (inside sidebar)
+      // When closed, position it at a fixed right position
+      // Use higher z-index to ensure it's always visible above sidebar content
+      chatToggle.style.cssText = `
+        right: ${open ? `calc(${chatWidth}px - 2rem)` : '90px'};
+        -webkit-app-region: no-drag;
+        z-index: 10001;
+        cursor: pointer;
+        transition: right 0.3s ease;
+      `;
+    };
+
     chatToggle.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       store.chatSidebarOpen.update(v => !v);
     });
+
     document.body.appendChild(chatToggle);
+    this.chatToggleButton = chatToggle;
+    
+    // Initial position
+    updateChatTogglePosition();
+
+    // Subscribe to chat sidebar state to update toggle position
+    this.subscribe(store.chatSidebarOpen, () => {
+      // Small delay to let sidebar width update first
+      setTimeout(() => {
+        updateChatTogglePosition();
+      }, 10);
+    });
 
     this.registerCleanup(() => {
       chatToggle.remove();
-    });
-
-    // Subscribe to chat sidebar state to hide this toggle when sidebar is open
-    // (Sidebar has its own integrated close button to avoid overlap)
-    this.subscribe(store.chatSidebarOpen, (open) => {
-      chatToggle.style.display = open ? 'none' : 'flex';
     });
 
     // Sidebar (Left)
@@ -192,7 +217,7 @@ export class Layout extends Component {
 
     // Chat Sidebar (Right)
     this.chatSidebarContainer = createElement('aside', {
-      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative',
+      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative border-l border-border/50',
     });
     // CRITICAL: Set high z-index immediately to ensure it's above browser
     (this.chatSidebarContainer as HTMLElement).style.cssText = `
@@ -243,6 +268,18 @@ export class Layout extends Component {
         this.chatSidebarContainer.style.width = open ? chatWidth : '0';
         // CRITICAL: Force a reflow to ensure width is applied immediately
         this.chatSidebarContainer.offsetWidth; // Force reflow
+      }
+
+      // Show/hide border line when sidebar is open/closed (like left sidebar)
+      this.chatSidebarContainer.style.borderLeftWidth = open ? '1px' : '0';
+
+      // Update toggle button position (like left sidebar - stays visible)
+      if (this.chatToggleButton) {
+        const currentWidth = this.chatSidebarContainer.offsetWidth || 320;
+        this.chatToggleButton.style.right = open 
+          ? `calc(${currentWidth}px - 2rem)` 
+          : '90px';
+        this.chatToggleButton.style.zIndex = '10001'; // Ensure above sidebar (z-index 10000)
       }
 
       // CRITICAL: Ensure sidebar has proper z-index to be above browser content
