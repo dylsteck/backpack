@@ -18,16 +18,15 @@
   --cc-surface: #1a1a26;
   --cc-elevated: #22223a;
 
-  /* Atmospheric Gradients */
-  --cc-gradient-bg: linear-gradient(135deg,
-    #0a0a0f 0%,
-    #12121a 50%,
-    #1a1a26 100%);
+  /* Atmospheric Gradients - Subtle and refined */
+  --cc-gradient-bg: linear-gradient(180deg,
+    #0c0c12 0%,
+    #101018 100%);
   --cc-gradient-mesh:
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
 
   /* Accent Colors */
   --cc-primary: #6366f1;
@@ -50,11 +49,11 @@
   --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
                      0 2px 8px rgba(0, 0, 0, 0.2);
 
-  /* Elevation Shadows */
-  --cc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --cc-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
-  --cc-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --cc-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4);
+  /* Elevation Shadows - Softer, more subtle */
+  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.22);
 
   /* Typography Scale */
   --cc-font-display: 'Syne', system-ui, sans-serif;
@@ -144,11 +143,7 @@
 }
 
 .cc-message-user:hover {
-  border-color: rgba(99, 102, 241, 0.35);
-  box-shadow:
-    0 6px 24px rgba(99, 102, 241, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .cc-message-assistant {
@@ -170,12 +165,8 @@
 }
 
 .cc-message-assistant:hover {
-  background: rgba(26, 26, 38, 0.8);
-  border-color: rgba(255, 255, 255, 0.09);
-  box-shadow:
-    var(--cc-shadow-lg),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================

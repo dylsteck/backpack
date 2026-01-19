@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { getDatabase, chatSessions, chatMessages } from "@cortex/db";
+import { getDatabase, chatSessions, chatMessages, uiBlocks } from "@cortex/db";
 import { eq, desc, asc } from "drizzle-orm";
 
 export const chatRouter = router({
@@ -212,6 +212,41 @@ export const chatRouter = router({
 			} catch (error) {
 				console.error("Error deleting chat session:", error);
 				throw new Error("Failed to delete chat session");
+			}
+		}),
+
+	// Save a generated UI block
+	saveUIBlock: publicProcedure
+		.input(
+			z.object({
+				sessionId: z.string(),
+				messageId: z.string().optional(),
+				title: z.string().optional(),
+				uiJson: z.string(),
+				dataContext: z.record(z.unknown()).optional(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const db = getDatabase();
+				const now = new Date();
+				const blockId = `ui_${crypto.randomUUID()}`;
+
+				await db.insert(uiBlocks).values({
+					id: blockId,
+					sessionId: input.sessionId,
+					messageId: input.messageId,
+					title: input.title,
+					uiJson: input.uiJson,
+					dataContext: input.dataContext,
+					createdAt: now,
+					updatedAt: now,
+				});
+
+				return { success: true, id: blockId };
+			} catch (error) {
+				console.error("Error saving UI block:", error);
+				throw new Error("Failed to save UI block");
 			}
 		}),
 });

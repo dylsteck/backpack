@@ -2227,11 +2227,19 @@ async function startBrowserBridge() {
       const browserManager2 = getBrowserManager();
       const tabs = browserManager2 ? browserManager2.getAllTabs() : [];
       if (tabs.length === 0) {
-        throw new Error("No browser tabs open");
+        console.log("[Bridge] No tabs found, creating default tab");
+        const newTabId = browserManager2.createTab("https://www.google.com");
+        browserManager2.switchTab(newTabId);
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
       const activeTab = browserManager2.getActiveTab();
       if (!activeTab && tabs.length > 0) {
         browserManager2.switchTab(tabs[0].id);
+      } else if (!activeTab) {
+        const updatedTabs = browserManager2.getAllTabs();
+        if (updatedTabs.length > 0) {
+          browserManager2.switchTab(updatedTabs[0].id);
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
       if (toolName === "list_pages" || toolName === "navigate_page") {

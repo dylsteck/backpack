@@ -48,6 +48,8 @@
     "@types/eslint-config-prettier": "^6.11.3",
     "@types/marked": "^6.0.0",
     "@types/node": "^24.7.2",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
     "concurrently": "^9.1.0",
     "electron": "^38.3.0",
     "electron-devtools-installer": "^4.0.0",
@@ -70,6 +72,8 @@
   },
   "dependencies": {
     "@cortex/api": "workspace:*",
+    "@json-render/core": "^0.2.0",
+    "@json-render/react": "^0.2.0",
     "@tailwindcss/vite": "^4.1.14",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
@@ -81,6 +85,9 @@
     "highlight.js": "^11.9.0",
     "marked": "^12.0.0",
     "marked-highlight": "^2.1.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "scheduler": "^0.25.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.1.12"

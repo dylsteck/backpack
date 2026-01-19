@@ -145,3 +145,16 @@ export interface ChatMessage {
   createdAt: string | Date;
 }
 
+// Chat session transfer (for moving chat from ChatPage to ChatSidebar)
+export interface ChatSessionTransfer {
+  sessionId: string | null;
+  messages: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    createdAt: Date;
+  }>;
+  provider: string;
+  model: string;
+}
+

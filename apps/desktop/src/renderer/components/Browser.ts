@@ -61,6 +61,10 @@ export class Browser extends Component {
       });
     }
     
+    // Initial delay to let BrowserManager finish loading session (500ms) and http-bridge create tabs if needed
+    // This prevents creating duplicate tabs when browser tools are called before navigating to browser route
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     // Update bounds when layout changes - use requestAnimationFrame for smooth updates
     const updateBounds = () => {
       requestAnimationFrame(() => {
@@ -68,7 +72,16 @@ export class Browser extends Component {
       });
     };
     
-    updateBounds();
+    // Initial bounds update - wait a bit for sidebar to be ready if chat was transferred
+    const chatSidebarOpen = store.chatSidebarOpen.get();
+    if (chatSidebarOpen) {
+      // If sidebar is open (likely from transfer), wait a bit longer for it to render
+      setTimeout(() => {
+        updateBounds();
+      }, 100);
+    } else {
+      updateBounds();
+    }
     
     // Subscribe to sidebar and chat sidebar state changes
     // Use longer delay to ensure layout has fully updated
@@ -170,14 +183,38 @@ export class Browser extends Component {
     };
     setTimeout(periodicUpdate, 1000);
     
-    // Load initial tabs
-    await this.loadTabs();
+    // Load initial tabs - retry multiple times to catch tabs created by BrowserManager or http-bridge
+    // BrowserManager loads session after 500ms, and http-bridge might create tabs when tools are called
+    let retries = 0;
+    const maxRetries = 8; // Increased retries to wait longer
+    while (retries < maxRetries) {
+      await this.loadTabs();
+      if (this.tabs.length > 0) {
+        console.log(`[Browser] Found ${this.tabs.length} existing tab(s) after ${retries} retries`);
+        break; // Tabs found, no need to create new ones
+      }
+      // Wait progressively longer - BrowserManager loads after 500ms, so wait at least that long
+      const delay = retries < 3 ? 200 : 300; // Faster initial checks, then slower
+      await new Promise(resolve => setTimeout(resolve, delay));
+      retries++;
+    }
     
-    // Create initial tab if none exist (should be restored from session, but fallback)
+    // Only create initial tab if none exist after all retries
+    // This prevents duplicate tabs when browser tools create tabs before navigation
     if (this.tabs.length === 0 && window.browser) {
+      console.log('[Browser] No tabs found after all retries, creating default tab');
       const tabId = await window.browser.createTab('https://www.google.com');
       this.activeTabId = tabId;
       await this.loadTabs();
+    } else if (this.tabs.length > 0) {
+      // Ensure we have an active tab from existing tabs
+      if (!this.activeTabId) {
+        this.activeTabId = this.tabs[0].id;
+        // Switch to the first tab to ensure it's active
+        if (window.browser) {
+          await window.browser.switchTab(this.activeTabId);
+        }
+      }
     }
     
     this.render();

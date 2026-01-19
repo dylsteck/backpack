@@ -26,10 +26,10 @@ performance.mark(perfMarks.start);
 class App {
   private layout: Layout | null = null;
   private cleanups: (() => void)[] = [];
-  
+
   async init(): Promise<void> {
     console.time('app-init');
-    
+
     // Wait for DOM
     if (document.readyState === 'loading') {
       await new Promise<void>(resolve => {
@@ -37,50 +37,50 @@ class App {
       });
     }
     performance.mark(perfMarks.domReady);
-    
+
     // Initialize API with server port
     await initializeApi();
-    
+
     // If database path exists, ensure the server has initialized the database
     const existingDbPath = store.databasePath.get();
     if (existingDbPath && store.hasSeenOnboarding.get()) {
       await this.ensureDatabaseInitialized(existingDbPath);
     }
-    
+
     // Get app container
     const appContainer = getElementById<HTMLDivElement>('app');
     if (!appContainer) {
       throw new Error('App container not found');
     }
-    
+
     // Check if should redirect to onboarding
     if (!store.hasSeenOnboarding.get() && router.getCurrentPath() !== '/onboarding') {
       router.navigate('/onboarding');
     }
-    
+
     // Initialize layout
     this.layout = new Layout(appContainer);
     await this.layout.init();
-    
+
     // Set up routes
     this.setupRoutes();
     performance.mark(perfMarks.routerReady);
-    
+
     // Start router
     router.start();
-    
+
     // Prefetch data in background (only if onboarding is complete)
     if (store.hasSeenOnboarding.get()) {
       this.prefetchData();
     }
-    
+
     console.timeEnd('app-init');
     performance.mark(perfMarks.end);
-    
+
     // Log performance metrics
     this.logPerformance();
   }
-  
+
   /**
    * Ensure the database is initialized on the server
    * This is needed on app restart when the database path is already set
@@ -99,7 +99,7 @@ class App {
       console.error('[App] Error initializing database:', error);
     }
   }
-  
+
   private setupRoutes(): void {
     router.registerAll([
       {
@@ -130,14 +130,18 @@ class App {
         path: '/onboarding',
         render: () => this.layout?.showRoute('onboarding'),
       },
+      {
+        path: '/chat',
+        render: () => this.layout?.showRoute('chat'),
+      },
     ]);
-    
+
     router.notFound(() => {
       // Redirect to home
       router.navigate('/');
     });
   }
-  
+
   private async prefetchData(): Promise<void> {
     try {
       // Check API health
@@ -145,7 +149,7 @@ class App {
       if (!healthy) {
         console.warn('API health check failed');
       }
-      
+
       // Prefetch apps list
       await fetchAppsWithCache();
       performance.mark(perfMarks.dataLoaded);
@@ -153,13 +157,13 @@ class App {
       console.error('Failed to prefetch data:', error);
     }
   }
-  
+
   private logPerformance(): void {
     // Log all performance measures
     performance.measure('DOM Ready', perfMarks.start, perfMarks.domReady);
     performance.measure('Router Setup', perfMarks.domReady, perfMarks.routerReady);
     performance.measure('Total Init', perfMarks.start, perfMarks.end);
-    
+
     const measures = performance.getEntriesByType('measure');
     console.group('Performance Metrics');
     for (const measure of measures) {
@@ -167,7 +171,7 @@ class App {
     }
     console.groupEnd();
   }
-  
+
   /**
    * Clean up application
    */
@@ -181,7 +185,7 @@ class App {
 const app = new App();
 app.init().catch(error => {
   console.error('Failed to initialize app:', error);
-  
+
   // Show error UI
   const appContainer = getElementById<HTMLDivElement>('app');
   if (appContainer) {

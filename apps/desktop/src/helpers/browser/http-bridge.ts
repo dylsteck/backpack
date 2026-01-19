@@ -279,14 +279,26 @@ export async function startBrowserBridge(): Promise<number> {
       // Check if browser has tabs
       const browserManager = getBrowserManager();
       const tabs = browserManager ? browserManager.getAllTabs() : [];
+      
+      // If no tabs exist, create one (this can happen if browser tools are called before navigating to browser route)
       if (tabs.length === 0) {
-        throw new Error('No browser tabs open');
+        console.log('[Bridge] No tabs found, creating default tab');
+        const newTabId = browserManager.createTab('https://www.google.com');
+        browserManager.switchTab(newTabId);
+        // Wait a bit for tab to initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       // Ensure active tab exists (MCP needs at least one page to connect to)
       const activeTab = browserManager.getActiveTab();
       if (!activeTab && tabs.length > 0) {
         browserManager.switchTab(tabs[0].id);
+      } else if (!activeTab) {
+        // Re-fetch tabs after creating one
+        const updatedTabs = browserManager.getAllTabs();
+        if (updatedTabs.length > 0) {
+          browserManager.switchTab(updatedTabs[0].id);
+        }
       }
       
       // Small delay to ensure CDP has registered the tab (WebContentsView needs time to appear in CDP)

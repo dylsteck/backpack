@@ -58,8 +58,56 @@ export class ChatSidebar extends Component {
     this.stateManager = getChatStateManager();
     this.currentProvider = this.stateManager.getProvider();
     this.apiKeyMissing = !hasApiKeyForProvider(this.currentProvider);
+    
+    // Check for transferred chat session from ChatPage (e.g., when browser tools are used)
+    const transferredSession = store.chatSessionTransfer.get();
+    if (transferredSession) {
+      this.loadTransferredSession(transferredSession);
+      store.chatSessionTransfer.set(null); // Clear the transfer
+    }
+    
+    // Subscribe to future transfers (in case sidebar is already open)
+    this.subscribe(store.chatSessionTransfer, (transfer) => {
+      if (transfer) {
+        this.loadTransferredSession(transfer);
+        store.chatSessionTransfer.set(null);
+      }
+    });
+    
     await this.loadSessions();
     this.render();
+  }
+
+  /**
+   * Load a chat session transferred from ChatPage
+   */
+  private loadTransferredSession(transfer: { 
+    sessionId: string | null; 
+    messages: Array<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: Date }>;
+    provider: string;
+    model: string;
+  }): void {
+    this.sessionId = transfer.sessionId;
+    this.messages = transfer.messages.map(m => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt,
+    }));
+    
+    // Update provider and model if valid
+    const validProvider = transfer.provider as Provider;
+    if (validProvider && ['openrouter', 'anthropic'].includes(validProvider)) {
+      this.currentProvider = validProvider;
+      this.stateManager.setProvider(validProvider);
+    }
+    if (transfer.model) {
+      this.stateManager.setModel(this.currentProvider, transfer.model);
+    }
+    
+    this.apiKeyMissing = !hasApiKeyForProvider(this.currentProvider);
+    this.render();
+    this.renderMessages();
   }
 
   private async loadSessions(): Promise<void> {
@@ -264,9 +312,9 @@ export class ChatSidebar extends Component {
 
     panel.appendChild(header);
     
-    // Messages container
+    // Messages container - optimized spacing
     this.messagesContainer = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-4 space-y-4',
+      className: 'flex-1 overflow-y-auto p-3',
     });
     (this.messagesContainer as HTMLElement).style.cssText = `
       scrollbar-width: thin;
@@ -1108,10 +1156,10 @@ export class ChatSidebar extends Component {
   private createMessageElement(message: ChatMessage): HTMLElement {
     const isUser = message.role === 'user';
     const wrapper = createElement('div', {
-      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`
+      className: `flex ${isUser ? 'justify-end' : 'justify-start'} mb-2`
     });
     (wrapper as HTMLElement).style.cssText = `
-      animation: cc-slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      animation: cc-slideIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     `;
 
     if (isUser) {
@@ -1371,14 +1419,14 @@ export class ChatSidebar extends Component {
     `;
 
     const indicator = createElement('div', {
-      className: 'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all',
+      className: 'flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all',
     });
     (indicator as HTMLElement).style.cssText = `
       background: rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      animation: cc-fadeIn 0.3s ease-out;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      animation: cc-fadeIn 0.2s ease-out;
       word-wrap: break-word;
       overflow-wrap: break-word;
       word-break: break-word;
@@ -1426,30 +1474,33 @@ export class ChatSidebar extends Component {
       else label = 'Browser';
     }
 
-    // Icon container
+    // Icon container - larger and more prominent
     const iconContainer = createElement('div', {
       className: 'flex items-center justify-center flex-shrink-0',
     });
     (iconContainer as HTMLElement).style.cssText = `
-      width: 20px;
-      height: 20px;
-      border-radius: 5px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
       background: ${iconColor.replace('0.9', '0.15')};
       color: ${iconColor};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid ${iconColor.replace('0.9', '0.2')};
     `;
-    iconContainer.innerHTML = icon;
+    iconContainer.innerHTML = icon.replace('width="12"', 'width="14"').replace('height="12"', 'height="14"');
     indicator.appendChild(iconContainer);
 
-    // Label with result summary if available
-    const displayLabel = toolResult ? `${label} · ${toolResult}` : label;
+    // Label - larger and more readable
     const labelSpan = createElement('span', {
-      textContent: displayLabel,
+      textContent: label,
     });
     (labelSpan as HTMLElement).style.cssText = `
       font-family: var(--cc-font-body, 'Archivo', sans-serif);
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--cc-text-secondary, #cbd5e1);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cc-text-primary, #f1f5f9);
       flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1457,44 +1508,126 @@ export class ChatSidebar extends Component {
     `;
     indicator.appendChild(labelSpan);
 
-    // Expand/collapse chevron
-    const chevron = createElement('div', {
-      className: 'flex-shrink-0 transition-transform duration-200',
-    });
-    (chevron as HTMLElement).style.cssText = `
-      color: var(--cc-text-muted, #475569);
-    `;
-    chevron.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`;
-    indicator.appendChild(chevron);
+    // Status badge showing success/result preview
+    if (toolResult) {
+      const isSuccess = !toolResult.toLowerCase().includes('error') && !toolResult.toLowerCase().includes('failed');
+      const resultPreview = toolResult.length > 40 ? toolResult.substring(0, 40) + '...' : toolResult;
+      const statusBadge = createElement('div', {
+        className: 'flex items-center gap-1.5 flex-shrink-0',
+      });
+      (statusBadge as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 10px;
+        font-weight: 500;
+        color: ${isSuccess ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68, 68, 0.9)'};
+        background: ${isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      `;
+      
+      // Add checkmark or X icon
+      const statusIcon = createElement('span');
+      statusIcon.innerHTML = isSuccess 
+        ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>`
+        : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+      statusBadge.appendChild(statusIcon);
+      
+      const statusText = createElement('span', {
+        textContent: isSuccess ? 'Success' : 'Error',
+      });
+      statusBadge.appendChild(statusText);
+      
+      indicator.appendChild(statusBadge);
+    } else {
+      // Loading state
+      const loadingBadge = createElement('div', {
+        className: 'flex items-center gap-1.5 flex-shrink-0',
+      });
+      (loadingBadge as HTMLElement).style.cssText = `
+        font-family: var(--cc-font-body, 'Archivo', sans-serif);
+        font-size: 10px;
+        font-weight: 500;
+        color: rgba(99, 102, 241, 0.9);
+        background: rgba(99, 102, 241, 0.1);
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      `;
+      loadingBadge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Running</span>
+      `;
+      indicator.appendChild(loadingBadge);
+    }
+
+    // Expand/collapse chevron - only show if there's input/result to expand
+    let chevron: HTMLElement | null = null;
+    if (toolInput || (toolResult && !toolResult.startsWith('data:image'))) {
+      chevron = createElement('div', {
+        className: 'flex-shrink-0 transition-transform duration-200',
+      });
+      (chevron as HTMLElement).style.cssText = `
+        color: var(--cc-text-muted, #475569);
+        opacity: 0.6;
+      `;
+      chevron.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>`;
+      indicator.appendChild(chevron);
+    }
 
     wrapper.appendChild(indicator);
 
     // Expandable details section (hidden by default)
     const details = createElement('div', {
-      className: 'overflow-hidden transition-all duration-200',
+      className: 'overflow-hidden transition-all duration-300 ease-out',
     });
     (details as HTMLElement).style.cssText = `
       max-height: 0;
       opacity: 0;
+      margin-top: 0;
     `;
 
     const detailsInner = createElement('div', {
-      className: 'px-3 py-2 mt-1 rounded-lg space-y-2',
+      className: 'px-3 py-2.5 mt-2 rounded-lg space-y-2',
     });
     (detailsInner as HTMLElement).style.cssText = `
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     `;
 
-    // Tool name
+    // Tool name header
+    const toolHeader = createElement('div', {
+      className: 'flex items-center gap-2',
+    });
     const toolLabel = createElement('div', {});
     (toolLabel as HTMLElement).style.cssText = `
-      font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
-      font-size: 10px;
-      color: var(--cc-text-muted, #475569);
+      font-family: var(--cc-font-body, 'Archivo', sans-serif);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--cc-text-secondary, #cbd5e1);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     `;
-    toolLabel.textContent = `Tool: ${toolName}`;
-    detailsInner.appendChild(toolLabel);
+    toolLabel.textContent = toolName.replace(/_/g, ' ');
+    toolHeader.appendChild(toolLabel);
+    
+    // Add a subtle divider
+    const divider = createElement('div');
+    (divider as HTMLElement).style.cssText = `
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.05);
+    `;
+    toolHeader.appendChild(divider);
+    detailsInner.appendChild(toolHeader);
 
     // Input section
     if (toolInput) {
@@ -1502,16 +1635,14 @@ export class ChatSidebar extends Component {
       (inputSection as HTMLElement).style.cssText = `margin-top: 6px;`;
 
       const inputLabel = createElement('div', {
-        textContent: 'Input:',
+        textContent: 'Input',
       });
       (inputLabel as HTMLElement).style.cssText = `
         font-family: var(--cc-font-body, 'Archivo', sans-serif);
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 600;
-        color: var(--cc-text-muted, #475569);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
+        color: var(--cc-text-secondary, #94a3b8);
+        margin-bottom: 6px;
       `;
       inputSection.appendChild(inputLabel);
 
@@ -1531,16 +1662,18 @@ export class ChatSidebar extends Component {
       });
       (inputValue as HTMLElement).style.cssText = `
         font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
-        font-size: 10px;
-        color: var(--cc-text-secondary, #cbd5e1);
-        background: rgba(0, 0, 0, 0.3);
-        padding: 6px 8px;
-        border-radius: 6px;
+        font-size: 11px;
+        color: var(--cc-text-primary, #f1f5f9);
+        background: rgba(0, 0, 0, 0.4);
+        padding: 8px 10px;
+        border-radius: 8px;
         margin: 0;
         white-space: pre-wrap;
-        word-break: break-all;
-        max-height: 80px;
+        word-break: break-word;
+        max-height: 120px;
         overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        line-height: 1.5;
       `;
       inputSection.appendChild(inputValue);
       detailsInner.appendChild(inputSection);
@@ -1552,16 +1685,14 @@ export class ChatSidebar extends Component {
       (resultSection as HTMLElement).style.cssText = `margin-top: 6px;`;
 
       const resultLabel = createElement('div', {
-        textContent: 'Result:',
+        textContent: 'Result',
       });
       (resultLabel as HTMLElement).style.cssText = `
         font-family: var(--cc-font-body, 'Archivo', sans-serif);
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 600;
-        color: var(--cc-text-muted, #475569);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
+        color: var(--cc-text-secondary, #94a3b8);
+        margin-bottom: 6px;
       `;
       resultSection.appendChild(resultLabel);
 
@@ -1621,19 +1752,38 @@ export class ChatSidebar extends Component {
         
         resultSection.appendChild(imgWrapper);
       } else {
-        // Regular text result
-        const resultValue = createElement('div', {
-          textContent: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2),
+        // Regular text result - try to parse as JSON for better formatting
+        let resultText = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2);
+        let isJSON = false;
+        
+        try {
+          const parsed = JSON.parse(resultText);
+          if (typeof parsed === 'object' && parsed !== null) {
+            resultText = JSON.stringify(parsed, null, 2);
+            isJSON = true;
+          }
+        } catch {
+          // Not JSON, keep as-is
+        }
+        
+        const resultValue = createElement('pre', {
+          textContent: resultText,
         });
         (resultValue as HTMLElement).style.cssText = `
-          font-family: var(--cc-font-body, 'Archivo', sans-serif);
-          font-size: 10px;
-          color: ${iconColor};
-          font-weight: 500;
+          font-family: ${isJSON ? 'var(--cc-font-mono, "JetBrains Mono", monospace)' : 'var(--cc-font-body, "Archivo", sans-serif)'};
+          font-size: ${isJSON ? '11px' : '11px'};
+          color: var(--cc-text-primary, #f1f5f9);
+          font-weight: ${isJSON ? '400' : '500'};
           max-height: 200px;
           overflow-y: auto;
           white-space: pre-wrap;
           word-break: break-word;
+          background: rgba(0, 0, 0, 0.4);
+          padding: 8px 10px;
+          border-radius: 8px;
+          margin: 0;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          line-height: 1.5;
         `;
         resultSection.appendChild(resultValue);
       }
@@ -1658,31 +1808,36 @@ export class ChatSidebar extends Component {
 
     // Calculate dynamic height based on content
     const hasInput = !!toolInput;
-    const expandedHeight = hasInput ? '200px' : '80px';
+    const hasResult = !!toolResult && !toolResult.startsWith('data:image');
+    const expandedHeight = hasInput && hasResult ? '250px' : hasInput ? '150px' : hasResult ? '120px' : '60px';
 
-    // Toggle expand/collapse
+    // Toggle expand/collapse - only if there's content to expand
     let isExpanded = false;
-    indicator.addEventListener('click', () => {
-      isExpanded = !isExpanded;
-      if (isExpanded) {
-        (details as HTMLElement).style.maxHeight = expandedHeight;
-        (details as HTMLElement).style.opacity = '1';
-        (chevron as HTMLElement).style.transform = 'rotate(180deg)';
-        (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.06)';
-      } else {
-        (details as HTMLElement).style.maxHeight = '0';
-        (details as HTMLElement).style.opacity = '0';
-        (chevron as HTMLElement).style.transform = 'rotate(0)';
-        (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
-      }
-    });
+    if (toolInput || (toolResult && !toolResult.startsWith('data:image'))) {
+      indicator.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+          (details as HTMLElement).style.maxHeight = expandedHeight;
+          (details as HTMLElement).style.opacity = '1';
+          if (chevron) chevron.style.transform = 'rotate(180deg)';
+          (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+        } else {
+          (details as HTMLElement).style.maxHeight = '0';
+          (details as HTMLElement).style.opacity = '0';
+          if (chevron) chevron.style.transform = 'rotate(0)';
+          (indicator as HTMLElement).style.background = 'rgba(255, 255, 255, 0.03)';
+        }
+      });
+    }
 
     // Hover effect
     indicator.addEventListener('mouseenter', () => {
-      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.06)';
+      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.05)';
+      (indicator as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.08)';
     });
     indicator.addEventListener('mouseleave', () => {
-      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.04)';
+      (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.03)';
+      (indicator as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.05)';
     });
 
     return wrapper;

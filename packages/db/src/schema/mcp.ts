@@ -110,3 +110,23 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
 		references: [chatSessions.id],
 	}),
 }));
+
+// UI Blocks for storing AI-generated json-render UIs
+export const uiBlocks = sqliteTable("ui_blocks", {
+	id: text("id").primaryKey(),
+	sessionId: text("session_id").references(() => chatSessions.id, { onDelete: "cascade" }),
+	messageId: text("message_id"),
+	title: text("title"),
+	uiJson: text("ui_json").notNull(), // The json-render tree
+	dataContext: text("data_context", { mode: "json" }).$type<Record<string, unknown>>(), // Data for binding
+	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const uiBlocksRelations = relations(uiBlocks, ({ one }) => ({
+	session: one(chatSessions, {
+		fields: [uiBlocks.sessionId],
+		references: [chatSessions.id],
+	}),
+}));
+

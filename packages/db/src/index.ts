@@ -174,6 +174,22 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 		CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
 	`);
 	
+	// Always ensure apps table exists (for existing databases)
+	sqliteDb.exec(`
+		CREATE TABLE IF NOT EXISTS "apps" (
+			"id" text PRIMARY KEY NOT NULL,
+			"name" text NOT NULL,
+			"description" text NOT NULL,
+			"transport" text,
+			"oauth" integer DEFAULT 0 NOT NULL,
+			"icon_url" text NOT NULL,
+			"config" text NOT NULL,
+			"connection_type" text DEFAULT 'mcp' NOT NULL,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+	`);
+	
 	// Ensure Obsidian exists in apps table (migration for existing DBs)
 	const obsidianExists = sqliteDb.query('SELECT 1 FROM apps WHERE id = ?').get('obsidian');
 	if (!obsidianExists) {

@@ -15,8 +15,9 @@ import { Onboarding } from './Onboarding';
 import { TopbarTitle } from './TopbarTitle';
 import { ChatSidebar } from './ChatSidebar';
 import { Browser } from './Browser';
+import { ChatPage } from './ChatPage';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser' | 'chat';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -30,10 +31,10 @@ export class Layout extends Component {
   private topbarTitleEl: HTMLElement | null = null;
   private lastViewWasOnboarding: boolean = false;
   private lastView: RouteView | null = null;
-  
+
   async init(): Promise<void> {
     this.render();
-    
+
     // CRITICAL: Hide browser tabs on initial load if not on browser route
     const currentPath = router.getCurrentPath();
     if (currentPath !== '/browser' && window.browser && window.browser.hideTabs) {
@@ -41,43 +42,43 @@ export class Layout extends Component {
         console.error('[Layout] Failed to hide browser tabs on init:', error);
       });
     }
-    
+
     // Subscribe to sidebar states
     this.subscribe(store.sidebarCollapsed, () => this.updateSidebarState());
     this.subscribe(store.chatSidebarOpen, () => this.updateChatSidebarState());
   }
-  
+
   render(): void {
     const isOnboarding = router.getCurrentPath() === '/onboarding' || this.lastViewWasOnboarding;
-    
+
     if (isOnboarding && this.lastViewWasOnboarding) {
       this.lastViewWasOnboarding = false;
     }
-    
+
     if (router.getCurrentPath() === '/onboarding') {
       this.lastViewWasOnboarding = true;
-      
+
       // Onboarding has its own full-screen layout
       this.container.innerHTML = '';
       this.container.className = 'h-full w-full bg-gradient-soft';
-      
+
       this.contentContainer = createElement('div', {
         className: 'h-full w-full',
       });
       this.container.appendChild(this.contentContainer);
       return;
     }
-    
+
     // Main layout with sidebar
     this.container.innerHTML = '';
     this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden';
-    
+
     // Subtle border line under topbar
     const borderLine = createElement('div', {
       className: 'fixed top-[44px] left-0 right-0 h-px bg-border/50 z-50',
     });
     this.container.appendChild(borderLine);
-    
+
     // Topbar background (covers content area)
     this.topbarContainer = createElement('div', {
       className: 'fixed top-0 h-[44px] z-40 bg-background/80 backdrop-blur-sm transition-all duration-300',
@@ -86,7 +87,7 @@ export class Layout extends Component {
       },
     });
     this.container.appendChild(this.topbarContainer);
-    
+
     // Topbar title
     this.topbarTitleEl = createElement('div', {
       className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-medium text-foreground select-none pointer-events-none',
@@ -114,7 +115,7 @@ export class Layout extends Component {
       store.chatSidebarOpen.update(v => !v);
     });
     document.body.appendChild(chatToggle);
-    
+
     this.registerCleanup(() => {
       chatToggle.remove();
     });
@@ -124,7 +125,7 @@ export class Layout extends Component {
     this.subscribe(store.chatSidebarOpen, (open) => {
       chatToggle.style.display = open ? 'none' : 'flex';
     });
-    
+
     // Sidebar (Left)
     this.sidebarContainer = createElement('aside', {
       className: 'w-64 h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-300',
@@ -139,7 +140,7 @@ export class Layout extends Component {
     this.container.appendChild(this.sidebarContainer);
     this.sidebar = new Sidebar(this.sidebarContainer);
     this.sidebar.init();
-    
+
     // Main content area
     const mainWrapper = createElement('div', {
       className: 'flex flex-row h-screen overflow-hidden flex-1 bg-gradient-soft',
@@ -153,7 +154,7 @@ export class Layout extends Component {
       min-width: 0;
       max-width: 100%;
     `;
-    
+
     const contentStack = createElement('div', {
       className: 'flex flex-col flex-1 min-w-0',
     });
@@ -172,7 +173,7 @@ export class Layout extends Component {
       className: 'draglayer h-[44px] shrink-0',
     });
     contentStack.appendChild(dragRegion);
-    
+
     // Content container
     this.contentContainer = createElement('div', {
       className: 'flex-1 overflow-y-auto min-h-0',
@@ -186,7 +187,7 @@ export class Layout extends Component {
       max-width: 100%;
     `;
     contentStack.appendChild(this.contentContainer);
-    
+
     mainWrapper.appendChild(contentStack);
 
     // Chat Sidebar (Right)
@@ -206,28 +207,28 @@ export class Layout extends Component {
       -webkit-backdrop-filter: blur(12px);
     `;
     mainWrapper.appendChild(this.chatSidebarContainer);
-    
+
     this.container.appendChild(mainWrapper);
-    
+
     // Update initial state
     this.updateChatSidebarState();
   }
-  
+
   private updateSidebarState(): void {
     const collapsed = store.sidebarCollapsed.get();
     const collapsedLeft = '130px';
     const expandedLeft = 'calc(16rem + 0.5rem)';
-    
+
     if (this.sidebarContainer) {
       this.sidebarContainer.dataset.state = collapsed ? 'collapsed' : 'expanded';
       this.sidebarContainer.style.width = collapsed ? '0' : '16rem';
       this.sidebarContainer.style.borderRightWidth = collapsed ? '0' : '1px';
     }
-    
+
     if (this.topbarContainer) {
       this.topbarContainer.style.left = collapsed ? collapsedLeft : expandedLeft;
     }
-    
+
     if (this.topbarTitleEl) {
       this.topbarTitleEl.style.left = collapsed ? collapsedLeft : expandedLeft;
     }
@@ -243,7 +244,7 @@ export class Layout extends Component {
         // CRITICAL: Force a reflow to ensure width is applied immediately
         this.chatSidebarContainer.offsetWidth; // Force reflow
       }
-      
+
       // CRITICAL: Ensure sidebar has proper z-index to be above browser content
       this.chatSidebarContainer.style.zIndex = '10000'; // Much higher z-index (increased from 1000)
       this.chatSidebarContainer.style.position = 'relative';
@@ -255,26 +256,33 @@ export class Layout extends Component {
       // CRITICAL: Ensure sidebar is positioned correctly
       this.chatSidebarContainer.style.flexShrink = '0';
       this.chatSidebarContainer.style.minWidth = open ? chatWidth : '0';
-      
+
       // CRITICAL: Trigger browser bounds update after sidebar state changes
       // Use multiple timeouts to catch CSS transitions
       setTimeout(() => {
         // Dispatch a custom event that browser can listen to
-        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', { 
-          detail: { open, width: open ? 320 : 0 } 
+        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', {
+          detail: { open, width: open ? 320 : 0 }
         }));
       }, 0);
-      
+
       // Also trigger after a short delay to catch any CSS transitions
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', { 
-          detail: { open, width: open ? 320 : 0 } 
+        window.dispatchEvent(new CustomEvent('chat-sidebar-state-changed', {
+          detail: { open, width: open ? 320 : 0 }
         }));
       }, 100);
 
       if (open && !this.chatSidebar) {
         this.chatSidebar = new ChatSidebar(this.chatSidebarContainer);
         this.chatSidebar.init();
+      } else if (open && this.chatSidebar) {
+        // Sidebar already exists - check for transferred session and reload if needed
+        const transfer = store.chatSessionTransfer.get();
+        if (transfer) {
+          // Re-init to load transfer (subscription should also catch it, but this ensures it)
+          this.chatSidebar.init();
+        }
       }
     }
 
@@ -283,7 +291,7 @@ export class Layout extends Component {
       this.topbarContainer.style.right = open ? `${currentWidth}px` : '0';
     }
   }
-  
+
   /**
    * Show a specific route view
    */
@@ -293,22 +301,22 @@ export class Layout extends Component {
       this.currentView.destroy();
       this.currentView = null;
     }
-    
+
     // Re-render layout if switching to/from onboarding
     const isOnboarding = view === 'onboarding';
     const wasOnboarding = this.lastViewWasOnboarding && view !== 'onboarding';
-    
+
     this.lastViewWasOnboarding = isOnboarding;
-    
+
     if (!this.contentContainer || isOnboarding || wasOnboarding) {
       this.render();
     }
-    
+
     if (!this.contentContainer) return;
-    
+
     // Clear content
     clearChildren(this.contentContainer);
-    
+
     // Restore scroll styles
     this.contentContainer.className = 'w-full flex-1 overflow-y-auto min-h-0';
     this.contentContainer.style.cssText = `
@@ -319,7 +327,7 @@ export class Layout extends Component {
       max-width: 100%;
       position: relative;
     `;
-    
+
     // CRITICAL: Always hide browser tabs when NOT on browser route
     // This ensures tabs are hidden even if lastView is null or incorrect
     if (view !== 'browser') {
@@ -329,7 +337,12 @@ export class Layout extends Component {
         });
       }
     }
-    
+
+    // If navigating to browser and there's a transferred chat session, ensure sidebar opens
+    if (view === 'browser' && store.chatSessionTransfer.get()) {
+      store.chatSidebarOpen.set(true);
+    }
+
     // Create new view
     switch (view) {
       case 'timeline':
@@ -344,13 +357,16 @@ export class Layout extends Component {
       case 'browser':
         this.currentView = new Browser(this.contentContainer);
         break;
+      case 'chat':
+        this.currentView = new ChatPage(this.contentContainer);
+        break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);
         break;
     }
-    
+
     this.currentView?.init();
-    
+
     // Show browser tabs ONLY when switching to browser route
     if (view === 'browser') {
       if (window.browser && window.browser.showTabs) {
@@ -370,14 +386,14 @@ export class Layout extends Component {
         }, 50);
       }
     }
-    
+
     // Store last view
     this.lastView = view;
-    
+
     // Update topbar
     this.topbar?.updateForRoute(view, params);
   }
-  
+
   destroy(): void {
     this.sidebar?.destroy();
     this.chatSidebar?.destroy();
