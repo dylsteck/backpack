@@ -105,6 +105,9 @@ export class Timeline extends Component {
     this.itemsContainer = createElement('div', {
       className: 'timeline-items relative',
     });
+    (this.itemsContainer as HTMLElement).style.cssText = `
+      position: relative;
+    `;
     wrapper.appendChild(this.itemsContainer);
     
     // Load more trigger
@@ -620,80 +623,240 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
   
   private renderTimeline(items: TimelineItem[]): void {
     const grouped = groupByDate(items);
-    const container = createElement('div', { className: 'space-y-8' });
+    const container = createElement('div', { className: 'space-y-12 relative' });
+    
+    // Vertical connecting line - runs down the left side
+    // Aligned with briefing text start: icon (24px) + gap (12px) = 36px from container edge
+    const connectingLine = createElement('div', {
+      className: 'absolute top-0 bottom-0',
+    });
+    (connectingLine as HTMLElement).style.cssText = `
+      left: 36px;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      z-index: 0;
+    `;
+    container.appendChild(connectingLine);
     
     for (const [dateKey, dayItems] of grouped) {
       const dayWrapper = createElement('div', { className: 'relative' });
       
-      // Minimal date header - very subtle, only show if not today
+      // Date badge with horizontal line - pill-shaped, overlapping line
       const today = new Date().toDateString();
       const dateKeyDate = new Date(dateKey).toDateString();
       if (dateKeyDate !== today) {
-        const dateHeader = createElement('div', {
-          className: 'mb-5',
+        // Container for line and badge
+        const dateSection = createElement('div', {
+          className: 'relative mb-8',
         });
-        const dateLabel = formatFullDate(new Date(dateKey));
-        dateHeader.innerHTML = `
-          <h2 style="font-family: var(--font-sans, 'Manrope', sans-serif); font-weight: 500; font-size: 0.8125rem; letter-spacing: 0.03em; text-transform: uppercase;" class="text-muted-foreground/40">${dateLabel}</h2>
+        (dateSection as HTMLElement).style.cssText = `
+          position: relative;
+          display: flex;
+          align-items: center;
+          width: 100%;
         `;
-        dayWrapper.appendChild(dateHeader);
+        
+        // Horizontal line - extends across
+        const line = createElement('div');
+        (line as HTMLElement).style.cssText = `
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: hsl(var(--destructive) / 0.6);
+          z-index: 1;
+        `;
+        dateSection.appendChild(line);
+        
+        // Badge container - right-aligned, overlaps line
+        const dateBadge = createElement('div', {
+          className: 'flex justify-end relative z-10',
+        });
+        (dateBadge as HTMLElement).style.cssText = `
+          position: relative;
+          z-index: 10;
+        `;
+        
+        const badge = createElement('div');
+        (badge as HTMLElement).style.cssText = `
+          background: hsl(var(--destructive));
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 9999px;
+          font-family: var(--font-sans, 'Manrope', sans-serif);
+          font-size: 0.8125rem;
+          font-weight: 500;
+          box-shadow: 0 2px 8px hsl(var(--destructive) / 0.3);
+          white-space: nowrap;
+        `;
+        badge.textContent = formatFullDate(new Date(dateKey));
+        dateBadge.appendChild(badge);
+        dateSection.appendChild(dateBadge);
+        dayWrapper.appendChild(dateSection);
       }
       
-      const itemsList = createElement('div', { className: 'space-y-4 relative' });
+      const itemsList = createElement('div', { className: 'space-y-6 relative z-10' });
       
       dayItems.forEach((item, index) => {
-        // Message bubble - very subtle background
+        const isLast = index === dayItems.length - 1;
+        
+        // Message wrapper with left padding for timeline
+        // Padding accounts for node position (36px) + spacing (12px) = 48px
         const messageWrapper = createElement('div', {
-          className: 'flex items-start gap-4 group relative',
+          className: 'relative group',
         });
         (messageWrapper as HTMLElement).style.cssText = `
-          padding-left: 1.5rem;
+          padding-left: 48px;
+          position: relative;
         `;
 
-        // Timeline dot indicator - very subtle
-        const dot = createElement('div', {
-          className: 'absolute left-5 top-3',
+        // Timeline node - circular, positioned on the connecting line
+        // Aligned with briefing text start: icon (24px) + gap (12px) = 36px
+        const node = createElement('div', {
+          className: 'absolute',
         });
-        (dot as HTMLElement).style.cssText = `
-          width: 5px;
-          height: 5px;
+        (node as HTMLElement).style.cssText = `
+          left: 36px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(99, 102, 241, 0.6);
+          border: 2px solid var(--background);
           transform: translateX(-50%);
+          z-index: 10;
+          top: 0.75rem;
         `;
-        messageWrapper.appendChild(dot);
+        messageWrapper.appendChild(node);
 
-        // Message bubble - very subtle, minimal styling
+        // Connecting line segment from node to next node (if not last)
+        if (!isLast) {
+          const lineSegment = createElement('div', {
+            className: 'absolute',
+          });
+          (lineSegment as HTMLElement).style.cssText = `
+            left: 36px;
+            width: 1px;
+            height: calc(100% + 1.5rem);
+            background: rgba(255, 255, 255, 0.08);
+            top: 1.5rem;
+            transform: translateX(-50%);
+            z-index: 1;
+          `;
+          messageWrapper.appendChild(lineSegment);
+        }
+
+        // Sender info (avatar + name) - positioned above bubble
+        const senderInfo = createElement('div', {
+          className: 'flex items-center gap-2 mb-2',
+        });
+        
+        // Avatar/icon
+        const avatar = createElement('div', {
+          className: 'flex-shrink-0',
+        });
+        (avatar as HTMLElement).style.cssText = `
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: rgba(99, 102, 241, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        `;
+        const iconUrl = this.iconUrls[item.source];
+        if (iconUrl) {
+          avatar.innerHTML = `<img src="${iconUrl}" style="width: 100%; height: 100%; object-fit: cover;" />`;
+        } else {
+          avatar.innerHTML = `<div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(99, 102, 241, 0.6);"></div>`;
+        }
+        senderInfo.appendChild(avatar);
+        
+        // Sender name
+        let displayName = item.source.charAt(0).toUpperCase() + item.source.slice(1);
+        if (item.type === 'cast' && (item.data as FarcasterCast).author) {
+          displayName = (item.data as FarcasterCast).author.display_name || displayName;
+        }
+        const senderName = createElement('span');
+        (senderName as HTMLElement).style.cssText = `
+          font-family: var(--font-sans, 'Manrope', sans-serif);
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: var(--muted-foreground);
+          opacity: 0.8;
+        `;
+        senderName.textContent = displayName;
+        senderInfo.appendChild(senderName);
+        
+        // Time indicator below name
+        const timeIndicator = createElement('span');
+        (timeIndicator as HTMLElement).style.cssText = `
+          font-family: var(--font-sans, 'Manrope', sans-serif);
+          font-size: 0.75rem;
+          color: var(--muted-foreground);
+          opacity: 0.5;
+          margin-left: 0.5rem;
+        `;
+        timeIndicator.textContent = this.getRelativeTime(item.timestamp);
+        senderInfo.appendChild(timeIndicator);
+        
+        messageWrapper.appendChild(senderInfo);
+
+        // Special styling for Obsidian notes - card-like appearance
+        const isObsidianNote = item.type === 'obsidian-note';
+        
+        // Message bubble - chat-like appearance (or card-like for Obsidian)
         const bubble = createElement('div', {
-          className: 'flex-1 cursor-pointer',
+          className: 'cursor-pointer',
         });
         (bubble as HTMLElement).style.cssText = `
-          background: rgba(255, 255, 255, 0.01);
-          border-radius: 0.5rem;
-          padding: 0.75rem 1rem;
-          transition: background 0.15s ease;
+          background: ${isObsidianNote ? 'hsl(var(--card))' : 'hsl(var(--muted) / 0.3)'};
+          border: 1px solid ${isObsidianNote ? 'hsl(var(--border) / 0.5)' : 'hsl(var(--border) / 0.5)'};
+          border-radius: ${isObsidianNote ? '0.875rem' : '0.75rem'};
+          padding: ${isObsidianNote ? '1.25rem 1.5rem' : '1rem 1.25rem'};
+          transition: all 0.2s ease;
+          box-shadow: ${isObsidianNote ? '0 2px 8px hsl(var(--background) / 0.3)' : '0 1px 2px hsl(var(--background) / 0.05)'};
+          max-width: 85%;
         `;
         bubble.addEventListener('mouseenter', () => {
-          (bubble as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
+          (bubble as HTMLElement).style.background = isObsidianNote 
+            ? 'hsl(var(--card) / 0.95)' 
+            : 'hsl(var(--muted) / 0.5)';
+          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.8)';
+          (bubble as HTMLElement).style.transform = isObsidianNote ? 'translateY(-1px)' : 'none';
+          (bubble as HTMLElement).style.boxShadow = isObsidianNote 
+            ? '0 4px 12px hsl(var(--background) / 0.4)' 
+            : '0 1px 2px hsl(var(--background) / 0.05)';
         });
         bubble.addEventListener('mouseleave', () => {
-          (bubble as HTMLElement).style.background = 'rgba(255, 255, 255, 0.01)';
+          (bubble as HTMLElement).style.background = isObsidianNote 
+            ? 'hsl(var(--card))' 
+            : 'hsl(var(--muted) / 0.3)';
+          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.5)';
+          (bubble as HTMLElement).style.transform = 'none';
+          (bubble as HTMLElement).style.boxShadow = isObsidianNote 
+            ? '0 2px 8px hsl(var(--background) / 0.3)' 
+            : '0 1px 2px rgba(0, 0, 0, 0.05)';
         });
         this.addListener(bubble, 'click', () => this.openItemDetail(item));
 
-        // Content text
-        const content = this.renderItemContent(item);
-        (content as HTMLElement).style.cssText = `
-          font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.875rem;
-          line-height: 1.65;
-          color: var(--foreground);
-          margin-bottom: 0.625rem;
-        `;
+        // Content - special renderer for Obsidian notes
+        const content = isObsidianNote 
+          ? this.renderObsidianNoteContent(item)
+          : this.renderItemContent(item);
+        
+        if (!isObsidianNote) {
+          (content as HTMLElement).style.cssText = `
+            font-family: var(--font-sans, 'Manrope', sans-serif);
+            font-size: 0.875rem;
+            line-height: 1.7;
+            color: var(--foreground);
+            margin-bottom: 0.75rem;
+          `;
+        }
         bubble.appendChild(content);
         
-        // Check if item has linked todos or actionable items
-        // For now, detect if content mentions Linear tickets or similar patterns
+        // Check if item has linked todos
         const contentText = this.extractPreviewText(item) || '';
         const hasLinkedTodos = contentText.toLowerCase().includes('linear') || 
                                contentText.toLowerCase().includes('des-') ||
@@ -701,55 +864,80 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
         
         if (hasLinkedTodos) {
           const todosSection = createElement('div', {
-            className: 'mt-3 pt-3 border-t border-white/5',
+            className: 'mt-4 pt-4',
           });
-          
-          const todosHeader = createElement('div', {
-            className: 'text-xs mb-2',
-          });
-          (todosHeader as HTMLElement).style.cssText = `
-            color: var(--muted-foreground);
-            opacity: 0.5;
-            font-weight: 500;
+          (todosSection as HTMLElement).style.cssText = `
+            border-top: 1px solid hsl(var(--border) / 0.5);
+            margin-top: ${isObsidianNote ? '1rem' : '1rem'};
+            padding-top: ${isObsidianNote ? '1rem' : '1rem'};
           `;
-          todosHeader.textContent = 'Linked todos';
+          
+          // Todos header badge - nicer styling for Obsidian
+          const todoItems = this.extractTodoItems(contentText);
+          const todosHeader = createElement('div');
+          (todosHeader as HTMLElement).style.cssText = `
+            background: hsl(var(--muted) / 0.4);
+            color: var(--muted-foreground);
+            padding: 0.375rem 0.625rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 0.875rem;
+            opacity: 0.8;
+            font-family: var(--font-sans, 'Manrope', sans-serif);
+          `;
+          // Count completed (first item is checked)
+          const completedCount = todoItems.length > 0 ? 1 : 0;
+          todosHeader.textContent = `${completedCount}/${todoItems.length} Linked todos`;
           todosSection.appendChild(todosHeader);
           
-          // Extract todo items from content (simplified - could be enhanced)
-          const todoItems = this.extractTodoItems(contentText);
+          // Todo items with checkboxes
           todoItems.forEach((todo, todoIndex) => {
             const todoItem = createElement('div', {
-              className: 'flex items-center gap-2 py-1',
+              className: 'flex items-center gap-3 py-1.5',
             });
             
+            // Checkbox - circular, filled for first item
             const checkbox = createElement('div', {
               className: 'flex-shrink-0',
             });
+            const isChecked = todoIndex === 0;
             (checkbox as HTMLElement).style.cssText = `
-              width: 16px;
-              height: 16px;
-              border-radius: 0.25rem;
-              border: 1.5px solid rgba(255, 255, 255, 0.2);
+              width: 18px;
+              height: 18px;
+              border-radius: 50%;
+              border: ${isChecked ? 'none' : '1.5px solid hsl(var(--border) / 0.6)'};
+              background: ${isChecked ? 'hsl(var(--primary) / 0.8)' : 'transparent'};
               cursor: pointer;
               transition: all 0.15s;
-              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
             `;
+            if (isChecked) {
+              checkbox.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            }
             checkbox.addEventListener('mouseenter', () => {
-              (checkbox as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.6)';
-              (checkbox as HTMLElement).style.background = 'rgba(99, 102, 241, 0.1)';
+              if (!isChecked) {
+                (checkbox as HTMLElement).style.borderColor = 'hsl(var(--primary) / 0.6)';
+                (checkbox as HTMLElement).style.background = 'hsl(var(--primary) / 0.1)';
+              }
             });
             checkbox.addEventListener('mouseleave', () => {
-              (checkbox as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              (checkbox as HTMLElement).style.background = 'transparent';
+              if (!isChecked) {
+                (checkbox as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.6)';
+                (checkbox as HTMLElement).style.background = 'transparent';
+              }
             });
             
-            const todoText = createElement('span', {
-              className: 'text-sm',
-            });
+            const todoText = createElement('span');
             (todoText as HTMLElement).style.cssText = `
-              color: var(--foreground);
-              opacity: ${todoIndex === 0 ? '1' : '0.7'};
-              font-weight: ${todoIndex === 0 ? '500' : '400'};
+              font-family: var(--font-sans, 'Manrope', sans-serif);
+              font-size: 0.875rem;
+              color: ${isChecked ? 'hsl(var(--primary) / 0.9)' : 'var(--foreground)'};
+              opacity: ${isChecked ? '1' : '0.7'};
+              font-weight: ${isChecked ? '500' : '400'};
             `;
             todoText.textContent = todo;
             todoItem.appendChild(checkbox);
@@ -760,49 +948,23 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
           bubble.appendChild(todosSection);
         }
 
-        // Footer with sender, time, and source badge
+        // Footer with source badge inline
         const footer = createElement('div', {
-          className: 'flex items-center gap-2 mt-2',
+          className: 'flex items-center gap-2 mt-3',
         });
         
-        // Sender name (if available) or source
-        const senderName = createElement('span', {
-          className: 'text-xs font-medium',
-        });
-        (senderName as HTMLElement).style.cssText = `
-          color: var(--muted-foreground);
-          opacity: 0.7;
-        `;
-        
-        // Try to extract sender name from item data
-        let displayName = item.source;
-        if (item.type === 'cast' && (item.data as FarcasterCast).author) {
-          displayName = (item.data as FarcasterCast).author.display_name || displayName;
-        }
-        senderName.textContent = displayName;
-        footer.appendChild(senderName);
-        
-        // Time badge
-        const timeBadge = createElement('span', {
-          className: 'text-xs',
-        });
-        (timeBadge as HTMLElement).style.cssText = `
-          color: var(--muted-foreground);
-          opacity: 0.5;
-        `;
-        const timeAgo = this.getRelativeTime(item.timestamp);
-        timeBadge.textContent = timeAgo;
-        footer.appendChild(timeBadge);
-        
-        // Source badge ("using X") with icon
+        // Source badge ("using X") inline
         const sourceBadge = createElement('span', {
-          className: 'inline-flex items-center gap-1.5 ml-auto',
+          className: 'inline-flex items-center gap-1.5',
         });
         (sourceBadge as HTMLElement).style.cssText = `
-          font-size: 0.625rem;
+          background: hsl(var(--muted) / 0.5);
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.375rem;
+          font-size: 0.75rem;
           font-weight: 500;
           color: var(--muted-foreground);
-          opacity: 0.5;
+          opacity: 0.7;
         `;
         
         const sourceIconSpan = createElement('span');
@@ -824,18 +986,21 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
         bubble.appendChild(footer);
         messageWrapper.appendChild(bubble);
 
-        // Right-side absolute timestamp
+        // Right-side timestamp
         const absoluteTime = createElement('div', {
-          className: 'absolute right-0 top-2',
+          className: 'absolute right-0 top-0',
         });
         (absoluteTime as HTMLElement).style.cssText = `
-          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-family: var(--font-sans, 'Manrope', sans-serif);
           font-size: 0.75rem;
           color: var(--muted-foreground);
           opacity: 0.4;
           white-space: nowrap;
         `;
-        absoluteTime.textContent = formatTime(item.timestamp);
+        const timeStr = formatTime(item.timestamp);
+        const dateStr = new Date(item.timestamp).toDateString();
+        const todayStr = new Date().toDateString();
+        absoluteTime.textContent = dateStr === todayStr ? timeStr : `${timeStr} ${formatFullDate(new Date(item.timestamp)).split(',')[0]}`;
         messageWrapper.appendChild(absoluteTime);
 
         itemsList.appendChild(messageWrapper);
@@ -1018,19 +1183,102 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
     return parts.length ? parts.slice(0, 2).join(', ') : `${group.items.length} items`;
   }
   
+  private renderObsidianNoteContent(item: TimelineItem): HTMLElement {
+    const note = item.data as { title: string; body: string; path: string; mtime: number; tags?: string[] };
+    const wrapper = createElement('div', { className: 'obsidian-note-content' });
+    
+    // Title - prominent
+    const title = createElement('h3');
+    (title as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--foreground);
+      margin: 0 0 0.5rem 0;
+      line-height: 1.4;
+    `;
+    title.textContent = note.title || 'Untitled';
+    wrapper.appendChild(title);
+    
+    // Date - formatted nicely
+    const date = createElement('div');
+    (date as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+      margin-bottom: 0.75rem;
+      opacity: 0.8;
+    `;
+    const dateObj = new Date(note.mtime);
+    date.textContent = dateObj.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    wrapper.appendChild(date);
+    
+    // Preview text from body - clean and readable
+    const bodyText = note.body.replace(/^---\n[\s\S]*?\n---\n?/, '').trim(); // Remove frontmatter
+    const previewLength = 150;
+    const preview = bodyText.length > previewLength 
+      ? bodyText.substring(0, previewLength).trim() + '...' 
+      : bodyText;
+    
+    // Check for links in preview
+    const linkMatch = preview.match(/\[([^\]]+)\]\(([^)]+)\)/);
+    const hasLink = linkMatch !== null;
+    
+    const previewDiv = createElement('div');
+    (previewDiv as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--foreground);
+      margin-bottom: ${hasLink ? '0.5rem' : '0.75rem'};
+      opacity: 0.9;
+    `;
+    
+    // If markdown, parse it; otherwise just show text
+    if (isMarkdown(preview)) {
+      previewDiv.innerHTML = parseMarkdown(preview);
+      setupMarkdownInteractivity(previewDiv);
+    } else {
+      previewDiv.textContent = preview;
+    }
+    wrapper.appendChild(previewDiv);
+    
+    // Extract and display link if present
+    if (hasLink && linkMatch) {
+      const linkText = linkMatch[1];
+      const linkUrl = linkMatch[2];
+      const linkEl = createElement('a', {
+        attributes: { href: linkUrl, target: '_blank' },
+      });
+      (linkEl as HTMLElement).style.cssText = `
+        font-family: var(--font-sans, 'Manrope', sans-serif);
+        font-size: 0.875rem;
+        color: hsl(var(--primary));
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        margin-bottom: 0.75rem;
+        display: inline-block;
+        transition: opacity 0.2s;
+      `;
+      linkEl.textContent = linkText;
+      linkEl.addEventListener('mouseenter', () => {
+        (linkEl as HTMLElement).style.opacity = '0.8';
+      });
+      linkEl.addEventListener('mouseleave', () => {
+        (linkEl as HTMLElement).style.opacity = '1';
+      });
+      wrapper.appendChild(linkEl);
+    }
+    
+    return wrapper;
+  }
+  
   private renderItemContent(item: TimelineItem): HTMLElement {
     const text = this.extractPreviewText(item) || 'No preview available';
-
-    // Check if content is markdown (for Obsidian notes)
-    if (item.type === 'obsidian-note' && isMarkdown(text)) {
-      const wrapper = createElement('div', { className: 'markdown-content text-sm leading-relaxed' });
-      // Limit to first 200 chars for preview
-      const preview = text.length > 200 ? text.substring(0, 200) + '...' : text;
-      wrapper.innerHTML = parseMarkdown(preview);
-      // Setup interactivity for wikilinks and hashtags
-      setupMarkdownInteractivity(wrapper);
-      return wrapper;
-    }
 
     // Regular text content
     const wrapper = createElement('div', { className: 'text-sm leading-relaxed' });

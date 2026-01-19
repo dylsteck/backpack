@@ -129,8 +129,8 @@ export class ChatPage extends Component {
             className: 'w-full max-w-md p-8 rounded-2xl',
         });
         (card as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--cc-glass-bg);
+      border: 1px solid var(--cc-glass-border);
       backdrop-filter: blur(20px);
     `;
 
@@ -177,8 +177,8 @@ export class ChatPage extends Component {
             className: 'flex-1 px-3 py-2 rounded-lg text-sm',
         }) as HTMLSelectElement;
         (providerSelect as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: hsl(var(--muted) / 0.4);
+      border: 1px solid hsl(var(--border) / 0.8);
       color: var(--cc-text-primary);
       outline: none;
     `;
@@ -209,8 +209,8 @@ export class ChatPage extends Component {
             },
         }) as HTMLInputElement;
         (input as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: hsl(var(--muted) / 0.4);
+      border: 1px solid hsl(var(--border) / 0.8);
       color: var(--cc-text-primary);
       outline: none;
     `;
@@ -279,7 +279,7 @@ export class ChatPage extends Component {
             className: 'px-6 py-4 flex items-center gap-4 shrink-0',
         });
         (header as HTMLElement).style.cssText = `
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--cc-glass-border);
     `;
 
         // Provider selector
@@ -290,8 +290,8 @@ export class ChatPage extends Component {
             className: 'px-3 py-1.5 rounded-lg text-xs font-medium',
         }) as HTMLSelectElement;
         (providerSelect as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: hsl(var(--muted) / 0.4);
+      border: 1px solid var(--cc-glass-border);
       color: var(--cc-text-secondary);
       outline: none;
     `;
@@ -316,8 +316,8 @@ export class ChatPage extends Component {
             className: 'px-3 py-1.5 rounded-lg text-xs font-medium',
         }) as HTMLSelectElement;
         (modelSelect as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--cc-glass-bg);
+      border: 1px solid var(--cc-glass-border);
       color: var(--cc-text-secondary);
       outline: none;
     `;
@@ -341,33 +341,41 @@ export class ChatPage extends Component {
             className: 'ml-auto flex items-center gap-2',
         });
 
-        // Recent conversations dropdown
+        // Recent conversations dropdown (clock icon)
         let historyDropdownOpen = false;
         const historyButton = createElement('button', {
-            className: 'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 relative',
+            className: 'flex items-center justify-center relative',
+            attributes: {
+                'aria-label': 'Recent chats',
+                'aria-expanded': 'false',
+            },
         });
         (historyButton as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: hsl(var(--muted) / 0.4);
+      border: 1px solid var(--cc-glass-border);
       color: var(--cc-text-secondary);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
         historyButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>Recent</span>
-      ${this.sessions.length > 0 ? `<span style="opacity: 0.6;">(${this.sessions.length})</span>` : ''}
-      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s; transform: ${historyDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'};">
-        <path d="m6 9 6 6 6-6"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
       </svg>
     `;
         historyButton.addEventListener('mouseenter', () => {
-            (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.06)';
+            (historyButton as HTMLElement).style.background = 'var(--cc-glass-bg)';
+            (historyButton as HTMLElement).style.color = 'var(--cc-text-primary)';
         });
         historyButton.addEventListener('mouseleave', () => {
-            (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
+            (historyButton as HTMLElement).style.background = 'hsl(var(--muted) / 0.4)';
+            (historyButton as HTMLElement).style.color = 'var(--cc-text-secondary)';
         });
 
         // Dropdown menu
@@ -375,9 +383,9 @@ export class ChatPage extends Component {
             className: 'absolute top-full right-0 mt-1 rounded-lg overflow-hidden shadow-xl z-50',
         });
         (dropdown as HTMLElement).style.cssText = `
-      background: rgba(10, 10, 15, 0.98);
+      background: hsl(var(--card));
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid hsl(var(--border) / 0.8);
       min-width: 240px;
       max-width: 320px;
       max-height: 400px;
@@ -394,7 +402,7 @@ export class ChatPage extends Component {
                 className: 'w-full px-4 py-2.5 flex items-center gap-2 text-left hover:bg-white/5 transition-colors',
             });
             (newChatOption as HTMLElement).style.cssText = `
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid var(--cc-glass-border);
       `;
             newChatOption.innerHTML = `
         <div style="width: 20px; height: 20px; border-radius: 6px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -430,12 +438,33 @@ export class ChatPage extends Component {
                 dropdown.appendChild(recentLabel);
 
                 this.sessions.slice(0, 10).forEach(session => {
-                    const sessionOption = createElement('button', {
-                        className: 'w-full px-4 py-2.5 flex items-center gap-2 text-left hover:bg-white/5 transition-colors group',
+                    const sessionRow = createElement('div', {
+                        className: 'flex items-center gap-2 px-4 py-2.5 transition-colors group relative',
                     });
+                    (sessionRow as HTMLElement).style.cssText = `
+                        position: relative;
+                    `;
+                    
+                    // Hover effect for row
+                    sessionRow.addEventListener('mouseenter', () => {
+                        (sessionRow as HTMLElement).style.background = 'var(--cc-glass-bg)';
+                        const deleteBtn = sessionRow.querySelector('.delete-btn') as HTMLElement;
+                        if (deleteBtn) deleteBtn.style.opacity = '1';
+                    });
+                    sessionRow.addEventListener('mouseleave', () => {
+                        (sessionRow as HTMLElement).style.background = 'transparent';
+                        const deleteBtn = sessionRow.querySelector('.delete-btn') as HTMLElement;
+                        if (deleteBtn) deleteBtn.style.opacity = '0';
+                    });
+
                     const isCurrent = this.sessionId === session.id;
-                    sessionOption.innerHTML = `
-            <div style="width: 20px; height: 20px; border-radius: 6px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    
+                    // Chat button (clickable area for loading session)
+                    const chatBtn = createElement('button', {
+                        className: 'flex items-center gap-2 flex-1 min-w-0 text-left',
+                    });
+                    chatBtn.innerHTML = `
+            <div style="width: 20px; height: 20px; border-radius: 6px; background: hsl(var(--primary) / 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #6366f1;">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
@@ -449,12 +478,54 @@ export class ChatPage extends Component {
               </div>
             </div>
           `;
-                    this.addListener(sessionOption, 'click', () => {
+                    this.addListener(chatBtn, 'click', () => {
                         this.loadSession(session.id);
                         historyDropdownOpen = false;
                         dropdown.style.display = 'none';
                     });
-                    dropdown.appendChild(sessionOption);
+                    sessionRow.appendChild(chatBtn);
+
+                    // Delete button (X icon)
+                    const deleteBtn = createElement('button', {
+                        className: 'delete-btn p-1 rounded transition-all',
+                    });
+                    deleteBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    `;
+                    (deleteBtn as HTMLElement).style.cssText = `
+                        opacity: 0;
+                        color: var(--cc-text-muted);
+                        flex-shrink: 0;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+                    `;
+                    deleteBtn.addEventListener('mouseenter', () => {
+                        (deleteBtn as HTMLElement).style.color = '#ef4444';
+                        (deleteBtn as HTMLElement).style.background = 'rgba(239, 68, 68, 0.1)';
+                    });
+                    deleteBtn.addEventListener('mouseleave', () => {
+                        (deleteBtn as HTMLElement).style.color = 'var(--cc-text-muted)';
+                        (deleteBtn as HTMLElement).style.background = 'transparent';
+                    });
+                    this.addListener(deleteBtn, 'click', async (e: Event) => {
+                        e.stopPropagation();
+                        await this.deleteSession(session.id);
+                        // Refresh dropdown after deletion (keep it open)
+                        updateDropdown();
+                        // Only close dropdown if there are no more sessions
+                        if (this.sessions.length === 0) {
+                            historyDropdownOpen = false;
+                            dropdown.style.display = 'none';
+                        }
+                    });
+                    sessionRow.appendChild(deleteBtn);
+                    
+                    dropdown.appendChild(sessionRow);
                 });
             } else {
                 const emptyState = createElement('div', {
@@ -472,16 +543,12 @@ export class ChatPage extends Component {
         this.addListener(historyButton, 'click', (e: Event) => {
             e.stopPropagation();
             historyDropdownOpen = !historyDropdownOpen;
+            historyButton.setAttribute('aria-expanded', String(historyDropdownOpen));
             if (historyDropdownOpen) {
                 updateDropdown();
                 dropdown.style.display = 'block';
             } else {
                 dropdown.style.display = 'none';
-            }
-            // Update chevron rotation
-            const chevron = historyButton.querySelector('svg:last-child') as HTMLElement;
-            if (chevron) {
-                chevron.style.transform = historyDropdownOpen ? 'rotate(180deg)' : 'rotate(0)';
             }
         });
 
@@ -489,9 +556,8 @@ export class ChatPage extends Component {
         document.addEventListener('click', (e: MouseEvent) => {
             if (!historyButton.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
                 historyDropdownOpen = false;
+                historyButton.setAttribute('aria-expanded', 'false');
                 dropdown.style.display = 'none';
-                const chevron = historyButton.querySelector('svg:last-child') as HTMLElement;
-                if (chevron) chevron.style.transform = 'rotate(0)';
             }
         });
 
@@ -502,28 +568,38 @@ export class ChatPage extends Component {
         historyWrapper.appendChild(dropdown);
         chatActionsGroup.appendChild(historyWrapper);
 
-        // New chat button
+        // New chat button (plus icon)
         const newChatBtn = createElement('button', {
-            className: 'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5',
+            className: 'flex items-center justify-center',
+            attributes: {
+                'aria-label': 'New chat',
+            },
         });
         (newChatBtn as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: hsl(var(--muted) / 0.4);
+      border: 1px solid var(--cc-glass-border);
       color: var(--cc-text-secondary);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
         newChatBtn.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 5v14M5 12h14"/>
       </svg>
-      New Chat
     `;
         newChatBtn.addEventListener('mouseenter', () => {
-            (newChatBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.06)';
+            (newChatBtn as HTMLElement).style.background = 'var(--cc-glass-bg)';
+            (newChatBtn as HTMLElement).style.color = 'var(--cc-text-primary)';
         });
         newChatBtn.addEventListener('mouseleave', () => {
-            (newChatBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
+            (newChatBtn as HTMLElement).style.background = 'hsl(var(--muted) / 0.4)';
+            (newChatBtn as HTMLElement).style.color = 'var(--cc-text-secondary)';
         });
         this.addListener(newChatBtn, 'click', () => {
             this.sessionId = null;
@@ -556,35 +632,56 @@ export class ChatPage extends Component {
 
         // Input area
         const inputArea = createElement('div', {
-            className: 'px-6 py-4 shrink-0',
+            className: 'px-6 py-3 shrink-0',
         });
 
         const inputWrapper = createElement('div', {
-            className: 'max-w-3xl mx-auto flex items-end gap-3 px-4 py-3 rounded-2xl',
+            className: 'max-w-3xl mx-auto flex items-end gap-2.5 px-3.5 py-2.5 rounded-xl',
         });
         (inputWrapper as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: hsl(var(--muted) / 0.3);
+      border: 1px solid hsl(var(--border) / 0.5);
+      backdrop-filter: blur(8px);
     `;
 
         this.inputElement = createElement('textarea', {
-            className: 'flex-1 bg-transparent resize-none outline-none min-h-[24px] max-h-32',
+            className: 'flex-1 bg-transparent resize-none outline-none min-h-[20px] max-h-28',
             attributes: {
                 placeholder: 'Message...',
                 rows: '1',
             },
         }) as HTMLTextAreaElement;
         (this.inputElement as HTMLElement).style.cssText = `
-      font-family: var(--cc-font-body);
+      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
       font-size: 14px;
+      font-weight: 400;
       color: var(--cc-text-primary);
       line-height: 1.5;
+      letter-spacing: -0.01em;
     `;
+        // Add placeholder styling via CSS
+        setTimeout(() => {
+            const styleId = 'chat-input-placeholder-style';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+          textarea[placeholder="Message..."]::placeholder {
+            color: var(--cc-text-muted);
+            opacity: 0.6;
+            font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
+            font-weight: 400;
+            letter-spacing: -0.01em;
+          }
+        `;
+                document.head.appendChild(style);
+            }
+        }, 0);
 
         this.addListener(this.inputElement, 'input', () => {
             if (this.inputElement) {
                 this.inputElement.style.height = 'auto';
-                this.inputElement.style.height = Math.min(this.inputElement.scrollHeight, 128) + 'px';
+                this.inputElement.style.height = Math.min(this.inputElement.scrollHeight, 112) + 'px';
             }
         });
 
@@ -598,22 +695,36 @@ export class ChatPage extends Component {
         inputWrapper.appendChild(this.inputElement);
 
         const sendBtn = createElement('button', {
-            className: 'p-2.5 rounded-xl shrink-0',
+            className: 'p-2 rounded-lg shrink-0',
+            attributes: {
+                'aria-label': 'Send message',
+            },
         });
         (sendBtn as HTMLElement).style.cssText = `
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: hsl(var(--primary));
       color: white;
       border: none;
       cursor: pointer;
-      transition: transform 0.2s, opacity 0.2s;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
     `;
         sendBtn.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
       </svg>
     `;
-        sendBtn.addEventListener('mouseenter', () => (sendBtn as HTMLElement).style.transform = 'scale(1.05)');
-        sendBtn.addEventListener('mouseleave', () => (sendBtn as HTMLElement).style.transform = 'scale(1)');
+        sendBtn.addEventListener('mouseenter', () => {
+            (sendBtn as HTMLElement).style.background = 'hsl(var(--primary) / 0.9)';
+            (sendBtn as HTMLElement).style.transform = 'scale(1.05)';
+        });
+        sendBtn.addEventListener('mouseleave', () => {
+            (sendBtn as HTMLElement).style.background = 'hsl(var(--primary))';
+            (sendBtn as HTMLElement).style.transform = 'scale(1)';
+        });
         this.addListener(sendBtn, 'click', () => {
             if (!this.isLoading) this.sendMessage();
         });
@@ -629,122 +740,28 @@ export class ChatPage extends Component {
         if (!this.messagesContainer) return;
 
         const welcome = createElement('div', {
-            className: 'flex flex-col items-center justify-center h-full',
+            className: 'flex items-center justify-center h-full',
         });
         (welcome as HTMLElement).style.cssText = `
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
-
-        // Header
-        const header = createElement('div', {
-            className: 'text-center mb-8',
-        });
-
-        const icon = createElement('div', {
-            className: 'w-20 h-20 rounded-3xl flex items-center justify-center mb-6 mx-auto',
-        });
-        (icon as HTMLElement).style.cssText = `
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-    `;
-        icon.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: #6366f1;">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    `;
-        header.appendChild(icon);
 
         const title = createElement('h2', {
-            className: 'text-2xl font-semibold mb-3',
-            textContent: 'How can I help you today?',
+            className: 'text-2xl font-semibold',
+            textContent: 'Chat',
         });
-        (title as HTMLElement).style.color = 'var(--cc-text-primary)';
-        header.appendChild(title);
-
-        const desc = createElement('p', {
-            className: 'text-sm',
-            textContent: 'Choose a question below or start typing your own.',
-        });
-        (desc as HTMLElement).style.color = 'var(--cc-text-tertiary)';
-        header.appendChild(desc);
-
-        welcome.appendChild(header);
-
-        // Common starter questions
-        const starterQuestions = [
-            'Analyze my timeline data and show key insights',
-            'Help me organize my Obsidian notes',
-            'What can you tell me about my recent activity?',
-            'Create a summary of my timeline items',
-            'Show me patterns in my data',
-            'Help me find specific information',
-        ];
-
-        const questionsGrid = createElement('div', {
-            className: 'grid grid-cols-1 md:grid-cols-2 gap-3 w-full',
-        });
-
-        starterQuestions.forEach((question, index) => {
-            const questionBtn = createElement('button', {
-                className: 'px-5 py-4 rounded-xl text-left group',
-            });
-            (questionBtn as HTMLElement).style.cssText = `
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-align: left;
-        `;
-            questionBtn.addEventListener('mouseenter', () => {
-                (questionBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
-                (questionBtn as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.3)';
-                (questionBtn as HTMLElement).style.transform = 'translateY(-1px)';
-            });
-            questionBtn.addEventListener('mouseleave', () => {
-                (questionBtn as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
-                (questionBtn as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                (questionBtn as HTMLElement).style.transform = 'translateY(0)';
-            });
-
-            const questionText = createElement('span', {
-                className: 'text-sm',
-                textContent: question,
-            });
-            (questionText as HTMLElement).style.color = 'var(--cc-text-secondary)';
-            questionBtn.appendChild(questionText);
-
-            const arrowIcon = createElement('span', {
-                className: 'ml-2 opacity-0 group-hover:opacity-100 transition-opacity',
-            });
-            arrowIcon.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; color: #6366f1;">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            `;
-            questionBtn.appendChild(arrowIcon);
-
-            this.addListener(questionBtn, 'click', async () => {
-                if (this.inputElement) {
-                    // Set the question in the input
-                    this.inputElement.value = question;
-                    this.inputElement.focus();
-                    this.inputElement.style.height = 'auto';
-                    this.inputElement.style.height = Math.min(this.inputElement.scrollHeight, 128) + 'px';
-                    
-                    // Automatically send the message
-                    // Small delay to ensure input is updated
-                    setTimeout(() => {
-                        this.sendMessage();
-                    }, 50);
-                }
-            });
-
-            questionsGrid.appendChild(questionBtn);
-        });
-
-        welcome.appendChild(questionsGrid);
+        (title as HTMLElement).style.cssText = `
+      color: var(--cc-text-primary);
+      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    `;
+        welcome.appendChild(title);
 
         this.messagesContainer.appendChild(welcome);
     }
@@ -782,14 +799,14 @@ export class ChatPage extends Component {
 
         if (isUser) {
             (bubble as HTMLElement).style.cssText = `
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
+        background: linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(var(--primary) / 0.12) 100%);
         border: 1px solid rgba(99, 102, 241, 0.2);
         border-bottom-right-radius: 6px;
       `;
         } else {
             (bubble as HTMLElement).style.cssText = `
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: var(--cc-glass-bg);
+        border: 1px solid var(--cc-glass-border);
         border-bottom-left-radius: 6px;
       `;
         }
@@ -828,7 +845,7 @@ export class ChatPage extends Component {
         };
         this.messages.push(userMsg);
         this.inputElement.value = '';
-        this.inputElement.style.height = 'auto';
+        this.inputElement.style.height = '20px';
 
         this.renderMessages();
 
@@ -963,8 +980,10 @@ Always ensure the JSON is valid and follows the UITree structure.
         // Check for browser tool calls and transfer chat to sidebar if on /chat
         // Transfer BEFORE the tool executes to ensure browser is ready
         if (this.detectBrowserToolCall(content) && router.getCurrentPath() === '/chat' && !this.hasTransferredChat) {
-            // Transfer immediately when browser tool is detected
-            this.transferChatToSidebar();
+            // Transfer immediately when browser tool is detected (await to ensure navigation completes)
+            this.transferChatToSidebar().catch(err => {
+                console.error('[ChatPage] Failed to transfer chat to sidebar:', err);
+            });
         }
 
         const bubbles = this.messagesContainer.querySelectorAll('[class*="justify-start"]');
@@ -1005,7 +1024,7 @@ Always ensure the JSON is valid and follows the UITree structure.
     /**
      * Transfer current chat session to the sidebar and navigate to browser
      */
-    private transferChatToSidebar(): void {
+    private async transferChatToSidebar(): Promise<void> {
         if (this.hasTransferredChat) return;
         this.hasTransferredChat = true;
 
@@ -1025,10 +1044,31 @@ Always ensure the JSON is valid and follows the UITree structure.
         // Open sidebar first
         store.chatSidebarOpen.set(true);
         
-        // Wait for sidebar to initialize before navigating (gives Layout time to create ChatSidebar)
-        setTimeout(() => {
-            router.navigate('/browser');
-        }, 200);
+        // Navigate to browser route immediately
+        router.navigate('/browser');
+        
+        // Wait for navigation, browser component initialization, and ensure tabs are ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Ensure browser has at least one tab before proceeding
+        if (window.browser) {
+          let attempts = 0;
+          while (attempts < 20) {
+            try {
+              const tabs = await window.browser.getAllTabs();
+              if (tabs && tabs.length > 0) {
+                break;
+              }
+            } catch (e) {
+              // Browser not ready yet
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+          }
+        }
+        
+        // Final wait for layout to stabilize
+        await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     private renderJsonUIBlocks(container: HTMLElement): void {
@@ -1043,8 +1083,12 @@ Always ensure the JSON is valid and follows the UITree structure.
 
                 const uiContainer = createElement('div', {
                     attributes: { id: blockId },
-                    className: 'my-4 rounded-xl overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] min-h-[100px]',
+                    className: 'my-4 rounded-xl overflow-hidden border min-h-[100px]',
                 });
+                (uiContainer as HTMLElement).style.cssText = `
+                    border-color: hsl(var(--border) / 0.6);
+                    background: hsl(var(--muted) / 0.2);
+                `;
 
                 // Keep original code in a hidden attribute/element just in case? 
                 // Replacing triggers unmount of previous.
@@ -1078,6 +1122,25 @@ Always ensure the JSON is valid and follows the UITree structure.
             this.render();
         } catch (error) {
             console.error('[ChatPage] Failed to load session:', error);
+        }
+    }
+
+    private async deleteSession(sessionId: string): Promise<void> {
+        try {
+            await api.chat.deleteSession.mutate({ sessionId });
+
+            // Remove from local state
+            this.sessions = this.sessions.filter(s => s.id !== sessionId);
+
+            // If we deleted the current session, clear it
+            if (this.sessionId === sessionId) {
+                this.sessionId = null;
+                this.messages = [];
+            }
+
+            this.render();
+        } catch (error) {
+            console.error('[ChatPage] Failed to delete session:', error);
         }
     }
 

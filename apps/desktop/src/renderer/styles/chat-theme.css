@@ -539,10 +539,167 @@
 }
 
 /* ============================================
-   DARK MODE ENHANCEMENTS
+   LIGHT MODE SUPPORT
    ============================================ */
-@media (prefers-color-scheme: dark) {
-  /* Already optimized for dark mode */
+:root:not(.dark) {
+  /* Light Mode Color Palette */
+  --cc-void: #f8fafc;
+  --cc-deep: #f1f5f9;
+  --cc-surface: #e2e8f0;
+  --cc-elevated: #ffffff;
+
+  /* Light Mode Gradients */
+  --cc-gradient-bg: linear-gradient(180deg,
+    #ffffff 0%,
+    #f8fafc 100%);
+  --cc-gradient-mesh:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
+
+  /* Light Mode Text Colors */
+  --cc-text-primary: #0f172a;
+  --cc-text-secondary: #334155;
+  --cc-text-tertiary: #64748b;
+  --cc-text-muted: #94a3b8;
+
+  /* Light Mode Glass Morphism */
+  --cc-glass-bg: rgba(255, 255, 255, 0.8);
+  --cc-glass-border: rgba(0, 0, 0, 0.08);
+  --cc-glass-highlight: rgba(255, 255, 255, 0.5);
+  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+                     0 2px 8px rgba(0, 0, 0, 0.04);
+
+  /* Light Mode Shadows */
+  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark Mode (default) */
+.dark {
+  /* Command Center Color Palette */
+  --cc-void: #0a0a0f;
+  --cc-deep: #12121a;
+  --cc-surface: #1a1a26;
+  --cc-elevated: #22223a;
+
+  /* Atmospheric Gradients - Subtle and refined */
+  --cc-gradient-bg: linear-gradient(180deg,
+    #0c0c12 0%,
+    #101018 100%);
+  --cc-gradient-mesh:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
+
+  /* Text Colors */
+  --cc-text-primary: #f8fafc;
+  --cc-text-secondary: #cbd5e1;
+  --cc-text-tertiary: #64748b;
+  --cc-text-muted: #475569;
+
+  /* Glass Morphism */
+  --cc-glass-bg: rgba(26, 26, 38, 0.7);
+  --cc-glass-border: rgba(255, 255, 255, 0.06);
+  --cc-glass-highlight: rgba(255, 255, 255, 0.02);
+  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                     0 2px 8px rgba(0, 0, 0, 0.2);
+
+  /* Elevation Shadows - Softer, more subtle */
+  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+/* Light Mode Message Styles */
+:root:not(.dark) .cc-message-user {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(139, 92, 246, 0.06) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+:root:not(.dark) .cc-message-assistant {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root:not(.dark) .cc-message-assistant:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Light Mode Avatar Styles */
+:root:not(.dark) .cc-avatar-assistant {
+  background: #ffffff;
+  color: var(--cc-primary);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Light Mode Input Container */
+:root:not(.dark) .cc-input-container {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root:not(.dark) .cc-input-container:focus-within {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow:
+    0 8px 32px rgba(99, 102, 241, 0.1),
+    0 0 0 3px rgba(99, 102, 241, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
+}
+
+/* Light Mode Code Blocks */
+:root:not(.dark) .cc-code-block {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) inset;
+}
+
+:root:not(.dark) .cc-code-inline {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Light Mode Button Secondary */
+:root:not(.dark) .cc-button-secondary {
+  background: #ffffff;
+  color: var(--cc-text-primary);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:root:not(.dark) .cc-button-secondary:hover {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Light Mode Scrollbar */
+:root:not(.dark) .cc-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:root:not(.dark) .cc-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Light Mode Tool Indicator */
+:root:not(.dark) .cc-tool-indicator {
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.06) 0%,
+    rgba(99, 102, 241, 0.04) 100%);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+/* Light Mode Badge */
+:root:not(.dark) .cc-badge {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
 }
 
 /* ============================================

@@ -175,8 +175,8 @@ export class AppDetail extends Component {
     this.container.innerHTML = `
       <div class="flex flex-col w-full p-4 items-center justify-center min-h-[400px]">
         <div class="text-center space-y-4">
-          <h2 class="text-2xl font-mono uppercase tracking-wider">App not found</h2>
-          <p class="text-muted-foreground font-mono">The app you're looking for doesn't exist.</p>
+          <h2 class="text-2xl">App not found</h2>
+          <p class="text-muted-foreground">The app you're looking for doesn't exist.</p>
           <button class="px-4 py-2 bg-primary text-primary-foreground flex items-center gap-2 mx-auto border border-border font-mono uppercase tracking-wider text-sm" data-back>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
             Back to Apps
@@ -248,9 +248,14 @@ export class AppDetail extends Component {
     });
     
     const title = createElement('h1', {
-      className: 'text-3xl font-mono uppercase tracking-wider text-foreground',
+      className: 'text-3xl text-foreground',
       textContent: this.app?.name || '',
     });
+    (title as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    `;
     titleRow.appendChild(title);
     
     // Refresh button (only show if connected)

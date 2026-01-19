@@ -6,6 +6,7 @@
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import { getDatabasePath, getDefaultDatabasePath } from '../ipc/database/database-listeners';
+import safeConsole from '../safe-console';
 
 export interface BrowserSessionTab {
   id: string;
@@ -108,7 +109,7 @@ export function loadBrowserSession(): BrowserSession | null {
     }
     
     if (!fs.existsSync(dbPath)) {
-      console.log('[BrowserSession] Database not initialized, no session to load');
+      safeConsole.log('[BrowserSession] Database not initialized, no session to load');
       return null;
     }
 
@@ -131,7 +132,7 @@ export function loadBrowserSession(): BrowserSession | null {
       activeTabId: session.active_tab_id || null,
     };
   } catch (error) {
-    console.error('[BrowserSession] Failed to load session:', error);
+    safeConsole.error('[BrowserSession] Failed to load session:', error);
     return null;
   }
 }

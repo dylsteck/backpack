@@ -51,13 +51,21 @@ export class ManageConnectionsModal extends Component {
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-xl font-mono uppercase tracking-wider text-foreground',
+      className: 'text-xl text-foreground',
       textContent: 'Manage Connections',
     });
+    (title as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    `;
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground font-mono mt-1',
+      className: 'text-sm text-muted-foreground mt-1',
       textContent: 'View and manage your connected apps',
     });
+    (subtitle as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+    `;
     titleSection.appendChild(title);
     titleSection.appendChild(subtitle);
     header.appendChild(titleSection);

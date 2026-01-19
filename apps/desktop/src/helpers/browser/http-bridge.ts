@@ -8,6 +8,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import * as net from 'net';
 import { getMCPInstance } from '../mcp/chrome-devtools';
 import { getBrowserManager } from '../ipc/browser/browser-listeners';
+import safeConsole from '../safe-console';
 
 let httpServer: ReturnType<typeof createServer> | null = null;
 let bridgePort: number = 0;
@@ -276,13 +277,18 @@ export async function startBrowserBridge(): Promise<number> {
         throw new Error('toolName is required and must be a string');
       }
       
-      // Check if browser has tabs
+      // Ensure browser component is ready
       const browserManager = getBrowserManager();
-      const tabs = browserManager ? browserManager.getAllTabs() : [];
+      if (!browserManager) {
+        throw new Error('Browser manager not initialized - ensure you are on the /browser route');
+      }
+      
+      // Check if browser has tabs
+      const tabs = browserManager.getAllTabs();
       
       // If no tabs exist, create one (this can happen if browser tools are called before navigating to browser route)
       if (tabs.length === 0) {
-        console.log('[Bridge] No tabs found, creating default tab');
+        safeConsole.log('[Bridge] No tabs found, creating default tab');
         const newTabId = browserManager.createTab('https://www.google.com');
         browserManager.switchTab(newTabId);
         // Wait a bit for tab to initialize
@@ -316,7 +322,7 @@ export async function startBrowserBridge(): Promise<number> {
       // Try MCP first with short timeout (10 seconds - increased for CDP discovery), then fall back to direct control
       if (mcpStatus.running) {
         try {
-          console.log(`[Bridge] Attempting MCP call for ${toolName}...`);
+          safeConsole.log(`[Bridge] Attempting MCP call for ${toolName}...`);
           result = await Promise.race([
             mcpInstance.callTool(toolName, args || {}),
             new Promise((_, reject) => 
@@ -327,8 +333,8 @@ export async function startBrowserBridge(): Promise<number> {
         } catch (mcpError: any) {
           // MCP failed or timed out - use native Electron debugger API
           // This works because WebContentsView instances aren't exposed via remote debugging port
-          console.warn(`[Bridge] MCP failed (${mcpError?.message}), using native Electron debugger API for ${toolName}`);
-          console.warn(`[Bridge] Note: WebContentsView tabs aren't visible to chrome-devtools-mcp via CDP`);
+          safeConsole.warn(`[Bridge] MCP failed (${mcpError?.message}), using native Electron debugger API for ${toolName}`);
+          safeConsole.warn(`[Bridge] Note: WebContentsView tabs aren't visible to chrome-devtools-mcp via CDP`);
           try {
             result = await executeNativeBrowserTool(toolName, args || {});
             console.log(`[Bridge] Native tool execution succeeded for ${toolName}`);
@@ -340,7 +346,7 @@ export async function startBrowserBridge(): Promise<number> {
         }
       } else {
         // MCP not running - use native Electron debugger API immediately
-        console.log(`[Bridge] MCP not running, using native Electron debugger API for ${toolName}`);
+        safeConsole.log(`[Bridge] MCP not running, using native Electron debugger API for ${toolName}`);
         try {
           result = await executeNativeBrowserTool(toolName, args || {});
         } catch (nativeError: any) {
@@ -369,7 +375,7 @@ export async function startBrowserBridge(): Promise<number> {
     });
     
     httpServer!.on('error', (error) => {
-      console.error('[Browser Bridge] Server error:', error);
+      safeConsole.error('[Browser Bridge] Server error:', error);
       reject(error);
     });
   });

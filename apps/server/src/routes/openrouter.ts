@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { streamText, type ModelMessage, stepCountIs } from "ai";
+import { streamText, type ModelMessage } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { tools } from "../tools";
 
@@ -51,8 +51,9 @@ export const openrouterRoutes = new Elysia({ prefix: "/api/chat/openrouter" })
 				model: openrouter.chat(modelId),
 				messages,
 				tools,
-				// Allow up to 3 steps for tool execution
-				stopWhen: stepCountIs(3),
+				// Allow up to 10 steps for tool execution (browser workflows need multiple steps)
+				// This allows: navigate -> snapshot -> fill/click -> screenshot -> final response
+				maxSteps: 10,
 				// Explicitly pass headers for the request
 				headers: {
 					"HTTP-Referer": "https://withcortex.com",

@@ -839,6 +839,32 @@ function addObsidianEventListeners() {
     }
   });
 }
+const safeConsole = {
+  log: (...args) => {
+    try {
+      if (process.stdout?.writable ?? true) {
+        console.log(...args);
+      }
+    } catch {
+    }
+  },
+  warn: (...args) => {
+    try {
+      if (process.stderr?.writable ?? true) {
+        console.warn(...args);
+      }
+    } catch {
+    }
+  },
+  error: (...args) => {
+    try {
+      if (process.stderr?.writable ?? true) {
+        console.error(...args);
+      }
+    } catch {
+    }
+  }
+};
 const SESSION_ID = "default-browser-session";
 let saveTimeout = null;
 let lastSaveTime = 0;
@@ -894,7 +920,7 @@ function loadBrowserSession() {
       dbPath = getDefaultDatabasePath();
     }
     if (!fs__namespace.existsSync(dbPath)) {
-      console.log("[BrowserSession] Database not initialized, no session to load");
+      safeConsole.log("[BrowserSession] Database not initialized, no session to load");
       return null;
     }
     const db = new Database(dbPath);
@@ -911,7 +937,7 @@ function loadBrowserSession() {
       activeTabId: session.active_tab_id || null
     };
   } catch (error) {
-    console.error("[BrowserSession] Failed to load session:", error);
+    safeConsole.error("[BrowserSession] Failed to load session:", error);
     return null;
   }
 }
@@ -949,7 +975,6 @@ class BrowserManager {
               this.activeTabId = id;
             }
           } catch (error) {
-            console.error("[BrowserManager] Failed to restore tab:", tabData, error);
           }
         }
         if (this.activeTabId && this.tabs.has(this.activeTabId)) {
@@ -1076,7 +1101,7 @@ class BrowserManager {
       clampedBounds.height = Math.max(100, windowBounds.height - clampedBounds.y);
     }
     if (clampedBounds.width < 100 || clampedBounds.height < 100) {
-      console.warn("[BrowserManager] Clamped bounds too small:", { original: bounds, clamped: clampedBounds, windowBounds });
+      safeConsole.warn("[BrowserManager] Clamped bounds too small:", { original: bounds, clamped: clampedBounds, windowBounds });
       return;
     }
     const finalRightEdge = clampedBounds.x + clampedBounds.width;
@@ -1104,7 +1129,7 @@ class BrowserManager {
           }
           tab.view.setBounds(finalBounds);
         } catch (error) {
-          console.error("[BrowserManager] Failed to set bounds:", error);
+          safeConsole.error("[BrowserManager] Failed to set bounds:", error);
         }
       }
     }
@@ -1168,7 +1193,7 @@ class BrowserManager {
         tab.view.setBounds(this.bounds);
       }
     } catch (error) {
-      console.error("[BrowserManager] Failed to add view:", error);
+      safeConsole.error("[BrowserManager] Failed to add view:", error);
     }
     this.activeTabId = id;
     this.emit("tab-switched", id);
@@ -1196,7 +1221,7 @@ class BrowserManager {
     try {
       tab.view.webContents.destroy();
     } catch (error) {
-      console.warn("[BrowserManager] Failed to destroy webContents:", error);
+      safeConsole.warn("[BrowserManager] Failed to destroy webContents:", error);
     }
     this.tabs.delete(id);
     this.emit("tab-closed", id);
@@ -1361,7 +1386,7 @@ class BrowserManager {
         });
       });
     } catch (error) {
-      console.error(`[BrowserManager] CDP command ${method} failed:`, error);
+      safeConsole.error(`[BrowserManager] CDP command ${method} failed:`, error);
       throw error;
     }
   }
@@ -1489,7 +1514,7 @@ class BrowserManager {
       this.saveSession();
     });
     view.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
-      console.error("Tab load failed:", errorDescription);
+      safeConsole.error("Tab load failed:", errorDescription);
       this.emit("tab-error", tab.id, errorDescription);
     });
   }
@@ -1502,32 +1527,6 @@ class BrowserManager {
     }
   }
 }
-const safeConsole = {
-  log: (...args) => {
-    try {
-      if (process.stdout?.writable ?? true) {
-        console.log(...args);
-      }
-    } catch {
-    }
-  },
-  warn: (...args) => {
-    try {
-      if (process.stderr?.writable ?? true) {
-        console.warn(...args);
-      }
-    } catch {
-    }
-  },
-  error: (...args) => {
-    try {
-      if (process.stderr?.writable ?? true) {
-        console.error(...args);
-      }
-    } catch {
-    }
-  }
-};
 class ChromeDevToolsMCP {
   process = null;
   pendingRequests = /* @__PURE__ */ new Map();
@@ -2225,9 +2224,12 @@ async function startBrowserBridge() {
         throw new Error("toolName is required and must be a string");
       }
       const browserManager2 = getBrowserManager();
-      const tabs = browserManager2 ? browserManager2.getAllTabs() : [];
+      if (!browserManager2) {
+        throw new Error("Browser manager not initialized - ensure you are on the /browser route");
+      }
+      const tabs = browserManager2.getAllTabs();
       if (tabs.length === 0) {
-        console.log("[Bridge] No tabs found, creating default tab");
+        safeConsole.log("[Bridge] No tabs found, creating default tab");
         const newTabId = browserManager2.createTab("https://www.google.com");
         browserManager2.switchTab(newTabId);
         await new Promise((resolve) => setTimeout(resolve, 200));
@@ -2250,7 +2252,7 @@ async function startBrowserBridge() {
       const mcpStatus = mcpInstance2.getStatus();
       if (mcpStatus.running) {
         try {
-          console.log(`[Bridge] Attempting MCP call for ${toolName}...`);
+          safeConsole.log(`[Bridge] Attempting MCP call for ${toolName}...`);
           result = await Promise.race([
             mcpInstance2.callTool(toolName, args || {}),
             new Promise(
@@ -2260,8 +2262,8 @@ async function startBrowserBridge() {
           ]);
           console.log(`[Bridge] MCP call succeeded for ${toolName}`);
         } catch (mcpError) {
-          console.warn(`[Bridge] MCP failed (${mcpError?.message}), using native Electron debugger API for ${toolName}`);
-          console.warn(`[Bridge] Note: WebContentsView tabs aren't visible to chrome-devtools-mcp via CDP`);
+          safeConsole.warn(`[Bridge] MCP failed (${mcpError?.message}), using native Electron debugger API for ${toolName}`);
+          safeConsole.warn(`[Bridge] Note: WebContentsView tabs aren't visible to chrome-devtools-mcp via CDP`);
           try {
             result = await executeNativeBrowserTool(toolName, args || {});
             console.log(`[Bridge] Native tool execution succeeded for ${toolName}`);
@@ -2272,7 +2274,7 @@ async function startBrowserBridge() {
           }
         }
       } else {
-        console.log(`[Bridge] MCP not running, using native Electron debugger API for ${toolName}`);
+        safeConsole.log(`[Bridge] MCP not running, using native Electron debugger API for ${toolName}`);
         try {
           result = await executeNativeBrowserTool(toolName, args || {});
         } catch (nativeError) {
@@ -2298,7 +2300,7 @@ async function startBrowserBridge() {
       resolve(bridgePort);
     });
     httpServer.on("error", (error) => {
-      console.error("[Browser Bridge] Server error:", error);
+      safeConsole.error("[Browser Bridge] Server error:", error);
       reject(error);
     });
   });
@@ -12889,7 +12891,7 @@ async function setupRemoteDebuggingPort() {
     remoteDebugPort = port;
     require$$0.app.commandLine.appendSwitch("remote-debugging-port", String(port));
     process.env.ELECTRON_CDP_PORT = String(port);
-    console.log(`[MCP] Using Electron CDP port ${port}`);
+    safeConsole.log(`[MCP] Using Electron CDP port ${port}`);
     return port;
   } catch (error) {
     console.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
@@ -12938,8 +12940,8 @@ async function startServer() {
     command = "bun";
     args = ["run", serverPath];
   }
-  console.log(`Starting server on port ${port}...`);
-  console.log(`Server path: ${serverPath}`);
+  safeConsole.log(`Starting server on port ${port}...`);
+  safeConsole.log(`Server path: ${serverPath}`);
   return new Promise((resolve, reject) => {
     const dbPath = getDatabasePath() || getDefaultDatabasePath();
     const env = {
@@ -12967,7 +12969,7 @@ async function startServer() {
     }
     if (serverProcess.stderr) {
       serverProcess.stderr.on("data", (data) => {
-        console.error(`[Server Error] ${data.toString().trim()}`);
+        safeConsole.error(`[Server Error] ${data.toString().trim()}`);
       });
     }
     serverProcess.on("error", (error) => {
@@ -12975,7 +12977,7 @@ async function startServer() {
       reject(error);
     });
     serverProcess.on("exit", (code) => {
-      console.log(`Server process exited with code ${code}`);
+      safeConsole.log(`Server process exited with code ${code}`);
       serverProcess = null;
     });
     waitForServer(port).then((ready) => {
@@ -12990,7 +12992,7 @@ async function startServer() {
 }
 function stopServer() {
   if (serverProcess) {
-    console.log("Stopping server...");
+    safeConsole.log("Stopping server...");
     serverProcess.kill("SIGTERM");
     setTimeout(() => {
       if (serverProcess && !serverProcess.killed) {
@@ -13028,7 +13030,7 @@ function createWindow() {
   return mainWindow;
 }
 function handleDeepLink(url) {
-  console.log("Deep link received:", url);
+  safeConsole.log("Deep link received:", url);
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "cortex:") {
@@ -13067,7 +13069,7 @@ function handleDeepLink(url) {
 async function installExtensions() {
   try {
     const result = await distExports.installExtension(distExports.REACT_DEVELOPER_TOOLS);
-    console.log(`Extensions installed successfully: ${result.name}`);
+    safeConsole.log(`Extensions installed successfully: ${result.name}`);
   } catch {
     console.error("Failed to install extensions");
   }
@@ -13115,7 +13117,7 @@ if (!gotTheLock) {
           require$$0.app.dock.setIcon(iconPath);
         }
       } catch (error) {
-        console.error("Failed to set dock icon:", error);
+        safeConsole.error("Failed to set dock icon:", error);
       }
     }
     try {
@@ -13123,7 +13125,7 @@ if (!gotTheLock) {
       setServerPort(serverPort);
       console.log(`API server running on http://127.0.0.1:${serverPort}`);
     } catch (error) {
-      console.error("Failed to start API server:", error);
+      safeConsole.error("Failed to start API server:", error);
     }
     try {
       const mcpInstance2 = getMCPInstance();
@@ -13132,7 +13134,7 @@ if (!gotTheLock) {
         console.log("[MCP] Browser will work, but MCP tools may not be available");
       });
       setMCPClient(mcpInstance2);
-      console.log("[MCP] Chrome DevTools MCP server starting...");
+      safeConsole.log("[MCP] Chrome DevTools MCP server starting...");
       const bridgePort2 = await startBrowserBridge();
       process.env.BROWSER_BRIDGE_PORT = bridgePort2.toString();
     } catch (error) {
@@ -13147,7 +13149,7 @@ if (!gotTheLock) {
     installExtensions();
   };
   startApp().catch((error) => {
-    console.error("Failed to start app:", error);
+    safeConsole.error("Failed to start app:", error);
   });
 }
 require$$0.app.on("before-quit", async () => {

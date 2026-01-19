@@ -45,15 +45,24 @@ export class VaultGrid extends Component {
     });
     
     const title = createElement('h1', {
-      className: 'text-2xl font-mono uppercase tracking-wider text-foreground',
+      className: 'text-2xl font-sans text-foreground',
       textContent: 'Vault',
     });
+    (title as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+    `;
     titleSection.appendChild(title);
     
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground font-mono mt-1',
+      className: 'text-sm text-muted-foreground mt-1',
       textContent: 'Your connected apps',
     });
+    (subtitle as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+    `;
     titleSection.appendChild(subtitle);
     
     this.headerContainer.appendChild(titleSection);
@@ -124,7 +133,7 @@ export class VaultGrid extends Component {
     if (isLoading && this.gridContainer) {
       this.gridContainer.innerHTML = `
         <div class="col-span-full flex items-center justify-center py-12">
-          <div class="font-mono uppercase tracking-wider text-sm text-muted-foreground">Loading...</div>
+          <div class="text-sm text-muted-foreground">Loading...</div>
         </div>
       `;
     }
@@ -166,18 +175,40 @@ export class VaultGrid extends Component {
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-mono uppercase tracking-wider text-foreground mb-2">No Connected Apps</h3>
+            <h3 class="text-lg text-foreground mb-2">No Connected Apps</h3>
             <p class="text-sm text-muted-foreground">Add apps to your vault to start syncing your data</p>
           </div>
-          <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm hover:bg-primary/90 transition-colors mx-auto" data-add-apps>
+          <button class="px-4 py-2 bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors mx-auto rounded-lg" data-add-apps>
             Add Apps
           </button>
         </div>
       </div>
     `;
     
+    // Apply modern fonts to text elements
+    const heading = this.gridContainer.querySelector('h3');
+    if (heading) {
+      (heading as HTMLElement).style.cssText = `
+        font-family: var(--font-sans, 'Manrope', sans-serif);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      `;
+    }
+    
+    const subtitle = this.gridContainer.querySelector('p');
+    if (subtitle) {
+      (subtitle as HTMLElement).style.cssText = `
+        font-family: var(--font-sans, 'Manrope', sans-serif);
+      `;
+    }
+    
     const addButton = this.gridContainer.querySelector('[data-add-apps]');
     if (addButton) {
+      (addButton as HTMLElement).style.cssText = `
+        font-family: var(--font-sans, 'Manrope', sans-serif);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      `;
       this.addListener(addButton as HTMLElement, 'click', () => {
         this.showAddAppsModal();
       });
@@ -221,9 +252,13 @@ export class VaultGrid extends Component {
     
     // Name
     const name = createElement('p', {
-      className: 'font-mono uppercase tracking-wider text-base text-center font-medium',
+      className: 'text-base text-center font-medium',
       textContent: app.name,
     });
+    (name as HTMLElement).style.cssText = `
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-weight: 500;
+    `;
     card.appendChild(name);
     
     // Description (truncated)

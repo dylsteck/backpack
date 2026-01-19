@@ -277,8 +277,13 @@ export class Browser extends Component {
     // Final safety check - ensure browser NEVER extends past chat sidebar
     if (chatSidebarIsOpen && chatSidebarRect && chatSidebarRect.left > 0) {
       const finalRight = bounds.x + bounds.width;
-      if (finalRight > chatSidebarRect.left - safetyMargin) {
-        bounds.width = Math.max(100, Math.round(chatSidebarRect.left - bounds.x - safetyMargin));
+      const sidebarLeft = Math.round(chatSidebarRect.left);
+      if (finalRight > sidebarLeft - safetyMargin) {
+        bounds.width = Math.max(100, Math.round(sidebarLeft - bounds.x - safetyMargin - 1));
+      }
+      // CRITICAL: Double-check - if still overlapping, force constraint
+      if (bounds.x + bounds.width > sidebarLeft - safetyMargin) {
+        bounds.width = Math.max(100, sidebarLeft - bounds.x - safetyMargin - 1);
       }
     }
 
@@ -295,6 +300,35 @@ export class Browser extends Component {
       return;
     }
 
+    // CRITICAL: Final absolute constraint - browser MUST NOT overlap sidebar
+    if (chatSidebarIsOpen && chatSidebarRect && chatSidebarRect.left > 0) {
+      const absoluteMaxRight = Math.round(chatSidebarRect.left) - safetyMargin;
+      const currentRight = bounds.x + bounds.width;
+      
+      // If browser extends past sidebar, force it back
+      if (currentRight > absoluteMaxRight) {
+        bounds.width = Math.max(100, absoluteMaxRight - bounds.x);
+      }
+      
+      // Double-check: ensure final bounds don't exceed
+      const finalRight = bounds.x + bounds.width;
+      if (finalRight > absoluteMaxRight) {
+        bounds.width = Math.max(100, Math.floor(absoluteMaxRight - bounds.x));
+      }
+      
+      // Log warning if still overlapping (shouldn't happen)
+      if (bounds.x + bounds.width > absoluteMaxRight + 1) {
+        console.warn('[Browser] CRITICAL: Browser still overlapping sidebar!', {
+          bounds,
+          sidebarLeft: chatSidebarRect.left,
+          absoluteMaxRight,
+          finalRight: bounds.x + bounds.width,
+        });
+        // Force constraint one more time
+        bounds.width = Math.max(100, Math.floor(absoluteMaxRight - bounds.x));
+      }
+    }
+
     window.browser.updateBounds(bounds);
   }
   
@@ -308,7 +342,7 @@ export class Browser extends Component {
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      background: rgba(10, 10, 15, 0.98);
+      background: hsl(var(--background));
       overflow: hidden;
       position: relative;
       z-index: 1;
@@ -320,6 +354,17 @@ export class Browser extends Component {
       overflow-x: hidden;
       overflow-y: hidden;
     `;
+    
+    // CRITICAL: Ensure browser container respects sidebar boundaries
+    // Subscribe to chat sidebar state to update container constraints
+    this.subscribe(store.chatSidebarOpen, () => {
+      this.updateContainerConstraints();
+    });
+    
+    // Initial constraint update
+    setTimeout(() => {
+      this.updateContainerConstraints();
+    }, 100);
     
     // Tab bar
     this.renderTabBar();
@@ -343,8 +388,8 @@ export class Browser extends Component {
       align-items: center;
       gap: 2px;
       padding: 6px 12px;
-      background: rgba(18, 18, 26, 0.95);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: hsl(var(--card));
+      border-bottom: 1px solid hsl(var(--border) / 0.5);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       -webkit-app-region: drag;
@@ -590,8 +635,8 @@ export class Browser extends Component {
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
-      background: rgba(18, 18, 26, 0.95);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: hsl(var(--card));
+      border-bottom: 1px solid hsl(var(--border) / 0.5);
       flex-shrink: 0;
     `;
     
@@ -665,7 +710,7 @@ export class Browser extends Component {
       font-size: 13px;
       letter-spacing: -0.01em;
       color: var(--cc-text-primary, #f8fafc);
-      background: rgba(255, 255, 255, 0.04);
+      background: hsl(var(--muted) / 0.4);
       border: 1px solid transparent;
       border-radius: 8px;
       outline: none;
@@ -744,9 +789,52 @@ export class Browser extends Component {
     });
   }
   
+  private updateContainerConstraints(): void {
+    const chatSidebar = document.querySelector('.chat-sidebar-container') as HTMLElement;
+    const chatSidebarIsOpen = store.chatSidebarOpen.get();
+    
+    if (chatSidebarIsOpen && chatSidebar) {
+      const chatWidth = chatSidebar.offsetWidth || 320;
+      const marginLeft = 16; // 1rem
+      const totalReserved = chatWidth + marginLeft;
+      
+      // CRITICAL: Constrain container to never overlap sidebar
+      // Use both max-width AND clip-path for maximum safety
+      this.container.style.maxWidth = `calc(100% - ${totalReserved}px)`;
+      this.container.style.marginRight = '0';
+      this.container.style.overflow = 'hidden';
+      this.container.style.clipPath = `inset(0 ${totalReserved}px 0 0)`;
+      this.container.style.paddingRight = '0';
+      
+      // Also constrain parent if it exists
+      const parent = this.container.parentElement;
+      if (parent) {
+        parent.style.maxWidth = `calc(100% - ${totalReserved}px)`;
+        parent.style.overflow = 'hidden';
+      }
+    } else {
+      this.container.style.maxWidth = '100%';
+      this.container.style.marginRight = '0';
+      this.container.style.clipPath = 'inset(0)';
+      this.container.style.paddingRight = '0';
+      
+      const parent = this.container.parentElement;
+      if (parent) {
+        parent.style.maxWidth = '100%';
+        parent.style.overflow = '';
+      }
+    }
+    
+    // Trigger bounds update after constraint change
+    setTimeout(() => {
+      this.updateBrowserBounds();
+    }, 50);
+  }
+  
   private renderViewport(): void {
     const viewport = createElement('div', {
       className: 'browser-viewport',
+      dataset: { viewport: 'true' },
     });
     viewport.style.cssText = `
       flex: 1;
@@ -789,8 +877,8 @@ export class Browser extends Component {
       className: 'browser-devtools',
     });
     this.devtoolsPanel.style.cssText = `
-      background: rgba(0, 0, 0, 0.3);
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: hsl(var(--background) / 0.3);
+      border-top: 1px solid hsl(var(--border) / 0.6);
       overflow: hidden;
       transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       max-height: 28px;

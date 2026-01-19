@@ -131,8 +131,8 @@ export class ChatSidebar extends Component {
       className: 'flex flex-col h-full w-full relative',
     });
     (panel as HTMLElement).style.cssText = `
-      background: linear-gradient(180deg, rgba(18, 18, 26, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
-      border-left: 1px solid rgba(255, 255, 255, 0.04);
+      background: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
+      border-left: 1px solid hsl(var(--border) / 0.5);
       animation: cc-slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       min-width: 0;
       overflow: hidden;
@@ -263,7 +263,7 @@ export class ChatSidebar extends Component {
     historyButton.appendChild(chevronWrapper);
     historyButton.addEventListener('mouseenter', () => {
       (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.04)';
-      (historyButton as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.06)';
+      (historyButton as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.6)';
     });
     historyButton.addEventListener('mouseleave', () => {
       (historyButton as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
@@ -339,7 +339,7 @@ export class ChatSidebar extends Component {
         className: 'p-4 shrink-0',
       });
       (inputArea as HTMLElement).style.cssText = `
-        background: linear-gradient(180deg, transparent 0%, rgba(10, 10, 15, 0.8) 100%);
+        background: linear-gradient(180deg, transparent 0%, hsl(var(--card) / 0.8) 100%);
       `;
 
       const inputWrapper = createElement('div', {
@@ -357,7 +357,7 @@ export class ChatSidebar extends Component {
         (inputWrapper as HTMLElement).style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(99, 102, 241, 0.1)';
       });
       inputWrapper.addEventListener('focusout', () => {
-        (inputWrapper as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.08)';
+        (inputWrapper as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.8)';
         (inputWrapper as HTMLElement).style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.2)';
       });
 
@@ -447,7 +447,7 @@ export class ChatSidebar extends Component {
       className: 'flex items-center gap-2 px-4 py-2 min-w-0',
     });
     (controlsRow as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.015);
+      background: hsl(var(--muted) / 0.15);
       min-width: 0;
       width: 100%;
       overflow: hidden;
@@ -459,7 +459,7 @@ export class ChatSidebar extends Component {
       className: 'flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 min-w-0 shrink-0',
     });
     (providerWrapper as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.03);
+      background: hsl(var(--muted) / 0.3);
       min-width: 0;
       max-width: 45%;
     `;
@@ -521,7 +521,7 @@ export class ChatSidebar extends Component {
       className: 'flex-1 flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors min-w-0',
     });
     (modelWrapper as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.03);
+      background: hsl(var(--muted) / 0.3);
       min-width: 0;
       flex: 1 1 0%;
       max-width: 50%;
@@ -1203,7 +1203,7 @@ export class ChatSidebar extends Component {
         width: 24px;
         height: 24px;
         border-radius: 8px;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+        background: linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(var(--primary) / 0.1) 100%);
         border: 1px solid rgba(99, 102, 241, 0.2);
         display: flex;
         align-items: center;
@@ -1218,10 +1218,10 @@ export class ChatSidebar extends Component {
         className: 'px-4 py-3 rounded-2xl markdown-content flex-1',
       });
       (bubble as HTMLElement).style.cssText = `
-        background: rgba(255, 255, 255, 0.03);
+        background: hsl(var(--muted) / 0.3);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid hsl(var(--border) / 0.6);
         border-radius: 4px 18px 18px 18px;
         font-family: var(--cc-font-body, 'Archivo', sans-serif);
         font-size: 14px;
@@ -1366,8 +1366,8 @@ export class ChatSidebar extends Component {
         width: 100%;
         max-width: 100%;
         border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid hsl(var(--border) / 0.6);
+        background: hsl(var(--background) / 0.2);
       `;
       bubble.appendChild(img);
     }
@@ -1520,7 +1520,7 @@ export class ChatSidebar extends Component {
         font-size: 10px;
         font-weight: 500;
         color: ${isSuccess ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68, 68, 0.9)'};
-        background: ${isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
+        background: ${isSuccess ? 'hsl(var(--status-connected) / 0.1)' : 'hsl(var(--destructive) / 0.1)'};
         padding: 3px 8px;
         border-radius: 6px;
         border: 1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
@@ -1553,7 +1553,7 @@ export class ChatSidebar extends Component {
         font-size: 10px;
         font-weight: 500;
         color: rgba(99, 102, 241, 0.9);
-        background: rgba(99, 102, 241, 0.1);
+        background: hsl(var(--primary) / 0.1);
         padding: 3px 8px;
         border-radius: 6px;
         border: 1px solid rgba(99, 102, 241, 0.2);
@@ -1597,7 +1597,7 @@ export class ChatSidebar extends Component {
       className: 'px-3 py-2.5 mt-2 rounded-lg space-y-2',
     });
     (detailsInner as HTMLElement).style.cssText = `
-      background: rgba(0, 0, 0, 0.3);
+      background: hsl(var(--background) / 0.3);
       border: 1px solid rgba(255, 255, 255, 0.06);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
@@ -1624,7 +1624,7 @@ export class ChatSidebar extends Component {
     (divider as HTMLElement).style.cssText = `
       flex: 1;
       height: 1px;
-      background: rgba(255, 255, 255, 0.05);
+      background: hsl(var(--muted) / 0.5);
     `;
     toolHeader.appendChild(divider);
     detailsInner.appendChild(toolHeader);
@@ -1664,7 +1664,7 @@ export class ChatSidebar extends Component {
         font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
         font-size: 11px;
         color: var(--cc-text-primary, #f1f5f9);
-        background: rgba(0, 0, 0, 0.4);
+        background: hsl(var(--background) / 0.4);
         padding: 8px 10px;
         border-radius: 8px;
         margin: 0;
@@ -1778,7 +1778,7 @@ export class ChatSidebar extends Component {
           overflow-y: auto;
           white-space: pre-wrap;
           word-break: break-word;
-          background: rgba(0, 0, 0, 0.4);
+          background: hsl(var(--background) / 0.4);
           padding: 8px 10px;
           border-radius: 8px;
           margin: 0;
@@ -1837,7 +1837,7 @@ export class ChatSidebar extends Component {
     });
     indicator.addEventListener('mouseleave', () => {
       (indicator as HTMLElement).style.background = isExpanded ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.03)';
-      (indicator as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.05)';
+      (indicator as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.5)';
     });
 
     return wrapper;
@@ -1875,7 +1875,7 @@ export class ChatSidebar extends Component {
       className: 'px-4 py-3 rounded-2xl relative overflow-hidden flex-1',
     });
     (bubble as HTMLElement).style.cssText = `
-      background: rgba(255, 255, 255, 0.03);
+      background: hsl(var(--muted) / 0.3);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1904,10 +1904,10 @@ export class ChatSidebar extends Component {
       const bubble = loadingMessage.querySelector('.rounded-2xl');
       if (bubble) {
         (bubble as HTMLElement).style.cssText = `
-          background: rgba(255, 255, 255, 0.03);
+          background: hsl(var(--muted) / 0.3);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid hsl(var(--border) / 0.6);
           border-radius: 4px 18px 18px 18px;
           font-family: var(--cc-font-body, 'Archivo', sans-serif);
           font-size: 14px;
@@ -1940,7 +1940,7 @@ export class ChatSidebar extends Component {
       className: 'max-h-80 overflow-y-auto',
     });
     (dropdown as HTMLElement).style.cssText = `
-      background: rgba(10, 10, 15, 0.95);
+      background: hsl(var(--card));
       border-top: 1px solid rgba(255, 255, 255, 0.04);
     `;
 
@@ -1958,7 +1958,7 @@ export class ChatSidebar extends Component {
       (newChatBtn as HTMLElement).style.background = 'transparent';
     });
     newChatBtn.innerHTML = `
-      <div style="width: 20px; height: 20px; border-radius: 6px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <div style="width: 20px; height: 20px; border-radius: 6px; background: hsl(var(--primary) / 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--cc-primary, #6366f1);">
           <path d="M5 12h14"/><path d="M12 5v14"/>
         </svg>

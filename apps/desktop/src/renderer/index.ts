@@ -134,6 +134,10 @@ class App {
         path: '/chat',
         render: () => this.layout?.showRoute('chat'),
       },
+      {
+        path: '/tasks',
+        render: () => this.layout?.showRoute('tasks'),
+      },
     ]);
 
     router.notFound(() => {

@@ -1,5 +1,6 @@
 import { WebContentsView, BrowserWindow } from "electron";
 import { saveBrowserSession, loadBrowserSession, BrowserSessionTab } from "./session-manager";
+import safeConsole from "../safe-console";
 
 export interface BrowserTab {
   id: string;
@@ -60,7 +61,7 @@ export class BrowserManager {
               this.activeTabId = id;
             }
           } catch (error) {
-            console.error('[BrowserManager] Failed to restore tab:', tabData, error);
+            // Silently ignore restore errors to prevent EIO
           }
         }
         
@@ -233,7 +234,7 @@ export class BrowserManager {
     
     // Final validation
     if (clampedBounds.width < 100 || clampedBounds.height < 100) {
-      console.warn('[BrowserManager] Clamped bounds too small:', { original: bounds, clamped: clampedBounds, windowBounds });
+      safeConsole.warn('[BrowserManager] Clamped bounds too small:', { original: bounds, clamped: clampedBounds, windowBounds });
       return;
     }
     
@@ -270,7 +271,7 @@ export class BrowserManager {
           
           tab.view.setBounds(finalBounds);
         } catch (error) {
-          console.error('[BrowserManager] Failed to set bounds:', error);
+          safeConsole.error('[BrowserManager] Failed to set bounds:', error);
         }
       }
     }
@@ -365,7 +366,7 @@ export class BrowserManager {
         tab.view.setBounds(this.bounds);
       }
     } catch (error) {
-      console.error('[BrowserManager] Failed to add view:', error);
+      safeConsole.error('[BrowserManager] Failed to add view:', error);
     }
     
     this.activeTabId = id;
@@ -403,7 +404,7 @@ export class BrowserManager {
     try {
       tab.view.webContents.destroy();
     } catch (error) {
-      console.warn('[BrowserManager] Failed to destroy webContents:', error);
+      safeConsole.warn('[BrowserManager] Failed to destroy webContents:', error);
     }
     this.tabs.delete(id);
     this.emit('tab-closed', id);
@@ -602,7 +603,7 @@ export class BrowserManager {
         });
       });
     } catch (error) {
-      console.error(`[BrowserManager] CDP command ${method} failed:`, error);
+      safeConsole.error(`[BrowserManager] CDP command ${method} failed:`, error);
       throw error;
     }
   }
@@ -765,7 +766,7 @@ export class BrowserManager {
     });
     
     view.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-      console.error('Tab load failed:', errorDescription);
+      safeConsole.error('Tab load failed:', errorDescription);
       this.emit('tab-error', tab.id, errorDescription);
     });
   }

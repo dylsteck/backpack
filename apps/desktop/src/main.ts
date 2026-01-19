@@ -14,6 +14,7 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from "electron-devtools-installer";
+import safeConsole from "./helpers/safe-console";
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
@@ -60,7 +61,7 @@ async function setupRemoteDebuggingPort(): Promise<number> {
     app.commandLine.appendSwitch("remote-debugging-port", String(port));
     // Pass port to MCP server + bridge
     process.env.ELECTRON_CDP_PORT = String(port);
-    console.log(`[MCP] Using Electron CDP port ${port}`);
+    safeConsole.log(`[MCP] Using Electron CDP port ${port}`);
     return port;
   } catch (error) {
     console.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
@@ -128,8 +129,8 @@ async function startServer(): Promise<number> {
     args = ["run", serverPath];
   }
   
-  console.log(`Starting server on port ${port}...`);
-  console.log(`Server path: ${serverPath}`);
+  safeConsole.log(`Starting server on port ${port}...`);
+  safeConsole.log(`Server path: ${serverPath}`);
   
   return new Promise((resolve, reject) => {
     // Get the database path (either user-configured or default)
@@ -163,7 +164,7 @@ async function startServer(): Promise<number> {
     
     if (serverProcess.stderr) {
       serverProcess.stderr.on("data", (data) => {
-        console.error(`[Server Error] ${data.toString().trim()}`);
+        safeConsole.error(`[Server Error] ${data.toString().trim()}`);
       });
     }
     
@@ -173,7 +174,7 @@ async function startServer(): Promise<number> {
     });
     
     serverProcess.on("exit", (code) => {
-      console.log(`Server process exited with code ${code}`);
+      safeConsole.log(`Server process exited with code ${code}`);
       serverProcess = null;
     });
     
@@ -196,7 +197,7 @@ async function startServer(): Promise<number> {
  */
 function stopServer(): void {
   if (serverProcess) {
-    console.log("Stopping server...");
+    safeConsole.log("Stopping server...");
     
     // Try graceful shutdown first
     serverProcess.kill("SIGTERM");
@@ -255,7 +256,7 @@ function createWindow() {
 }
 
 function handleDeepLink(url: string) {
-  console.log("Deep link received:", url);
+  safeConsole.log("Deep link received:", url);
   
   // Parse deep link: cortex://callback?success=true&sessionToken=xxx&accountIds=xxx,yyy&customerId=xxx
   // For Teller: cortex://callback?success=true&sessionToken=xxx&accessToken=xxx&enrollmentId=xxx&institutionName=xxx
@@ -304,7 +305,7 @@ function handleDeepLink(url: string) {
 async function installExtensions() {
   try {
     const result = await installExtension(REACT_DEVELOPER_TOOLS);
-    console.log(`Extensions installed successfully: ${result.name}`);
+    safeConsole.log(`Extensions installed successfully: ${result.name}`);
   } catch {
     console.error("Failed to install extensions");
   }
@@ -371,7 +372,7 @@ if (!gotTheLock) {
           app.dock.setIcon(iconPath);
         }
       } catch (error) {
-        console.error("Failed to set dock icon:", error);
+        safeConsole.error("Failed to set dock icon:", error);
       }
     }
     
@@ -382,7 +383,7 @@ if (!gotTheLock) {
       setServerPort(serverPort);
       console.log(`API server running on http://127.0.0.1:${serverPort}`);
     } catch (error) {
-      console.error("Failed to start API server:", error);
+      safeConsole.error("Failed to start API server:", error);
       // Continue anyway - might be running separately in development
     }
     
@@ -397,7 +398,7 @@ if (!gotTheLock) {
         console.log('[MCP] Browser will work, but MCP tools may not be available');
       });
       setMCPClient(mcpInstance);
-      console.log('[MCP] Chrome DevTools MCP server starting...');
+      safeConsole.log('[MCP] Chrome DevTools MCP server starting...');
       
       // Start HTTP bridge for server to call browser tools
       const bridgePort = await startBrowserBridge();
@@ -421,7 +422,7 @@ if (!gotTheLock) {
   };
 
   startApp().catch((error) => {
-    console.error("Failed to start app:", error);
+    safeConsole.error("Failed to start app:", error);
   });
 }
 

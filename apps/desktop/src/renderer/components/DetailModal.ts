@@ -64,7 +64,7 @@ export class DetailModal extends Component {
     
     // Backdrop with enhanced blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
+      className: 'fixed inset-0 bg-background/85 backdrop-blur-[32px] saturate-180 z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -76,19 +76,19 @@ export class DetailModal extends Component {
     
     // Modal container
     const modal = createElement('div', {
-      className: `glass-panel bg-card border border-border/50 transition-all duration-500 ease-in-out flex flex-col md:flex-row elevation-3 rounded-[2rem] modal-enter relative overflow-hidden ${this.isFullscreen ? 'w-full max-w-[98vw] h-[98vh] max-h-[98vh]' : 'w-full max-w-6xl h-full max-h-[90vh]'}`,
+      className: `modal-container-premium bg-card/80 border border-border/30 transition-all duration-500 ease-in-out flex flex-col md:flex-row elevation-4 rounded-[2rem] modal-enter relative overflow-hidden ${this.isFullscreen ? 'w-full max-w-[98vw] h-[98vh] max-h-[98vh]' : 'w-full max-w-6xl h-full max-h-[90vh]'}`,
     });
     // Ensure visibility
     (modal as HTMLElement).style.opacity = '1';
     
     // Top Right Controls Container
     const controlsContainer = createElement('div', {
-      className: 'absolute top-6 right-6 flex items-center gap-2 z-[200]',
+      className: 'absolute top-8 right-8 flex items-center gap-3 z-[200]',
     });
 
     // Fullscreen Button
     const fullscreenBtn = createElement('button', {
-      className: 'p-3 hover:bg-secondary rounded-2xl transition-all text-muted-foreground hover:text-foreground group bg-background/20 backdrop-blur-md border border-border/30',
+      className: 'modal-button-secondary p-3 rounded-2xl transition-all text-muted-foreground hover:text-foreground group',
       innerHTML: this.isFullscreen 
         ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="m15 3 6 6m0-6-6 6M9 21l-6-6m0 6 6-6M21 3h-6m6 0v6M3 21h6m-6 0v-6"/></svg>`,
@@ -102,7 +102,7 @@ export class DetailModal extends Component {
 
     // Close button
     const closeBtn = createElement('button', {
-      className: 'p-3 hover:bg-secondary rounded-2xl transition-all text-muted-foreground hover:text-foreground group bg-background/20 backdrop-blur-md border border-border/30',
+      className: 'modal-button-secondary p-3 rounded-2xl transition-all text-muted-foreground hover:text-foreground group',
       innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
@@ -116,12 +116,14 @@ export class DetailModal extends Component {
 
     // LEFT: Content Area
     const contentArea = createElement('div', {
-      className: `flex-1 min-h-0 overflow-y-auto p-8 md:p-16 bg-background/20 cc-scrollbar transition-all duration-500 ${this.isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`,
+      className: `modal-content-area flex-1 min-h-0 overflow-y-auto modal-content-spacing modal-scrollbar transition-all duration-500 modal-content-enter ${this.isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`,
     });
-    (contentArea as HTMLElement).style.height = '100%';
-    if (!this.isFullscreen) {
-      (contentArea as HTMLElement).style.maxHeight = '90vh';
-    }
+    (contentArea as HTMLElement).style.cssText = `
+      height: 100%;
+      ${!this.isFullscreen ? 'max-height: 90vh;' : ''}
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    `;
 
     const content = this.renderMainContent();
     contentArea.appendChild(content);
@@ -130,26 +132,36 @@ export class DetailModal extends Component {
     // RIGHT: Sidebar
     if (!this.isFullscreen) {
       const sidebarPanel = createElement('aside', {
-        className: 'w-full md:w-[360px] h-full border-l border-border/50 bg-muted/10 backdrop-blur-md flex flex-col shrink-0 relative',
+        className: 'modal-sidebar-premium w-full md:w-[380px] h-full flex flex-col shrink-0 relative',
       });
       
       // Sidebar Header
       const sidebarHeader = createElement('div', {
-        className: 'p-8 space-y-6 pt-12 pr-16', 
+        className: 'modal-content-spacing space-y-6 pt-16 pr-16', 
       });
       
       // Type badge
       const typeBadge = createElement('div', {
-        className: 'inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider',
+        className: 'inline-flex items-center px-4 py-2 rounded-full bg-primary/15 border border-primary/20 text-primary text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
         textContent: this.getTypeLabel(),
       });
+      (typeBadge as HTMLElement).style.cssText = `
+        font-family: var(--font-sans);
+        letter-spacing: 0.1em;
+      `;
       sidebarHeader.appendChild(typeBadge);
       
       const metaTitle = createElement('h2', {
-        className: 'text-2xl font-bold leading-tight tracking-tight text-foreground',
+        className: 'modal-title text-2xl text-foreground',
         textContent: this.getItemTitle(),
       });
-      (metaTitle as HTMLElement).style.fontFamily = 'var(--font-display)';
+      (metaTitle as HTMLElement).style.cssText = `
+        font-family: var(--font-display, var(--font-sans));
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: hsl(var(--foreground));
+      `;
       sidebarHeader.appendChild(metaTitle);
       
       // Actions Row
@@ -158,7 +170,7 @@ export class DetailModal extends Component {
       });
       
       const connectBtn = createElement('button', {
-        className: 'flex-1 h-12 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center gap-2 font-semibold hover:opacity-90 transition-opacity',
+        className: 'modal-button-primary flex-1 h-13 text-primary-foreground rounded-2xl flex items-center justify-center gap-2 font-semibold',
         innerHTML: `
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           <span>Connect</span>
@@ -167,7 +179,7 @@ export class DetailModal extends Component {
       actionRow.appendChild(connectBtn);
       
       const actionsBtn = createElement('button', {
-        className: 'w-12 h-12 p-0 flex items-center justify-center bg-secondary text-secondary-foreground rounded-2xl relative z-[20] hover:bg-secondary/80 transition-colors',
+        className: 'modal-button-secondary w-12 h-12 p-0 flex items-center justify-center text-secondary-foreground rounded-2xl relative z-[20]',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
         attributes: { 'id': this.triggerId },
       });
@@ -180,7 +192,7 @@ export class DetailModal extends Component {
       
       // Actions Dropdown
       const actionsDropdown = createElement('div', {
-        className: 'absolute right-0 top-full mt-3 w-56 bg-card border border-border p-2 rounded-2xl shadow-2xl z-[100] hidden flex-col overflow-hidden',
+        className: 'absolute right-0 top-full mt-3 w-56 modal-container-premium p-2 rounded-2xl elevation-4 z-[100] hidden flex-col overflow-hidden',
         attributes: { 'id': this.dropdownId },
       });
       
@@ -200,8 +212,12 @@ export class DetailModal extends Component {
       
       // Metadata Area
       const metadata = createElement('div', {
-        className: 'flex-1 overflow-y-auto p-8 space-y-6',
+        className: 'modal-visual-hierarchy flex-1 overflow-y-auto modal-scrollbar modal-content-spacing',
       });
+      (metadata as HTMLElement).style.cssText = `
+        background: transparent;
+        color: hsl(var(--foreground));
+      `;
       
       metadata.appendChild(this.createMetaSection('Date', formatFullDate(this.item.timestamp)));
       metadata.appendChild(this.createMetaSection('Time', formatTime(this.item.timestamp)));
@@ -220,24 +236,24 @@ export class DetailModal extends Component {
 
       // Connections section
       const connectionsSection = createElement('div', {
-        className: 'mt-auto border-t border-border/50 p-8 bg-muted/20',
+        className: 'mt-auto border-t border-border/30 modal-content-spacing bg-muted/10 backdrop-blur-sm',
       });
       
       const connectionsHeader = createElement('div', {
-        className: 'text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6',
+        className: 'text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-8',
         textContent: 'Connections (0)',
       });
       connectionsSection.appendChild(connectionsHeader);
       
       connectionsSection.innerHTML += `
-        <div class="flex flex-col items-center justify-center py-6 text-center space-y-4 opacity-50">
-          <div class="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center border border-border/50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+        <div class="flex flex-col items-center justify-center py-8 text-center space-y-6 opacity-60">
+          <div class="modal-metadata-card w-16 h-16 rounded-3xl flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
           </div>
-          <span class="text-xs font-medium text-muted-foreground">No graph connections</span>
+          <span class="text-sm font-medium text-muted-foreground">No graph connections available</span>
         </div>
       `;
       
@@ -332,11 +348,11 @@ export class DetailModal extends Component {
 
   private createMetaSection(label: string, value: string): HTMLElement {
     const section = createElement('div', {
-      className: 'p-5 rounded-2xl bg-secondary/30 border border-border/40 space-y-1 transition-all hover:bg-secondary/40 group',
+      className: 'modal-metadata-card p-5 rounded-2xl space-y-2',
     });
     section.innerHTML = `
-      <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">${label}</div>
-      <div class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">${escapeHtml(value)}</div>
+      <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">${label}</div>
+      <div class="text-sm font-semibold text-foreground transition-colors">${escapeHtml(value)}</div>
     `;
     return section;
   }
@@ -365,18 +381,22 @@ export class DetailModal extends Component {
     const wrapper = createElement('div', {
       className: 'w-full max-w-4xl mx-auto',
     });
+    (wrapper as HTMLElement).style.cssText = `
+      color: hsl(var(--foreground));
+      background: transparent;
+    `;
 
     switch (this.item.type) {
       case 'obsidian-note': {
         const note = this.item.data as { title: string; body: string; path: string; tags?: string[] };
         
-        const article = createElement('article', { className: `space-y-10 ${this.isFullscreen ? 'py-12' : ''}` });
+        const article = createElement('article', { className: `modal-visual-hierarchy ${this.isFullscreen ? 'py-12' : ''}` });
 
-        const header = createElement('header', { className: 'space-y-6 pb-10 border-b border-border/50' });
+        const header = createElement('header', { className: 'modal-section-spacing space-y-6 pb-10 border-b border-border/20' });
         header.innerHTML = `
-          <div class="space-y-4">
-            <h1 class="text-foreground leading-tight tracking-tight font-bold" style="font-family: var(--font-display); font-size: clamp(2.5rem, 5vw, 4rem);">${escapeHtml(note.title)}</h1>
-            <div class="flex items-center gap-3 text-muted-foreground font-mono text-[11px] bg-secondary/50 px-3 py-1.5 rounded-lg w-fit border border-border/30 overflow-hidden max-w-full">
+          <div class="space-y-5">
+            <h1 class="text-foreground leading-tight tracking-tight font-bold" style="font-family: var(--font-display); font-size: clamp(2.25rem, 4vw, 3.5rem); line-height: 1.2; letter-spacing: -0.02em;">${escapeHtml(note.title)}</h1>
+            <div class="flex items-center gap-3 text-muted-foreground font-sans text-xs bg-secondary/40 px-4 py-2 rounded-lg w-fit border border-border/20 overflow-hidden max-w-full" style="font-family: var(--font-sans);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-70 shrink-0"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               <span class="truncate">${escapeHtml(note.path)}</span>
             </div>
@@ -388,10 +408,16 @@ export class DetailModal extends Component {
         const cleanBody = note.body.replace(/^---\n[\s\S]*?\n---\n?/, '');
 
         const bodyContainer = createElement('div', {
-          className: 'markdown-content editorial-prose text-foreground/90',
+          className: 'markdown-content modal-content-readable',
         });
-        (bodyContainer as HTMLElement).style.fontSize = '1.1rem';
-        (bodyContainer as HTMLElement).style.lineHeight = '1.7';
+        (bodyContainer as HTMLElement).style.cssText = `
+          color: hsl(var(--foreground));
+          font-family: var(--font-sans, 'Manrope', sans-serif);
+          font-size: 1.0625rem;
+          line-height: 1.8;
+          letter-spacing: -0.003em;
+          max-width: 100%;
+        `;
         bodyContainer.innerHTML = parseMarkdown(cleanBody);
         setupMarkdownInteractivity(bodyContainer);
 
@@ -399,10 +425,10 @@ export class DetailModal extends Component {
 
         if (note.tags?.length) {
           const tagsContainer = createElement('div', {
-            className: 'flex flex-wrap gap-2.5 pt-10'
+            className: 'modal-section-spacing flex flex-wrap gap-3 pt-10'
           });
           tagsContainer.innerHTML = note.tags.map(t =>
-            `<span class="px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary text-xs font-bold rounded-full hover:bg-primary/20 transition-all cursor-pointer">#${escapeHtml(t)}</span>`
+            `<span class="px-4 py-2 bg-primary/12 border border-primary/25 text-primary text-xs font-semibold rounded-full hover:bg-primary/20 transition-all cursor-pointer backdrop-blur-sm" style="font-family: var(--font-sans);">#${escapeHtml(t)}</span>`
           ).join('');
           article.appendChild(tagsContainer);
         }
@@ -413,37 +439,37 @@ export class DetailModal extends Component {
         
       case 'cast': {
         const cast = this.item.data as FarcasterCast;
-        const article = createElement('article', { className: 'max-w-2xl mx-auto space-y-8' });
+        const article = createElement('article', { className: 'max-w-2xl mx-auto modal-visual-hierarchy' });
 
         article.innerHTML = `
-          <header class="flex items-center gap-4">
-            <img src="${cast.author.pfp_url}" class="w-14 h-14 rounded-xl shadow-lg border border-border/50" />
+          <header class="flex items-center gap-4 pb-8">
+            <img src="${cast.author.pfp_url}" class="w-16 h-16 rounded-2xl elevation-2 border border-border/30" />
             <div>
-              <div class="font-bold text-foreground text-lg tracking-tight">${escapeHtml(cast.author.display_name)}</div>
-              <div class="text-muted-foreground text-sm">@${escapeHtml(cast.author.username)}</div>
+              <div class="modal-subtitle text-xl text-foreground" style="font-family: var(--font-sans); font-weight: 600; line-height: 1.3;">${escapeHtml(cast.author.display_name)}</div>
+              <div class="text-muted-foreground text-sm font-sans" style="font-family: var(--font-sans);">@${escapeHtml(cast.author.username)}</div>
             </div>
           </header>
 
-          <div class="relative py-4">
-            <p class="text-foreground text-xl md:text-2xl leading-relaxed whitespace-pre-wrap font-medium">${escapeHtml(cast.text)}</p>
+          <div class="modal-section-spacing">
+            <p class="modal-content-readable text-foreground text-xl leading-relaxed whitespace-pre-wrap font-normal" style="font-family: var(--font-sans); line-height: 1.75; letter-spacing: -0.01em;">${escapeHtml(cast.text)}</p>
           </div>
 
           ${cast.embeds?.length ? `
-            <div class="grid grid-cols-1 gap-4">
+            <div class="modal-section-spacing grid grid-cols-1 gap-4">
               ${cast.embeds.map(e => e.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ?
-                `<img src="${e.url}" class="w-full rounded-2xl shadow-md border border-border/50" />` : ''
+                `<img src="${e.url}" class="w-full rounded-2xl elevation-2 border border-border/30" />` : ''
               ).join('')}
             </div>
           ` : ''}
 
-          <div class="flex gap-6 pt-6 border-t border-border/50">
-            <div class="flex items-center gap-2">
-              <span class="text-lg font-bold text-primary">${cast.reactions?.likes_count || 0}</span>
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Likes</span>
+          <div class="flex gap-8 pt-8 border-t border-border/20">
+            <div class="flex items-center gap-3">
+              <span class="text-xl font-bold text-primary animated-counter" style="font-family: var(--font-sans);">${cast.reactions?.likes_count || 0}</span>
+              <span class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground" style="font-family: var(--font-sans); letter-spacing: 0.1em;">Likes</span>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-lg font-bold text-secondary">${cast.reactions?.recasts_count || 0}</span>
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recasts</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xl font-bold text-secondary-foreground animated-counter" style="font-family: var(--font-sans);">${cast.reactions?.recasts_count || 0}</span>
+              <span class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground" style="font-family: var(--font-sans); letter-spacing: 0.1em;">Recasts</span>
             </div>
           </div>
         `;
@@ -456,28 +482,30 @@ export class DetailModal extends Component {
         const tx = this.item.data as TellerTransaction;
         const amount = parseFloat(tx.amount);
         wrapper.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center text-center space-y-10">
-            <div class="space-y-4">
-              <div class="inline-flex items-center px-4 py-1.5 rounded-full ${amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'} border border-current/20 text-xs font-bold uppercase tracking-wider">${tx.details.category || 'Payment'}</div>
-              <div class="text-foreground leading-none tracking-tighter font-bold" style="font-family: var(--font-display); font-size: 6rem;">
-                <span class="opacity-30 text-3xl align-top mr-1 mt-6 inline-block font-sans">$</span>${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          <div class="h-full flex flex-col items-center justify-center text-center modal-visual-hierarchy">
+            <div class="space-y-6">
+              <div class="inline-flex items-center px-5 py-2 rounded-full ${amount > 0 ? 'bg-green-500/12 border border-green-500/25 text-green-500' : 'bg-amber-500/12 border border-amber-500/25 text-amber-500'} text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
+                ${tx.details.category || 'Transaction'}
+              </div>
+              <div class="modal-title text-foreground leading-none" style="font-size: clamp(4rem, 8vw, 7rem);">
+                <span class="opacity-30 text-[clamp(1.5rem, 3vw, 2.5rem)] align-top mr-2 mt-6 inline-block font-sans font-light">$</span>${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
             
-            <div class="max-w-xl space-y-2">
-              <h2 class="text-2xl font-bold text-foreground tracking-tight">${escapeHtml(tx.description)}</h2>
-              <p class="text-muted-foreground">${formatFullDate(this.item.timestamp)}</p>
+            <div class="max-w-xl space-y-4">
+              <h2 class="modal-subtitle text-2xl text-foreground" style="font-family: var(--font-sans); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em;">${escapeHtml(tx.description)}</h2>
+              <p class="text-muted-foreground text-base font-sans" style="font-family: var(--font-sans);">${formatFullDate(this.item.timestamp)}</p>
             </div>
 
-            <div class="w-full max-w-sm grid grid-cols-2 gap-4 p-6 bg-secondary/20 border border-border/40 rounded-3xl">
-              <div class="text-left space-y-1">
-                <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Account</div>
-                <div class="text-foreground font-semibold text-sm">${escapeHtml(tx.account_id || 'Checking')}</div>
+            <div class="w-full max-w-sm grid grid-cols-2 gap-6 p-8 modal-metadata-card rounded-3xl">
+              <div class="text-left space-y-2">
+                <div class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest" style="font-family: var(--font-sans); letter-spacing: 0.08em;">Account</div>
+                <div class="text-foreground font-medium text-base" style="font-family: var(--font-sans); line-height: 1.5;">${escapeHtml(tx.account_id || 'Checking Account')}</div>
               </div>
-              <div class="text-left space-y-1">
-                <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</div>
-                <div class="text-green-500 font-semibold text-sm flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+              <div class="text-left space-y-2">
+                <div class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest" style="font-family: var(--font-sans); letter-spacing: 0.08em;">Status</div>
+                <div class="text-green-500 font-medium text-base flex items-center gap-2" style="font-family: var(--font-sans); line-height: 1.5;">
+                  <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                   Cleared
                 </div>
               </div>
@@ -493,17 +521,19 @@ export class DetailModal extends Component {
         const favicon = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
 
         wrapper.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center text-center space-y-8">
-            <div class="relative">
-              <div class="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-125"></div>
-              <img src="${favicon}" class="w-24 h-24 rounded-3xl shadow-xl relative z-10 border border-border/50 p-4 bg-card" />
+          <div class="h-full flex flex-col items-center justify-center text-center modal-visual-hierarchy">
+            <div class="relative mb-8">
+              <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 opacity-60"></div>
+              <div class="modal-container-premium relative z-10 w-28 h-28 rounded-3xl p-6 flex items-center justify-center">
+                <img src="${favicon}" class="w-full h-full object-contain" />
+              </div>
             </div>
 
-            <div class="max-w-xl space-y-4 relative z-10">
-              <h1 class="text-3xl font-bold text-foreground leading-tight tracking-tight" style="font-family: var(--font-display)">${escapeHtml(entry.title || 'Web Discovery')}</h1>
-              <a href="${entry.url}" target="_blank" class="inline-flex items-center gap-2 text-primary hover:underline font-mono text-sm">
-                <span>${url.hostname}</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <div class="max-w-xl space-y-6 relative z-10">
+              <h1 class="modal-title text-4xl text-foreground">${escapeHtml(entry.title || 'Web Discovery')}</h1>
+              <a href="${entry.url}" target="_blank" class="inline-flex items-center gap-3 text-primary hover:text-primary/80 transition-colors font-mono text-base modal-button-secondary px-4 py-2 rounded-xl">
+                <span class="truncate max-w-xs">${url.hostname}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
             </div>
           </div>

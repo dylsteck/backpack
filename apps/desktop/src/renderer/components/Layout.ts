@@ -16,8 +16,9 @@ import { TopbarTitle } from './TopbarTitle';
 import { ChatSidebar } from './ChatSidebar';
 import { Browser } from './Browser';
 import { ChatPage } from './ChatPage';
+import { Tasks } from './Tasks';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser' | 'chat';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser' | 'chat' | 'tasks';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -115,15 +116,17 @@ export class Layout extends Component {
     const updateChatTogglePosition = () => {
       const open = store.chatSidebarOpen.get();
       const chatWidth = this.chatSidebarContainer?.offsetWidth || 320;
-      // Position toggle button: when open, position it at the left edge of sidebar (inside sidebar)
-      // When closed, position it at a fixed right position
-      // Use higher z-index to ensure it's always visible above sidebar content
+      const marginLeft = open ? 16 : 0; // 1rem = 16px
+      // Hide toggle button when sidebar is open (use X button inside sidebar instead)
+      // Show toggle button when sidebar is closed - positioned at far right corner
       chatToggle.style.cssText = `
-        right: ${open ? `calc(${chatWidth}px - 2rem)` : '90px'};
+        right: ${open ? `calc(${chatWidth + marginLeft}px - 2rem)` : '12px'};
         -webkit-app-region: no-drag;
         z-index: 10001;
         cursor: pointer;
-        transition: right 0.3s ease;
+        transition: right 0.3s ease, opacity 0.2s ease;
+        opacity: ${open ? '0' : '1'};
+        pointer-events: ${open ? 'none' : 'auto'};
       `;
     };
 
@@ -192,6 +195,40 @@ export class Layout extends Component {
       overflow-y: hidden;
       position: relative;
     `;
+    
+    // CRITICAL: Ensure content stack respects chat sidebar boundaries
+    const updateContentStackConstraints = () => {
+      const chatSidebarOpen = store.chatSidebarOpen.get();
+      const chatSidebar = this.chatSidebarContainer;
+      if (chatSidebarOpen && chatSidebar) {
+        const chatWidth = chatSidebar.offsetWidth || 320;
+        const marginLeft = 16; // 1rem
+        const totalReserved = chatWidth + marginLeft;
+        
+        // Apply multiple constraints to prevent overlap
+        (contentStack as HTMLElement).style.maxWidth = `calc(100% - ${totalReserved}px)`;
+        (contentStack as HTMLElement).style.overflow = 'hidden';
+        (contentStack as HTMLElement).style.clipPath = `inset(0 ${totalReserved}px 0 0)`;
+        (contentStack as HTMLElement).style.paddingRight = '0';
+      } else {
+        (contentStack as HTMLElement).style.maxWidth = '100%';
+        (contentStack as HTMLElement).style.overflow = '';
+        (contentStack as HTMLElement).style.clipPath = 'inset(0)';
+        (contentStack as HTMLElement).style.paddingRight = '';
+      }
+    };
+    
+    // Subscribe to sidebar state changes with multiple updates to catch transitions
+    this.subscribe(store.chatSidebarOpen, () => {
+      setTimeout(updateContentStackConstraints, 0);
+      setTimeout(updateContentStackConstraints, 50);
+      setTimeout(updateContentStackConstraints, 100);
+      setTimeout(updateContentStackConstraints, 200);
+      setTimeout(updateContentStackConstraints, 300); // After transition completes
+    });
+    
+    // Initial constraint update
+    setTimeout(updateContentStackConstraints, 100);
 
     // Drag region
     const dragRegion = createElement('div', {
@@ -217,19 +254,21 @@ export class Layout extends Component {
 
     // Chat Sidebar (Right)
     this.chatSidebarContainer = createElement('aside', {
-      className: 'w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative border-l border-border/50',
+      className: 'chat-sidebar-container w-0 h-full flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative border-l border-border/50',
     });
     // CRITICAL: Set high z-index immediately to ensure it's above browser
     (this.chatSidebarContainer as HTMLElement).style.cssText = `
       min-width: 0;
-      overflow: hidden;
+      overflow: visible;
       z-index: 10000;
       position: relative;
       isolation: isolate;
-      background-color: var(--bg-primary);
-      background: linear-gradient(180deg, rgba(18, 18, 26, 0.98) 0%, rgba(10, 10, 15, 0.98) 100%);
+      background-color: hsl(var(--background));
+      background: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      margin-left: 1rem;
+      flex-shrink: 0;
     `;
     mainWrapper.appendChild(this.chatSidebarContainer);
 
@@ -273,13 +312,16 @@ export class Layout extends Component {
       // Show/hide border line when sidebar is open/closed (like left sidebar)
       this.chatSidebarContainer.style.borderLeftWidth = open ? '1px' : '0';
 
-      // Update toggle button position (like left sidebar - stays visible)
+      // Hide toggle button when sidebar is open (use X button inside sidebar instead)
       if (this.chatToggleButton) {
         const currentWidth = this.chatSidebarContainer.offsetWidth || 320;
+        const marginLeft = open ? 16 : 0; // 1rem = 16px
         this.chatToggleButton.style.right = open 
-          ? `calc(${currentWidth}px - 2rem)` 
-          : '90px';
+          ? `calc(${currentWidth + marginLeft}px - 2rem)` 
+          : '12px';
         this.chatToggleButton.style.zIndex = '10001'; // Ensure above sidebar (z-index 10000)
+        this.chatToggleButton.style.opacity = open ? '0' : '1';
+        this.chatToggleButton.style.pointerEvents = open ? 'none' : 'auto';
       }
 
       // CRITICAL: Ensure sidebar has proper z-index to be above browser content
@@ -325,7 +367,8 @@ export class Layout extends Component {
 
     if (this.topbarContainer) {
       const currentWidth = this.chatSidebarContainer?.offsetWidth || 320;
-      this.topbarContainer.style.right = open ? `${currentWidth}px` : '0';
+      const marginLeft = open ? 16 : 0; // 1rem = 16px
+      this.topbarContainer.style.right = open ? `${currentWidth + marginLeft}px` : '0';
     }
   }
 
@@ -396,6 +439,9 @@ export class Layout extends Component {
         break;
       case 'chat':
         this.currentView = new ChatPage(this.contentContainer);
+        break;
+      case 'tasks':
+        this.currentView = new Tasks(this.contentContainer);
         break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);

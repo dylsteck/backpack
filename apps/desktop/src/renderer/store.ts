@@ -127,7 +127,7 @@ export const store = {
   
   // UI State
   sidebarOpen: new Observable<boolean>(true),
-  sidebarCollapsed: new Observable<boolean>(false),
+  sidebarCollapsed: new Observable<boolean>(true),
   chatSidebarOpen: new Observable<boolean>(false),
   expandedItemId: new Observable<string | null>(null),
   
