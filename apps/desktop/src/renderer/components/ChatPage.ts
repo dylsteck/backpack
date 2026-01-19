@@ -818,8 +818,22 @@ export class ChatPage extends Component {
 
         // Parse markdown for assistant messages
         if (!isUser) {
-            content.innerHTML = parseMarkdown(message.content);
-            setTimeout(() => setupMarkdownInteractivity(content), 0);
+            if (!message.content || message.content.trim() === '') {
+                // Show loading indicator when content is empty
+                content.innerHTML = `
+                    <div class="flex items-center gap-2 text-muted-foreground">
+                        <div class="flex gap-1">
+                            <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 0ms;"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 150ms;"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 300ms;"></div>
+                        </div>
+                        <span class="text-xs" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">Thinking...</span>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = parseMarkdown(message.content);
+                setTimeout(() => setupMarkdownInteractivity(content), 0);
+            }
         } else {
             content.textContent = message.content;
         }
@@ -911,6 +925,9 @@ Always ensure the JSON is valid and follows the UITree structure.
                 ...messages
             ];
 
+            console.log('[ChatPage] Sending request to:', endpoint);
+            console.log('[ChatPage] Request messages count:', requestMessages.length);
+            
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -923,23 +940,39 @@ Always ensure the JSON is valid and follows the UITree structure.
                 }),
             });
 
+            console.log('[ChatPage] Response status:', response.status, response.statusText);
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}`);
+                console.error('[ChatPage] Response error:', errorData);
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
 
             const reader = response.body?.getReader();
-            if (!reader) throw new Error('No response body');
+            if (!reader) {
+                console.error('[ChatPage] No response body reader available');
+                throw new Error('No response body');
+            }
 
             const decoder = new TextDecoder();
+            let hasReceivedData = false;
 
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) {
+                    console.log('[ChatPage] Stream complete. Final content length:', assistantMsg.content.length);
+                    break;
+                }
 
+                hasReceivedData = true;
                 const chunk = decoder.decode(value, { stream: true });
                 assistantMsg.content += chunk;
                 this.updateLastMessage(assistantMsg.content, false);
+            }
+
+            if (!hasReceivedData && assistantMsg.content === '') {
+                console.warn('[ChatPage] No data received from stream');
+                assistantMsg.content = 'No response received from the server. Please try again.';
             }
 
             // Final update with completion flag
@@ -966,8 +999,18 @@ Always ensure the JSON is valid and follows the UITree structure.
 
         } catch (error) {
             console.error('Chat error:', error);
-            assistantMsg.content = `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`;
+            const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
+            assistantMsg.content = `Error: ${errorMessage}`;
             this.updateLastMessage(assistantMsg.content, true);
+            
+            // Log more details for debugging
+            if (error instanceof Error) {
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                });
+            }
         } finally {
             this.isLoading = false;
             this.inputElement?.focus();
@@ -991,11 +1034,25 @@ Always ensure the JSON is valid and follows the UITree structure.
         if (lastBubble) {
             const contentEl = lastBubble.querySelector('.text-sm');
             if (contentEl) {
-                (contentEl as HTMLElement).innerHTML = parseMarkdown(content);
-                setupMarkdownInteractivity(contentEl as HTMLElement);
+                // Show loading indicator if content is empty, otherwise show parsed content
+                if (!content || content.trim() === '') {
+                    (contentEl as HTMLElement).innerHTML = `
+                        <div class="flex items-center gap-2 text-muted-foreground">
+                            <div class="flex gap-1">
+                                <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 0ms;"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 150ms;"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-current animate-pulse" style="animation-delay: 300ms;"></div>
+                            </div>
+                            <span class="text-xs" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">Thinking...</span>
+                        </div>
+                    `;
+                } else {
+                    (contentEl as HTMLElement).innerHTML = parseMarkdown(content);
+                    setupMarkdownInteractivity(contentEl as HTMLElement);
 
-                if (isComplete) {
-                    this.renderJsonUIBlocks(contentEl as HTMLElement);
+                    if (isComplete) {
+                        this.renderJsonUIBlocks(contentEl as HTMLElement);
+                    }
                 }
             }
         }
@@ -1136,9 +1193,17 @@ Always ensure the JSON is valid and follows the UITree structure.
             if (this.sessionId === sessionId) {
                 this.sessionId = null;
                 this.messages = [];
+                // Re-render messages area if we deleted the current session
+                if (this.messagesContainer) {
+                    if (this.messages.length === 0) {
+                        this.renderWelcomeState();
+                    } else {
+                        this.renderMessages();
+                    }
+                }
             }
-
-            this.render();
+            // Don't call this.render() here - let the dropdown handler manage its own state
+            // The dropdown will call updateDropdown() to refresh its content
         } catch (error) {
             console.error('[ChatPage] Failed to delete session:', error);
         }
