@@ -42,9 +42,6 @@ export class ChatPage extends Component {
     private openCodeService!: OpenCodeService;
     private openCodeState!: OpenCodeState;
     private unsubscribe: (() => void) | null = null;
-    
-    // Flag to prevent multiple transfers when multiple browser tools are called
-    private hasTransferredChat = false;
 
     async init(): Promise<void> {
         this.stateManager = getChatStateManager();
@@ -61,9 +58,31 @@ export class ChatPage extends Component {
         // Set up OAuth callback listener
         this.setupOAuthListener();
 
-        // Try to connect if not already connected
-        if (this.openCodeState.status === 'disconnected') {
-            await this.openCodeService.connect();
+        // Try to connect to OpenCode first, if not already connected or in fallback mode
+        if (this.openCodeState.status === 'disconnected' && !this.openCodeState.useFallback) {
+            console.log('[ChatPage] Attempting to connect to OpenCode...');
+            try {
+                const connected = await this.openCodeService.connect();
+                this.openCodeState = this.openCodeService.getState();
+                
+                // If connection failed, immediately enable fallback mode
+                if (!connected) {
+                    console.log('[ChatPage] OpenCode connection failed, enabling fallback mode');
+                    this.openCodeService.enableFallback();
+                    this.openCodeState = this.openCodeService.getState();
+                }
+            } catch (error) {
+                // Any error during connection attempt should trigger fallback
+                console.log('[ChatPage] OpenCode connection error, enabling fallback mode:', error);
+                this.openCodeService.enableFallback();
+                this.openCodeState = this.openCodeService.getState();
+            }
+        }
+        
+        // Also check if we're in error state and should enable fallback
+        if (this.openCodeState.status === 'error' && !this.openCodeState.useFallback) {
+            console.log('[ChatPage] OpenCode in error state, enabling fallback mode');
+            this.openCodeService.enableFallback();
             this.openCodeState = this.openCodeService.getState();
         }
 
@@ -145,14 +164,26 @@ export class ChatPage extends Component {
             min-width: 0;
         `;
 
-        // Check if we need to show auth setup
-        const needsSetup = this.openCodeState.status !== 'connected' || 
-            (this.openCodeState.authMethod === 'apikey' && !this.openCodeState.isAuthenticated);
-
-        if (needsSetup && this.openCodeState.providers.length === 0) {
-            this.renderSetupPrompt(mainArea);
+        // In fallback mode or error state, show fallback chat interface
+        // Also enable fallback if we're in error state but haven't enabled it yet
+        if (this.openCodeState.status === 'error' && !this.openCodeState.useFallback) {
+            console.log('[ChatPage] Error state detected, enabling fallback mode');
+            this.openCodeService.enableFallback();
+            this.openCodeState = this.openCodeService.getState();
+        }
+        
+        if (this.openCodeState.useFallback || this.openCodeState.status === 'error') {
+            this.renderFallbackChatInterface(mainArea);
         } else {
-            this.renderChatInterface(mainArea);
+            // Check if we need to show OpenCode setup
+            const needsSetup = this.openCodeState.status !== 'connected' || 
+                (this.openCodeState.authMethod === 'apikey' && !this.openCodeState.isAuthenticated);
+
+            if (needsSetup && this.openCodeState.providers.length === 0) {
+                this.renderSetupPrompt(mainArea);
+            } else {
+                this.renderChatInterface(mainArea);
+            }
         }
 
         wrapper.appendChild(mainArea);
@@ -258,19 +289,308 @@ export class ChatPage extends Component {
             connectBtn.textContent = 'Connecting...';
             (connectBtn as HTMLButtonElement).disabled = true;
             
-            const connected = await this.openCodeService.connect(urlInput.value.trim() || undefined);
-            
-            if (connected) {
-                this.render();
-            } else {
-                connectBtn.textContent = 'Connect';
-                (connectBtn as HTMLButtonElement).disabled = false;
+            try {
+                const connected = await this.openCodeService.connect(urlInput.value.trim() || undefined);
+                this.openCodeState = this.openCodeService.getState();
+                
+                if (connected) {
+                    this.render();
+                } else {
+                    // Connection failed - enable fallback mode
+                    console.log('[ChatPage] Connection failed, enabling fallback mode');
+                    this.openCodeService.enableFallback();
+                    this.openCodeState = this.openCodeService.getState();
+                    this.render(); // Re-render to show fallback interface
+                }
+            } catch (error) {
+                // Any error - enable fallback mode
+                console.log('[ChatPage] Connection error, enabling fallback mode:', error);
+                this.openCodeService.enableFallback();
+                this.openCodeState = this.openCodeService.getState();
+                this.render(); // Re-render to show fallback interface
             }
         });
         card.appendChild(connectBtn);
 
         promptWrapper.appendChild(card);
         container.appendChild(promptWrapper);
+    }
+
+    /**
+     * Render fallback chat interface using local Cortex server
+     * This is shown when OpenCode is not available
+     */
+    private renderFallbackChatInterface(container: HTMLElement): void {
+        // Check if we have an API key stored
+        const storedKey = this.openCodeService.getStoredApiKey(this.openCodeState.currentProviderId || 'anthropic');
+        
+        if (!storedKey) {
+            // Show API key entry
+            this.renderFallbackApiKeyPrompt(container);
+        } else {
+            // Show chat interface
+            this.renderFallbackChat(container);
+        }
+    }
+
+    /**
+     * Render API key prompt for fallback mode
+     */
+    private renderFallbackApiKeyPrompt(container: HTMLElement): void {
+        const promptWrapper = createElement('div', {
+            className: 'flex flex-col items-center justify-center h-full p-8',
+        });
+
+        const card = createElement('div', {
+            className: 'w-full max-w-md p-8 rounded-2xl',
+        });
+        (card as HTMLElement).style.cssText = `
+            background: var(--cc-glass-bg);
+            border: 1px solid var(--cc-glass-border);
+            backdrop-filter: blur(20px);
+        `;
+
+        // Icon
+        const iconWrapper = createElement('div', {
+            className: 'w-14 h-14 rounded-2xl flex items-center justify-center mb-6 mx-auto',
+        });
+        (iconWrapper as HTMLElement).style.cssText = `
+            background: hsl(var(--primary) / 0.1);
+        `;
+        iconWrapper.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: hsl(var(--primary));">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        `;
+        card.appendChild(iconWrapper);
+
+        const title = createElement('h2', {
+            className: 'text-xl font-semibold text-center mb-2',
+            textContent: 'Chat',
+        });
+        (title as HTMLElement).style.cssText = `
+            color: var(--cc-text-primary);
+            font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
+            letter-spacing: -0.02em;
+        `;
+        card.appendChild(title);
+
+        const desc = createElement('p', {
+            className: 'text-sm text-center mb-6',
+            textContent: 'Enter your API key to start chatting',
+        });
+        (desc as HTMLElement).style.color = 'var(--cc-text-tertiary)';
+        card.appendChild(desc);
+
+        // Provider selector
+        const providerRow = createElement('div', {
+            className: 'flex items-center gap-2 mb-4',
+        });
+        const providerLabel = createElement('span', {
+            className: 'text-xs font-medium',
+            textContent: 'Provider',
+        });
+        (providerLabel as HTMLElement).style.color = 'var(--cc-text-tertiary)';
+        providerRow.appendChild(providerLabel);
+
+        const providerSelect = createElement('select', {
+            className: 'flex-1 px-3 py-2 rounded-lg text-sm',
+        }) as HTMLSelectElement;
+        (providerSelect as HTMLElement).style.cssText = `
+            background: hsl(var(--muted) / 0.4);
+            border: 1px solid hsl(var(--border) / 0.8);
+            color: var(--cc-text-primary);
+            outline: none;
+        `;
+        
+        // Fallback providers
+        const fallbackProviders = [
+            { id: 'anthropic', name: 'Anthropic' },
+            { id: 'openai', name: 'OpenAI' },
+            { id: 'openrouter', name: 'OpenRouter' },
+        ];
+        
+        fallbackProviders.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            if (p.id === (this.openCodeState.currentProviderId || 'anthropic')) opt.selected = true;
+            providerSelect.appendChild(opt);
+        });
+        
+        this.addListener(providerSelect, 'change', () => {
+            this.openCodeService.setProvider(providerSelect.value);
+            this.openCodeState = this.openCodeService.getState();
+        });
+        providerRow.appendChild(providerSelect);
+        card.appendChild(providerRow);
+
+        // API Key input
+        const keyInput = createElement('input', {
+            className: 'w-full px-4 py-3 rounded-xl text-sm mb-4',
+            attributes: {
+                type: 'password',
+                placeholder: 'Enter API key...',
+            },
+        }) as HTMLInputElement;
+        (keyInput as HTMLElement).style.cssText = `
+            background: hsl(var(--muted) / 0.4);
+            border: 1px solid hsl(var(--border) / 0.8);
+            color: var(--cc-text-primary);
+            outline: none;
+            font-family: var(--font-mono, 'Geist Mono', monospace);
+        `;
+        card.appendChild(keyInput);
+
+        const saveBtn = createElement('button', {
+            className: 'w-full py-3 rounded-xl text-sm font-medium',
+            textContent: 'Start Chatting',
+        });
+        (saveBtn as HTMLElement).style.cssText = `
+            background: hsl(var(--primary));
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
+            font-weight: 500;
+        `;
+        saveBtn.addEventListener('mouseenter', () => {
+            (saveBtn as HTMLElement).style.background = 'hsl(var(--primary) / 0.9)';
+        });
+        saveBtn.addEventListener('mouseleave', () => {
+            (saveBtn as HTMLElement).style.background = 'hsl(var(--primary))';
+        });
+
+        this.addListener(saveBtn, 'click', async () => {
+            const key = keyInput.value.trim();
+            if (!key) return;
+
+            saveBtn.textContent = 'Saving...';
+            (saveBtn as HTMLButtonElement).disabled = true;
+
+            const providerId = providerSelect.value;
+            await this.openCodeService.setApiKey(providerId, key);
+            this.openCodeState = this.openCodeService.getState();
+            this.render();
+        });
+        card.appendChild(saveBtn);
+
+        promptWrapper.appendChild(card);
+        container.appendChild(promptWrapper);
+    }
+
+    /**
+     * Render chat interface for fallback mode
+     */
+    private renderFallbackChat(container: HTMLElement): void {
+        // Header
+        const header = createElement('div', {
+            className: 'px-6 py-4 flex items-center gap-4 shrink-0',
+        });
+        (header as HTMLElement).style.cssText = `
+            border-bottom: 1px solid var(--cc-glass-border);
+        `;
+
+        // Provider/Model selector
+        const controlsGroup = createElement('div', {
+            className: 'flex items-center gap-3',
+        });
+
+        // Status indicator (Local mode)
+        const statusIndicator = createElement('div', {
+            className: 'flex items-center gap-1.5',
+        });
+        statusIndicator.innerHTML = `
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></div>
+            <span style="font-size: 11px; font-weight: 500; color: var(--cc-text-muted);">Local</span>
+        `;
+        controlsGroup.appendChild(statusIndicator);
+
+        // Divider
+        const divider = createElement('div');
+        (divider as HTMLElement).style.cssText = `width: 1px; height: 16px; background: var(--cc-glass-border);`;
+        controlsGroup.appendChild(divider);
+
+        // Provider selector
+        const providerSelect = createElement('select', {
+            className: 'px-3 py-1.5 rounded-lg text-xs font-medium',
+        }) as HTMLSelectElement;
+        (providerSelect as HTMLElement).style.cssText = `
+            background: hsl(var(--muted) / 0.4);
+            border: 1px solid var(--cc-glass-border);
+            color: var(--cc-text-secondary);
+            outline: none;
+            cursor: pointer;
+        `;
+        
+        const fallbackProviders = [
+            { id: 'anthropic', name: 'Anthropic' },
+            { id: 'openai', name: 'OpenAI' },
+            { id: 'openrouter', name: 'OpenRouter' },
+        ];
+        
+        fallbackProviders.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            if (p.id === (this.openCodeState.currentProviderId || 'anthropic')) opt.selected = true;
+            providerSelect.appendChild(opt);
+        });
+        
+        this.addListener(providerSelect, 'change', () => {
+            this.openCodeService.setProvider(providerSelect.value);
+            this.openCodeState = this.openCodeService.getState();
+            // Check if we have API key for new provider
+            const hasKey = this.openCodeService.getStoredApiKey(providerSelect.value);
+            if (!hasKey) {
+                this.render();
+            }
+        });
+        controlsGroup.appendChild(providerSelect);
+
+        header.appendChild(controlsGroup);
+
+        // Right side: History + New chat
+        const actionsGroup = createElement('div', {
+            className: 'ml-auto flex items-center gap-2',
+        });
+
+        // History dropdown
+        const historyWrapper = this.renderHistoryDropdown();
+        actionsGroup.appendChild(historyWrapper);
+
+        // New chat button
+        const newChatBtn = this.createIconButton('plus', 'New chat');
+        this.addListener(newChatBtn, 'click', () => {
+            this.sessionId = null;
+            this.messages = [];
+            this.render();
+        });
+        actionsGroup.appendChild(newChatBtn);
+
+        header.appendChild(actionsGroup);
+        container.appendChild(header);
+
+        // Messages area
+        this.messagesContainer = createElement('div', {
+            className: 'flex-1 overflow-y-auto px-6 py-6',
+        });
+        (this.messagesContainer as HTMLElement).style.cssText = `
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        `;
+
+        if (this.messages.length === 0) {
+            this.renderWelcomeState();
+        } else {
+            this.renderMessages();
+        }
+
+        container.appendChild(this.messagesContainer);
+
+        // Input area
+        this.renderInputArea(container);
     }
 
     private renderChatInterface(container: HTMLElement): void {
@@ -1217,8 +1537,18 @@ export class ChatPage extends Component {
         const content = this.inputElement.value.trim();
         if (!content) return;
 
-        // Check if connected
-        if (!this.openCodeService.isReady()) {
+        // Check if we're ready to send
+        const inFallbackMode = this.openCodeState.useFallback;
+        const providerId = this.openCodeState.currentProviderId || 'anthropic';
+        
+        if (inFallbackMode) {
+            // In fallback mode, check if we have an API key
+            const hasKey = this.openCodeService.getStoredApiKey(providerId);
+            if (!hasKey) {
+                alert('Please enter your API key to start chatting.');
+                return;
+            }
+        } else if (!this.openCodeService.isReady()) {
             alert('Not connected to OpenCode server. Please check settings.');
             return;
         }
@@ -1362,13 +1692,6 @@ Always ensure the JSON is valid and follows the UITree structure.
     private updateLastMessage(content: string, isComplete: boolean = false): void {
         if (!this.messagesContainer) return;
 
-        // Check for browser tool calls and transfer chat to sidebar if on /chat
-        if (this.detectBrowserToolCall(content) && router.getCurrentPath() === '/chat' && !this.hasTransferredChat) {
-            this.transferChatToSidebar().catch(err => {
-                console.error('[ChatPage] Failed to transfer chat to sidebar:', err);
-            });
-        }
-
         const bubbles = this.messagesContainer.querySelectorAll('[class*="justify-start"]');
         const lastBubble = bubbles[bubbles.length - 1];
         if (lastBubble) {
@@ -1397,59 +1720,6 @@ Always ensure the JSON is valid and follows the UITree structure.
         }
 
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
-    }
-
-    private detectBrowserToolCall(content: string): boolean {
-        const browserToolPatterns = [
-            /\[TOOL_START:browser_/i,
-            /\[Using tool: browser_/i,
-            /browser_navigate/i,
-            /browser_click/i,
-            /browser_screenshot/i,
-            /browser_snapshot/i,
-            /browser_fill/i,
-            /browser_wait/i,
-            /browser_evaluate/i,
-        ];
-        return browserToolPatterns.some(pattern => pattern.test(content));
-    }
-
-    private async transferChatToSidebar(): Promise<void> {
-        if (this.hasTransferredChat) return;
-        this.hasTransferredChat = true;
-
-        store.chatSessionTransfer.set({
-            sessionId: this.sessionId,
-            messages: this.messages.map(m => ({
-                id: m.id,
-                role: m.role,
-                content: m.content,
-                createdAt: m.createdAt,
-            })),
-            provider: this.openCodeState.currentProviderId || 'anthropic',
-            model: this.openCodeState.currentModelId || '',
-        });
-
-        store.chatSidebarOpen.set(true);
-        router.navigate('/browser');
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        if (window.browser) {
-            let attempts = 0;
-            while (attempts < 20) {
-                try {
-                    const tabs = await window.browser.getAllTabs();
-                    if (tabs && tabs.length > 0) break;
-                } catch {
-                    // Browser not ready yet
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     private renderJsonUIBlocks(container: HTMLElement): void {

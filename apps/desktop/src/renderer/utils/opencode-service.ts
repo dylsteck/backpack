@@ -46,6 +46,7 @@ export interface OpenCodeState {
   currentModelId: string | null;
   providers: Provider[];
   error: string | null;
+  useFallback: boolean; // When true, use local Cortex server instead of OpenCode
 }
 
 // Storage keys
@@ -72,6 +73,7 @@ class OpenCodeService {
     currentModelId: null,
     providers: [],
     error: null,
+    useFallback: false,
   };
   private listeners: Set<(state: OpenCodeState) => void> = new Set();
   private eventStream: AsyncIterableIterator<unknown> | null = null;
@@ -216,6 +218,38 @@ class OpenCodeService {
       isAuthenticated: false,
       error: null,
     });
+  }
+
+  /**
+   * Enable fallback mode to use local Cortex server
+   * This is called when OpenCode connection fails
+   */
+  enableFallback(): void {
+    console.log('[OpenCodeService] Enabling fallback mode - using local Cortex server');
+    this.updateState({
+      status: 'disconnected',
+      useFallback: true,
+      error: null,
+      // Set default provider for fallback mode
+      currentProviderId: this.state.currentProviderId || 'anthropic',
+      currentModelId: this.state.currentModelId || 'claude-3-5-sonnet-20241022',
+    });
+  }
+
+  /**
+   * Disable fallback mode
+   */
+  disableFallback(): void {
+    this.updateState({
+      useFallback: false,
+    });
+  }
+
+  /**
+   * Check if in fallback mode
+   */
+  isInFallbackMode(): boolean {
+    return this.state.useFallback;
   }
 
   /**

@@ -10,6 +10,5 @@ export { Timeline } from './Timeline';
 export { AppsGrid } from './AppsGrid';
 export { AppDetail } from './AppDetail';
 export { Onboarding } from './Onboarding';
-export { Browser } from './Browser';
 export { ChatPage } from './ChatPage';
 

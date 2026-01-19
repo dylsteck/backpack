@@ -47,10 +47,11 @@ export class ChromeDevToolsMCP {
         // Try to find available package manager
         // Prefer npx (comes with npm) as it's more widely available
         const command = 'npx';
-        const cdpPort = process.env.ELECTRON_CDP_PORT || process.env.CDP_PORT || '9222';
-        const args = ['-y', 'chrome-devtools-mcp@latest', `--browser-url=http://127.0.0.1:${cdpPort}`];
+        // Use --autoConnect to connect to existing Chrome instance with remote debugging enabled
+        // Chrome 144+ supports this via chrome://inspect/#remote-debugging
+        const args = ['-y', 'chrome-devtools-mcp@latest', '--autoConnect'];
         
-        safeConsole.log(`[MCP] Spawning chrome-devtools-mcp with: ${command} ${args.join(' ')} (CDP port ${cdpPort})`);
+        safeConsole.log(`[MCP] Spawning chrome-devtools-mcp with: ${command} ${args.join(' ')} (using autoConnect)`);
         
         this.process = spawn(command, args, {
           stdio: ['pipe', 'pipe', 'pipe'],

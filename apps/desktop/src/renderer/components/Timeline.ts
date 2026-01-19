@@ -33,6 +33,7 @@ export class Timeline extends Component {
   private iconUrls: Record<string, string | undefined> = {};
   private briefingContent: string | null = null;
   private briefingLastUpdated: Date | null = null;
+  private isRefreshingBriefing = false;
   
   async init(): Promise<void> {
     this.render();
@@ -142,6 +143,11 @@ export class Timeline extends Component {
   
   private async loadBriefing(forceRefresh = false): Promise<void> {
     if (!this.briefingContainer) return;
+    
+    // If force refresh, clear cache first
+    if (forceRefresh) {
+      localStorage.removeItem('cortex-daily-briefing');
+    }
     
     // Check cache (skip if forceRefresh is true)
     const cacheKey = 'cortex-daily-briefing';
@@ -372,8 +378,25 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
         margin-bottom: 2rem;
       `;
       
-      // Split into paragraphs
-      const paragraphs = this.briefingContent.split('\n\n').filter(p => p.trim());
+      // Split into paragraphs - handle both double newlines and single newlines
+      // First split by double newlines
+      let paragraphs = this.briefingContent.split(/\n\n+/).filter(p => p.trim());
+      
+      // If we only have one paragraph but it contains single newlines, split those too
+      // But only if the resulting paragraphs would be substantial (more than 50 chars)
+      if (paragraphs.length === 1 && paragraphs[0].includes('\n')) {
+        const singleLineSplit = paragraphs[0].split('\n').filter(p => p.trim());
+        // Only use single-line split if we get multiple substantial paragraphs
+        if (singleLineSplit.length > 1 && singleLineSplit.some(p => p.length > 50)) {
+          paragraphs = singleLineSplit;
+        }
+      }
+      
+      // Ensure we have at least one paragraph
+      if (paragraphs.length === 0 && this.briefingContent) {
+        paragraphs = [this.briefingContent.trim()];
+      }
+      
       paragraphs.forEach((para, index) => {
         const p = createElement('p', {
           textContent: para.trim(),
@@ -423,8 +446,8 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
     });
     (refreshBtn as HTMLElement).style.cssText = `
       color: var(--muted-foreground);
-      opacity: 0.6;
-      cursor: pointer;
+      opacity: ${this.isRefreshingBriefing ? '0.4' : '0.6'};
+      cursor: ${this.isRefreshingBriefing ? 'not-allowed' : 'pointer'};
       transition: opacity 0.2s;
       background: none;
       border: none;
@@ -432,16 +455,41 @@ Write in a natural, conversational tone. Be specific but concise. Format as plai
       font-family: var(--font-sans, 'Manrope', sans-serif);
       text-decoration: underline;
       text-underline-offset: 2px;
+      pointer-events: ${this.isRefreshingBriefing ? 'none' : 'auto'};
     `;
-    refreshBtn.textContent = 'Refresh';
+    refreshBtn.textContent = this.isRefreshingBriefing ? 'Refreshing...' : 'Refresh';
     refreshBtn.addEventListener('mouseenter', () => {
-      (refreshBtn as HTMLElement).style.opacity = '1';
+      if (!this.isRefreshingBriefing) {
+        (refreshBtn as HTMLElement).style.opacity = '1';
+      }
     });
     refreshBtn.addEventListener('mouseleave', () => {
-      (refreshBtn as HTMLElement).style.opacity = '0.6';
+      if (!this.isRefreshingBriefing) {
+        (refreshBtn as HTMLElement).style.opacity = '0.6';
+      }
     });
-    this.addListener(refreshBtn, 'click', () => {
-      this.loadBriefing(true);
+    this.addListener(refreshBtn, 'click', async () => {
+      if (this.isRefreshingBriefing) return;
+      
+      this.isRefreshingBriefing = true;
+      // Update button state immediately
+      refreshBtn.textContent = 'Refreshing...';
+      (refreshBtn as HTMLElement).style.opacity = '0.4';
+      (refreshBtn as HTMLElement).style.cursor = 'not-allowed';
+      (refreshBtn as HTMLElement).style.pointerEvents = 'none';
+      
+      // Re-render to show updated button state
+      this.renderBriefing();
+      
+      try {
+        await this.loadBriefing(true);
+      } catch (error) {
+        console.error('[Timeline] Failed to refresh briefing:', error);
+      } finally {
+        this.isRefreshingBriefing = false;
+        // Re-render to show updated state
+        this.renderBriefing();
+      }
     });
     footer.appendChild(refreshBtn);
     

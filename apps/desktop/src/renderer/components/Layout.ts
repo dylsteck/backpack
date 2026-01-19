@@ -14,11 +14,10 @@ import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
 import { TopbarTitle } from './TopbarTitle';
 import { ChatSidebar } from './ChatSidebar';
-import { Browser } from './Browser';
 import { ChatPage } from './ChatPage';
 import { Tasks } from './Tasks';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'browser' | 'chat' | 'tasks';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'chat' | 'tasks';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -36,14 +35,6 @@ export class Layout extends Component {
 
   async init(): Promise<void> {
     this.render();
-
-    // CRITICAL: Hide browser tabs on initial load if not on browser route
-    const currentPath = router.getCurrentPath();
-    if (currentPath !== '/browser' && window.browser && window.browser.hideTabs) {
-      window.browser.hideTabs().catch((error: any) => {
-        console.error('[Layout] Failed to hide browser tabs on init:', error);
-      });
-    }
 
     // Subscribe to sidebar states
     this.subscribe(store.sidebarCollapsed, () => this.updateSidebarState());
@@ -408,21 +399,6 @@ export class Layout extends Component {
       position: relative;
     `;
 
-    // CRITICAL: Always hide browser tabs when NOT on browser route
-    // This ensures tabs are hidden even if lastView is null or incorrect
-    if (view !== 'browser') {
-      if (window.browser && window.browser.hideTabs) {
-        window.browser.hideTabs().catch((error: any) => {
-          console.error('[Layout] Failed to hide browser tabs:', error);
-        });
-      }
-    }
-
-    // If navigating to browser and there's a transferred chat session, ensure sidebar opens
-    if (view === 'browser' && store.chatSessionTransfer.get()) {
-      store.chatSidebarOpen.set(true);
-    }
-
     // Create new view
     switch (view) {
       case 'timeline':
@@ -433,9 +409,6 @@ export class Layout extends Component {
         break;
       case 'app-detail':
         this.currentView = new AppDetail(this.contentContainer, params?.appId);
-        break;
-      case 'browser':
-        this.currentView = new Browser(this.contentContainer);
         break;
       case 'chat':
         this.currentView = new ChatPage(this.contentContainer);
@@ -449,26 +422,6 @@ export class Layout extends Component {
     }
 
     this.currentView?.init();
-
-    // Show browser tabs ONLY when switching to browser route
-    if (view === 'browser') {
-      if (window.browser && window.browser.showTabs) {
-        setTimeout(() => {
-          window.browser.showTabs().catch((error: any) => {
-            console.error('[Layout] Failed to show browser tabs:', error);
-          });
-        }, 100);
-      }
-    } else {
-      // Double-check: ensure tabs are hidden for non-browser routes
-      if (window.browser && window.browser.hideTabs) {
-        setTimeout(() => {
-          window.browser.hideTabs().catch((error: any) => {
-            console.error('[Layout] Failed to hide browser tabs (double-check):', error);
-          });
-        }, 50);
-      }
-    }
 
     // Store last view
     this.lastView = view;

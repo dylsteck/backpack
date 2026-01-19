@@ -5,8 +5,6 @@ import * as fs from "fs";
 import registerListeners from "./helpers/ipc/listeners-register";
 import { getDatabasePath, getDefaultDatabasePath, setServerPort } from "./helpers/ipc/database/database-listeners";
 import { getMCPInstance } from "./helpers/mcp/chrome-devtools";
-import { setMCPClient } from "./helpers/ipc/browser/browser-listeners";
-import { startBrowserBridge, stopBrowserBridge, getBridgePort } from "./helpers/browser/http-bridge";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
 import path from "path";
@@ -412,26 +410,15 @@ if (!gotTheLock) {
       // Continue anyway - might be running separately in development
     }
     
-    // Start MCP server for browser control
-    // Note: MCP server needs at least one browser tab to connect to CDP
-    // So we start it but it won't work until a tab is created
+    // Start MCP server for Chrome DevTools integration
     try {
       const mcpInstance = getMCPInstance();
-      // Start MCP server (it will initialize when browser tabs are available)
       mcpInstance.start().catch((error) => {
         console.error('[MCP] Failed to start MCP server:', error);
-        console.log('[MCP] Browser will work, but MCP tools may not be available');
       });
-      setMCPClient(mcpInstance);
       safeConsole.log('[MCP] Chrome DevTools MCP server starting...');
-      
-      // Start HTTP bridge for server to call browser tools
-      const bridgePort = await startBrowserBridge();
-      // Set environment variable so server knows the bridge port
-      process.env.BROWSER_BRIDGE_PORT = bridgePort.toString();
     } catch (error) {
       console.error('[MCP] Failed to start MCP components:', error);
-      // Continue anyway - browser will work without MCP
     }
     
     createWindow();
@@ -454,7 +441,6 @@ if (!gotTheLock) {
 // Clean up server on quit
 app.on("before-quit", async () => {
   stopServer();
-  stopBrowserBridge();
   const mcpInstance = getMCPInstance();
   await mcpInstance.stop();
 });

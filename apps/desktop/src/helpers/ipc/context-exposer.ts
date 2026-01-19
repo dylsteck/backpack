@@ -7,7 +7,6 @@ import { exposeServerContext } from "./server/server-context";
 import { exposeDatabaseContext } from "./database/database-context";
 import { exposeShellContext } from "./shell/shell-context";
 import { exposeObsidianContext } from "./obsidian/obsidian-context";
-import { exposeBrowserContext } from "./browser/browser-context";
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -19,5 +18,4 @@ export default function exposeContexts() {
   exposeDatabaseContext();
   exposeShellContext();
   exposeObsidianContext();
-  exposeBrowserContext();
 }
