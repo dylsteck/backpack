@@ -260,6 +260,7 @@ function handleDeepLink(url: string) {
   
   // Parse deep link: cortex://callback?success=true&sessionToken=xxx&accountIds=xxx,yyy&customerId=xxx
   // For Teller: cortex://callback?success=true&sessionToken=xxx&accessToken=xxx&enrollmentId=xxx&institutionName=xxx
+  // For OpenCode OAuth: cortex://opencode-auth?success=true&token=xxx&provider=github
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "cortex:") {
@@ -267,6 +268,30 @@ function handleDeepLink(url: string) {
     }
     
     const params = new URLSearchParams(urlObj.search);
+    const pathname = urlObj.pathname || urlObj.hostname; // Handle both cortex://path and cortex:path formats
+    
+    // Check if this is an OpenCode OAuth callback
+    if (pathname === 'opencode-auth' || urlObj.hostname === 'opencode-auth') {
+      const opencodeData = {
+        type: 'opencode-oauth',
+        success: params.get("success") === "true",
+        token: params.get("token"),
+        provider: params.get("provider"),
+        error: params.get("error"),
+      };
+      
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("deep-link-callback", opencodeData);
+        
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+      }
+      return;
+    }
+    
+    // Standard callback handling (Teller, etc.)
     const success = params.get("success") === "true";
     const sessionToken = params.get("sessionToken");
     const accountIds = params.get("accountIds")?.split(",") || [];

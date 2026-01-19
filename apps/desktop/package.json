@@ -73,6 +73,7 @@
   "dependencies": {
     "@cortex/api": "workspace:*",
     "@json-render/core": "^0.2.0",
+    "@opencode-ai/sdk": "^1.0.0",
     "@json-render/react": "^0.2.0",
     "@tailwindcss/vite": "^4.1.14",
     "@trpc/client": "catalog:",

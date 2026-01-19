@@ -7,9 +7,8 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { mcpRoutes } from "./routes/mcp";
 import { chatRoutes } from "./routes/chat";
 import { tellerRoutes } from "./routes/teller";
-import { openrouterRoutes } from "./routes/openrouter";
-import { anthropicRoutes } from "./routes/anthropic";
 import { mcpServerRoutes } from "./routes/mcp-server";
+// Note: OpenRouter and Anthropic routes removed - now handled by OpenCode SDK
 import { SyncService } from "@cortex/api/services/sync/service";
 import { initDatabase, databaseExists, seedDatabase } from "@cortex/db";
 import path from "path";
@@ -83,8 +82,6 @@ const app = new Elysia()
 	.use(mcpRoutes)
 	.use(chatRoutes)
 	.use(tellerRoutes)
-	.use(openrouterRoutes)
-	.use(anthropicRoutes)
 	.use(mcpServerRoutes)
 	.all("/trpc/*", async (context) => {
 		// Check if database is ready for tRPC calls

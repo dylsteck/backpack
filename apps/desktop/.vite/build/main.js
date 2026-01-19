@@ -13037,6 +13037,24 @@ function handleDeepLink(url) {
       return;
     }
     const params = new URLSearchParams(urlObj.search);
+    const pathname = urlObj.pathname || urlObj.hostname;
+    if (pathname === "opencode-auth" || urlObj.hostname === "opencode-auth") {
+      const opencodeData = {
+        type: "opencode-oauth",
+        success: params.get("success") === "true",
+        token: params.get("token"),
+        provider: params.get("provider"),
+        error: params.get("error")
+      };
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("deep-link-callback", opencodeData);
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+      }
+      return;
+    }
     const success = params.get("success") === "true";
     const sessionToken = params.get("sessionToken");
     const accountIds = params.get("accountIds")?.split(",") || [];
