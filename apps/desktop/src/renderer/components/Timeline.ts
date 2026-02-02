@@ -11,9 +11,6 @@ import { createElement, clearChildren, formatTime, formatFullDate, groupByDate, 
 import type { TimelineItem, SourceType, FarcasterCast, TellerTransaction, BrowserHistoryEntry } from '../types';
 import { DetailModal } from './DetailModal';
 import { parseMarkdown, isMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
-import { decryptApiKeyForProvider, hasApiKeyForProvider } from '../utils/crypto';
-import { getChatStateManager } from '../utils/chat-state';
-import type { Provider } from '../utils/providers';
 
 interface DayGroup {
   date: Date;
@@ -26,14 +23,10 @@ interface DayGroup {
 
 export class Timeline extends Component {
   private itemsContainer: HTMLElement | null = null;
-  private briefingContainer: HTMLElement | null = null;
   private loadMoreRef: HTMLElement | null = null;
   private observer: IntersectionObserver | null = null;
   private isLoadingMore = false;
   private iconUrls: Record<string, string | undefined> = {};
-  private briefingContent: string | null = null;
-  private briefingLastUpdated: Date | null = null;
-  private isRefreshingBriefing = false;
   
   async init(): Promise<void> {
     this.render();
@@ -42,16 +35,9 @@ export class Timeline extends Component {
     await this.loadInitialData();
     this.setupInfiniteScroll();
     
-    // Load briefing after a short delay to let timeline load first
-    setTimeout(() => {
-      this.loadBriefing();
-    }, 500);
-    
     // Subscriptions
     this.subscribe(store.timelineItems, () => {
       this.renderItems();
-      // Regenerate briefing when timeline updates (debounced)
-      this.debouncedRefreshBriefing();
     });
     this.subscribe(store.selectedSources, () => this.renderItems());
     this.subscribe(store.obsidianNotes, () => this.renderItems());
@@ -61,16 +47,6 @@ export class Timeline extends Component {
     });
     
     this.loadBrowserHistory();
-  }
-  
-  private briefingRefreshTimeout: NodeJS.Timeout | null = null;
-  private debouncedRefreshBriefing(): void {
-    if (this.briefingRefreshTimeout) {
-      clearTimeout(this.briefingRefreshTimeout);
-    }
-    this.briefingRefreshTimeout = setTimeout(() => {
-      this.loadBriefing(true);
-    }, 5000); // Wait 5 seconds after timeline updates
   }
   
   render(): void {
@@ -93,15 +69,6 @@ export class Timeline extends Component {
     const wrapper = createElement('div', {
       className: 'max-w-5xl mx-auto pb-32 px-6 md:px-10 relative w-full',
     });
-    
-    // Briefing section (at top) - minimal spacing, brought up slightly
-    this.briefingContainer = createElement('div', {
-      className: 'briefing-section mb-12',
-    });
-    (this.briefingContainer as HTMLElement).style.cssText = `
-      margin-top: -1rem;
-    `;
-    wrapper.appendChild(this.briefingContainer);
     
     this.itemsContainer = createElement('div', {
       className: 'timeline-items relative',
@@ -128,373 +95,6 @@ export class Timeline extends Component {
     
     // Empty header - briefing section handles the greeting
     return header;
-  }
-  
-  private getGreeting(): string {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-  
-  // ============================================
-  // BRIEFING SECTION
-  // ============================================
-  
-  private async loadBriefing(forceRefresh = false): Promise<void> {
-    if (!this.briefingContainer) return;
-    
-    // If force refresh, clear cache first
-    if (forceRefresh) {
-      localStorage.removeItem('cortex-daily-briefing');
-    }
-    
-    // Check cache (skip if forceRefresh is true)
-    const cacheKey = 'cortex-daily-briefing';
-    const cached = localStorage.getItem(cacheKey);
-    const now = new Date();
-    
-    if (!forceRefresh && cached) {
-      try {
-        const { content, timestamp } = JSON.parse(cached);
-        const cacheDate = new Date(timestamp);
-        const hoursSinceUpdate = (now.getTime() - cacheDate.getTime()) / (1000 * 60 * 60);
-        
-        // Use cache if less than 6 hours old
-        if (hoursSinceUpdate < 6) {
-          this.briefingContent = content;
-          this.briefingLastUpdated = cacheDate;
-          this.renderBriefing();
-          return;
-        }
-      } catch (e) {
-        console.warn('[Timeline] Failed to parse cached briefing:', e);
-      }
-    }
-    
-    // Generate new briefing (forceRefresh bypasses cache)
-    await this.generateBriefing();
-  }
-  
-  private async generateBriefing(): Promise<void> {
-    if (!this.briefingContainer) return;
-    
-    // Check if API key is available
-    const stateManager = getChatStateManager();
-    const provider: Provider = stateManager.getProvider();
-    
-    if (!hasApiKeyForProvider(provider)) {
-      this.renderBriefingPlaceholder();
-      return;
-    }
-    
-    try {
-      const apiKey = await decryptApiKeyForProvider(provider);
-      if (!apiKey) {
-        this.renderBriefingPlaceholder();
-        return;
-      }
-      
-      // Get recent timeline items for context
-      const allItems = this.getAllItems();
-      const recentItems = allItems.slice(0, 20);
-      
-      // Build context from recent items
-      const context = recentItems.map(item => {
-        const time = formatTime(item.timestamp);
-        const source = item.source;
-        const preview = this.extractPreviewText(item) || '';
-        return `[${time}] ${source}: ${preview.substring(0, 100)}`;
-      }).join('\n');
-      
-      const endpoint = stateManager.getEndpoint(provider, await this.getServerPort());
-      const model = stateManager.getModel(provider);
-      
-      const greeting = this.getGreeting();
-      const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      
-      const prompt = `Generate a concise daily briefing for ${greeting.toLowerCase()}, ${dateStr}. 
-
-Based on this recent activity:
-${context}
-
-Write 3-4 short paragraphs summarizing:
-1. Key meetings or important events coming up
-2. Notable activity or updates from connected services
-3. Any tasks or items that need attention
-4. A brief overall assessment of the day
-
-Write in a natural, conversational tone. Be specific but concise. Format as plain text paragraphs (no markdown, no lists).`;
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant that generates concise daily briefings.' },
-            { role: 'user', content: prompt }
-          ],
-          model,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      // Read entire streamed response before displaying
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-      
-      const decoder = new TextDecoder();
-      let content = '';
-      
-      // Read all chunks from the stream and accumulate text
-      // AI SDK streams plain text chunks, so we just concatenate them
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        // Accumulate all text chunks
-        content += chunk;
-      }
-      
-      // Clean up any streaming artifacts or extra whitespace
-      content = content.trim();
-      
-      // Set content and render once (no incremental updates)
-      this.briefingContent = content;
-      this.briefingLastUpdated = new Date();
-      this.renderBriefing();
-      
-      // Cache the briefing for 6 hours
-      localStorage.setItem('cortex-daily-briefing', JSON.stringify({
-        content,
-        timestamp: this.briefingLastUpdated.toISOString(),
-      }));
-      
-    } catch (error) {
-      console.error('[Timeline] Failed to generate briefing:', error);
-      this.renderBriefingPlaceholder();
-    }
-  }
-  
-  private async getServerPort(): Promise<number> {
-    if (typeof window !== 'undefined' && window.serverApi) {
-      try {
-        const port = await window.serverApi.getPort();
-        return port || 3000;
-      } catch {
-        return 3000;
-      }
-    }
-    return 3000;
-  }
-  
-  private renderBriefingPlaceholder(): void {
-    if (!this.briefingContainer) return;
-    
-    const greeting = this.getGreeting();
-    const hour = new Date().getHours();
-    const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-    
-    this.briefingContent = `Good ${timeOfDay}. Your timeline is ready. Connect services to see personalized insights and updates here.`;
-    this.briefingLastUpdated = new Date();
-    this.renderBriefing();
-  }
-  
-  private renderBriefing(): void {
-    if (!this.briefingContainer) return;
-    
-    clearChildren(this.briefingContainer);
-    
-    // Minimal wrapper - no card styling
-    const wrapper = createElement('div', {
-      className: 'briefing-wrapper',
-    });
-    (wrapper as HTMLElement).style.cssText = `
-      padding: 0;
-      animation: fade-in 0.4s ease-out;
-    `;
-    
-    // Header with icon and greeting - minimal
-    const header = createElement('div', {
-      className: 'flex items-center gap-3 mb-8',
-    });
-    
-    // Simple sun/icon - no background
-    const iconWrapper = createElement('div', {
-      className: 'flex-shrink-0',
-    });
-    (iconWrapper as HTMLElement).style.cssText = `
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted-foreground);
-      opacity: 0.6;
-    `;
-    const hour = new Date().getHours();
-    const isMorning = hour < 12;
-    const isAfternoon = hour >= 12 && hour < 17;
-    iconWrapper.innerHTML = isMorning 
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`
-      : isAfternoon
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a6 6 0 0 0-6 6c0 1.5.5 3 1.5 4L12 22l4.5-8A6 6 0 0 0 12 2Z"/></svg>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
-    header.appendChild(iconWrapper);
-    
-    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    const greetingText = createElement('h2', {
-      textContent: `${this.getGreeting()}, ${dateStr}.`,
-    });
-    (greetingText as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--foreground);
-      margin: 0;
-      line-height: 1.4;
-    `;
-    header.appendChild(greetingText);
-    
-    wrapper.appendChild(header);
-    
-    // Briefing content - plain text paragraphs
-    if (this.briefingContent) {
-      const contentWrapper = createElement('div', {
-        className: 'briefing-content',
-      });
-      (contentWrapper as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, 'Manrope', sans-serif);
-        font-size: 0.9375rem;
-        line-height: 1.8;
-        color: var(--foreground);
-        margin-bottom: 2rem;
-      `;
-      
-      // Split into paragraphs - handle both double newlines and single newlines
-      // First split by double newlines
-      let paragraphs = this.briefingContent.split(/\n\n+/).filter(p => p.trim());
-      
-      // If we only have one paragraph but it contains single newlines, split those too
-      // But only if the resulting paragraphs would be substantial (more than 50 chars)
-      if (paragraphs.length === 1 && paragraphs[0].includes('\n')) {
-        const singleLineSplit = paragraphs[0].split('\n').filter(p => p.trim());
-        // Only use single-line split if we get multiple substantial paragraphs
-        if (singleLineSplit.length > 1 && singleLineSplit.some(p => p.length > 50)) {
-          paragraphs = singleLineSplit;
-        }
-      }
-      
-      // Ensure we have at least one paragraph
-      if (paragraphs.length === 0 && this.briefingContent) {
-        paragraphs = [this.briefingContent.trim()];
-      }
-      
-      paragraphs.forEach((para, index) => {
-        const p = createElement('p', {
-          textContent: para.trim(),
-        });
-        (p as HTMLElement).style.cssText = `
-          margin-bottom: ${index < paragraphs.length - 1 ? '1.25rem' : '0'};
-          color: var(--foreground);
-          animation: fade-in 0.4s ease-out ${index * 0.1}s both;
-        `;
-        contentWrapper.appendChild(p);
-      });
-      
-      wrapper.appendChild(contentWrapper);
-    }
-    
-    // Footer - minimal, centered
-    const footer = createElement('div', {
-      className: 'flex flex-col items-center gap-1',
-    });
-    (footer as HTMLElement).style.cssText = `
-      padding-top: 0.5rem;
-    `;
-    
-    const timestamp = createElement('div', {
-      className: 'text-xs',
-    });
-    (timestamp as HTMLElement).style.cssText = `
-      color: var(--muted-foreground);
-      opacity: 0.5;
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-    `;
-    if (this.briefingLastUpdated) {
-      const hours = Math.floor((new Date().getTime() - this.briefingLastUpdated.getTime()) / (1000 * 60 * 60));
-      const minutes = Math.floor((new Date().getTime() - this.briefingLastUpdated.getTime()) / (1000 * 60));
-      if (hours > 0) {
-        timestamp.textContent = `Last updated: ${hours}h ago`;
-      } else if (minutes > 0) {
-        timestamp.textContent = `Last updated: ${minutes}m ago`;
-      } else {
-        timestamp.textContent = `Last updated: just now`;
-      }
-    }
-    footer.appendChild(timestamp);
-    
-    const refreshBtn = createElement('button', {
-      className: 'text-xs',
-    });
-    (refreshBtn as HTMLElement).style.cssText = `
-      color: var(--muted-foreground);
-      opacity: ${this.isRefreshingBriefing ? '0.4' : '0.6'};
-      cursor: ${this.isRefreshingBriefing ? 'not-allowed' : 'pointer'};
-      transition: opacity 0.2s;
-      background: none;
-      border: none;
-      padding: 0;
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      pointer-events: ${this.isRefreshingBriefing ? 'none' : 'auto'};
-    `;
-    refreshBtn.textContent = this.isRefreshingBriefing ? 'Refreshing...' : 'Refresh';
-    refreshBtn.addEventListener('mouseenter', () => {
-      if (!this.isRefreshingBriefing) {
-        (refreshBtn as HTMLElement).style.opacity = '1';
-      }
-    });
-    refreshBtn.addEventListener('mouseleave', () => {
-      if (!this.isRefreshingBriefing) {
-        (refreshBtn as HTMLElement).style.opacity = '0.6';
-      }
-    });
-    this.addListener(refreshBtn, 'click', async () => {
-      if (this.isRefreshingBriefing) return;
-      
-      this.isRefreshingBriefing = true;
-      // Update button state immediately
-      refreshBtn.textContent = 'Refreshing...';
-      (refreshBtn as HTMLElement).style.opacity = '0.4';
-      (refreshBtn as HTMLElement).style.cursor = 'not-allowed';
-      (refreshBtn as HTMLElement).style.pointerEvents = 'none';
-      
-      // Re-render to show updated button state
-      this.renderBriefing();
-      
-      try {
-        await this.loadBriefing(true);
-      } catch (error) {
-        console.error('[Timeline] Failed to refresh briefing:', error);
-      } finally {
-        this.isRefreshingBriefing = false;
-        // Re-render to show updated state
-        this.renderBriefing();
-      }
-    });
-    footer.appendChild(refreshBtn);
-    
-    wrapper.appendChild(footer);
-    this.briefingContainer.appendChild(wrapper);
   }
   
   private renderItems(): void {

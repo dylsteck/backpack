@@ -177,7 +177,7 @@ export class AppDetail extends Component {
         <div class="text-center space-y-4">
           <h2 class="text-2xl">App not found</h2>
           <p class="text-muted-foreground">The app you're looking for doesn't exist.</p>
-          <button class="px-4 py-2 bg-primary text-primary-foreground flex items-center gap-2 mx-auto border border-border font-mono uppercase tracking-wider text-sm" data-back>
+          <button class="px-4 py-2 bg-primary text-primary-foreground flex items-center gap-2 mx-auto font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-back>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
             Back to Apps
           </button>
@@ -379,7 +379,7 @@ export class AppDetail extends Component {
     statusCard.innerHTML = `
       <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Connection Status</h3>
       <div class="flex items-center gap-3">
-        <div class="w-3 h-3 ${isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'}"></div>
+        <div class="w-2 h-2 rounded-full ${isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'}"></div>
         <span class="font-mono uppercase">${isConnected ? 'Connected' : 'Not Connected'}</span>
       </div>
       <div class="mt-4 pt-4 border-t border-border">
@@ -451,7 +451,7 @@ export class AppDetail extends Component {
               />
               <p class="text-xs text-muted-foreground mt-2 font-mono">Your FID is your unique Farcaster identifier (e.g., 12345)</p>
             </div>
-            <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm" data-connect>
+            <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-connect>
               Connect ${this.app.name}
             </button>
           </div>
@@ -475,7 +475,7 @@ export class AppDetail extends Component {
         actionCard.innerHTML = `
           <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Get Started</h3>
           <p class="text-muted-foreground mb-4">Connect this app to start seeing data in your timeline.</p>
-          <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm" data-connect>
+          <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-connect>
             Connect ${this.app.name}
           </button>
         `;
@@ -490,11 +490,11 @@ export class AppDetail extends Component {
           <div class="mt-4 p-4 bg-muted/30 border border-border">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-3">
-                <div class="w-2 h-2 bg-primary animate-pulse"></div>
+                <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                 <span class="text-sm font-mono uppercase tracking-wider">Running in background</span>
               </div>
               <button 
-                class="px-3 py-1 text-xs bg-background border border-border hover:bg-muted font-mono uppercase tracking-wider transition-colors"
+                class="px-3 py-1 text-xs bg-background border border-border hover:bg-muted font-mono uppercase tracking-wider transition-colors rounded"
                 data-stop-backfill
                 title="Stop backfill"
               >
@@ -508,7 +508,7 @@ export class AppDetail extends Component {
         backfillIndicator = `
           <div class="mt-4 p-4 bg-status-connected/10 border border-status-connected/30">
             <div class="flex items-center gap-3">
-              <div class="w-2 h-2 bg-status-connected"></div>
+              <div class="w-2 h-2 rounded-full bg-status-connected"></div>
               <span class="text-sm font-mono uppercase tracking-wider text-status-connected">Backfill complete</span>
             </div>
             ${backfillStatus.message ? `<p class="text-xs text-muted-foreground font-mono mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
@@ -518,7 +518,7 @@ export class AppDetail extends Component {
         backfillIndicator = `
           <div class="mt-4 p-4 bg-status-error/10 border border-status-error/30">
             <div class="flex items-center gap-3">
-              <div class="w-2 h-2 bg-status-error"></div>
+              <div class="w-2 h-2 rounded-full bg-status-error"></div>
               <span class="text-sm font-mono uppercase tracking-wider text-status-error">Backfill error</span>
             </div>
             ${backfillStatus.message ? `<p class="text-xs text-status-error font-mono mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
@@ -531,7 +531,7 @@ export class AppDetail extends Component {
         <p class="text-muted-foreground mb-4">This app is connected and syncing data.</p>
         ${backfillIndicator}
         <div class="mt-4">
-          <button class="px-4 py-2 bg-destructive text-destructive-foreground font-mono uppercase tracking-wider text-sm" data-disconnect>
+          <button class="px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors rounded" data-disconnect>
             Disconnect
           </button>
         </div>

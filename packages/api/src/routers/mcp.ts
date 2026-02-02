@@ -88,6 +88,7 @@ export const appsRouter = router({
 
 	// Get all MCP connections
 	getUserConnections: publicProcedure.query(async () => {
+		const db = getDatabase();
 		const connectionList = await db
 			.select()
 			.from(connections);
@@ -107,6 +108,7 @@ export const appsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
+			const db = getDatabase();
 			const id = crypto.randomUUID();
 			const now = new Date();
 
@@ -138,6 +140,7 @@ export const appsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
+			const db = getDatabase();
 			const now = new Date();
 
 			const [connection] = await db
@@ -157,6 +160,7 @@ export const appsRouter = router({
 	removeConnection: publicProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
+			const db = getDatabase();
 			await db
 				.delete(connections)
 				.where(eq(connections.id, input.id));
