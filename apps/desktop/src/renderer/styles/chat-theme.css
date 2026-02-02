@@ -4,60 +4,54 @@
  */
 
 /* ============================================
-   CUSTOM FONTS - Import distinctive typography
-   ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap');
-
-/* ============================================
-   CSS VARIABLES - Design Tokens
+   CSS VARIABLES - Design Tokens (Light)
    ============================================ */
 :root {
   /* Command Center Color Palette */
-  --cc-void: #0a0a0f;
-  --cc-deep: #12121a;
-  --cc-surface: #1a1a26;
-  --cc-elevated: #22223a;
+  --cc-void: #fbf8f3;
+  --cc-deep: #f4efe7;
+  --cc-surface: #efe9e1;
+  --cc-elevated: #ffffff;
 
   /* Atmospheric Gradients - Subtle and refined */
   --cc-gradient-bg: linear-gradient(180deg,
-    #0c0c12 0%,
-    #101018 100%);
+    #fbf8f3 0%,
+    #f1ebe3 100%);
   --cc-gradient-mesh:
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(47, 75, 107, 0.06) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(198, 87, 73, 0.05) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(75, 111, 92, 0.04) 0px, transparent 55%),
+    radial-gradient(at 0% 100%, rgba(120, 105, 90, 0.05) 0px, transparent 55%);
 
   /* Accent Colors */
-  --cc-primary: #6366f1;
-  --cc-primary-glow: rgba(99, 102, 241, 0.3);
-  --cc-secondary: #8b5cf6;
-  --cc-accent: #3b82f6;
-  --cc-success: #10b981;
-  --cc-warning: #f59e0b;
+  --cc-primary: #2f4b6b;
+  --cc-primary-glow: rgba(47, 75, 107, 0.18);
+  --cc-secondary: #c65749;
+  --cc-accent: #7a6a5a;
+  --cc-success: #3b7a5a;
+  --cc-warning: #c27a2c;
 
   /* Text Colors */
-  --cc-text-primary: #f8fafc;
-  --cc-text-secondary: #cbd5e1;
-  --cc-text-tertiary: #64748b;
-  --cc-text-muted: #475569;
+  --cc-text-primary: #1b1916;
+  --cc-text-secondary: #3d3832;
+  --cc-text-tertiary: #6b635a;
+  --cc-text-muted: #9c9288;
 
   /* Glass Morphism */
-  --cc-glass-bg: rgba(26, 26, 38, 0.7);
-  --cc-glass-border: rgba(255, 255, 255, 0.06);
-  --cc-glass-highlight: rgba(255, 255, 255, 0.02);
-  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
-                     0 2px 8px rgba(0, 0, 0, 0.2);
+  --cc-glass-bg: rgba(255, 255, 255, 0.75);
+  --cc-glass-border: rgba(27, 25, 22, 0.08);
+  --cc-glass-highlight: rgba(255, 255, 255, 0.6);
+  --cc-glass-shadow: 0 6px 24px rgba(27, 25, 22, 0.08);
 
-  /* Elevation Shadows - Softer, more subtle */
-  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.18);
-  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.22);
+  /* Elevation Shadows */
+  --cc-shadow-sm: 0 1px 3px rgba(27, 25, 22, 0.08);
+  --cc-shadow-md: 0 2px 8px rgba(27, 25, 22, 0.1);
+  --cc-shadow-lg: 0 4px 16px rgba(27, 25, 22, 0.12);
+  --cc-shadow-xl: 0 8px 24px rgba(27, 25, 22, 0.14);
 
   /* Typography Scale */
-  --cc-font-display: 'Syne', system-ui, sans-serif;
-  --cc-font-body: 'Archivo', system-ui, sans-serif;
+  --cc-font-display: 'Fraunces', Georgia, serif;
+  --cc-font-body: 'Manrope', system-ui, sans-serif;
   --cc-font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
   --cc-text-xs: 0.6875rem;    /* 11px */
@@ -99,24 +93,24 @@
    ============================================ */
 .cc-glass {
   background: var(--cc-glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
   border: 1px solid var(--cc-glass-border);
   box-shadow: var(--cc-glass-shadow);
 }
 
 .cc-glass-light {
-  background: rgba(34, 34, 58, 0.6);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(27, 25, 22, 0.08);
 }
 
 .cc-glass-subtle {
-  background: rgba(18, 18, 26, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(27, 25, 22, 0.05);
 }
 
 /* ============================================
@@ -124,11 +118,11 @@
    ============================================ */
 .cc-message-user {
   background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.15) 0%,
-    rgba(139, 92, 246, 0.12) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+    rgba(47, 75, 107, 0.12) 0%,
+    rgba(198, 87, 73, 0.08) 100%);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  border: 1px solid rgba(47, 75, 107, 0.18);
   border-radius: var(--cc-radius-lg);
   border-bottom-right-radius: var(--cc-radius-sm);
   padding: var(--cc-space-4) var(--cc-space-5);
@@ -137,19 +131,19 @@
   font-size: var(--cc-text-base);
   line-height: 1.6;
   box-shadow:
-    0 4px 16px rgba(99, 102, 241, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    0 4px 14px rgba(27, 25, 22, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   transition: all var(--cc-transition-base);
 }
 
 .cc-message-user:hover {
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: rgba(47, 75, 107, 0.28);
 }
 
 .cc-message-assistant {
-  background: var(--cc-glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
   border: 1px solid var(--cc-glass-border);
   border-radius: var(--cc-radius-lg);
   border-top-left-radius: var(--cc-radius-sm);
@@ -165,8 +159,8 @@
 }
 
 .cc-message-assistant:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(27, 25, 22, 0.12);
 }
 
 /* ============================================
@@ -174,11 +168,11 @@
    ============================================ */
 .cc-tool-indicator {
   background: linear-gradient(135deg,
-    rgba(139, 92, 246, 0.08) 0%,
-    rgba(99, 102, 241, 0.06) 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+    rgba(47, 75, 107, 0.06) 0%,
+    rgba(198, 87, 73, 0.04) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(47, 75, 107, 0.12);
   border-left: 3px solid var(--cc-secondary);
   border-radius: var(--cc-radius-md);
   padding: var(--cc-space-3) var(--cc-space-4);
@@ -207,15 +201,15 @@
 .cc-tool-indicator.cc-tool-search {
   border-left-color: var(--cc-primary);
   background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(59, 130, 246, 0.06) 100%);
+    rgba(47, 75, 107, 0.08) 0%,
+    rgba(47, 75, 107, 0.04) 100%);
 }
 
 .cc-tool-indicator.cc-tool-obsidian {
   border-left-color: var(--cc-accent);
   background: linear-gradient(135deg,
-    rgba(59, 130, 246, 0.08) 0%,
-    rgba(14, 165, 233, 0.06) 100%);
+    rgba(122, 106, 90, 0.08) 0%,
+    rgba(122, 106, 90, 0.04) 100%);
 }
 
 /* ============================================
@@ -238,8 +232,8 @@
   background: linear-gradient(135deg, var(--cc-primary) 0%, var(--cc-secondary) 100%);
   color: white;
   box-shadow:
-    0 4px 12px rgba(99, 102, 241, 0.2),
-    0 0 0 3px rgba(99, 102, 241, 0.1);
+    0 4px 12px rgba(47, 75, 107, 0.18),
+    0 0 0 3px rgba(47, 75, 107, 0.08);
 }
 
 .cc-avatar-assistant {
@@ -256,8 +250,8 @@
    ============================================ */
 .cc-input-container {
   background: var(--cc-glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--cc-glass-border);
   border-radius: var(--cc-radius-xl);
   padding: var(--cc-space-4);
@@ -268,11 +262,11 @@
 }
 
 .cc-input-container:focus-within {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(47, 75, 107, 0.3);
   box-shadow:
-    0 8px 32px rgba(99, 102, 241, 0.15),
-    0 0 0 3px rgba(99, 102, 241, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 8px 24px rgba(47, 75, 107, 0.12),
+    0 0 0 3px rgba(47, 75, 107, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 }
 
 .cc-input {
@@ -309,25 +303,25 @@
   cursor: pointer;
   transition: all var(--cc-transition-base);
   box-shadow:
-    0 4px 12px rgba(99, 102, 241, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    0 4px 12px rgba(47, 75, 107, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   position: relative;
   overflow: hidden;
 }
 
 .cc-button:hover {
-  background: #5558e3;
+  background: #274160;
   box-shadow:
-    0 6px 20px rgba(99, 102, 241, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+    0 6px 20px rgba(47, 75, 107, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.25) inset;
   transform: translateY(-1px);
 }
 
 .cc-button:active {
   transform: translateY(0);
   box-shadow:
-    0 2px 8px rgba(99, 102, 241, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    0 2px 8px rgba(47, 75, 107, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 }
 
 .cc-button-secondary {
@@ -339,10 +333,10 @@
 }
 
 .cc-button-secondary:hover {
-  background: rgba(34, 34, 58, 0.9);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow:
     var(--cc-shadow-md),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    0 0 0 1px rgba(27, 25, 22, 0.08) inset;
 }
 
 /* ============================================
@@ -350,7 +344,7 @@
    ============================================ */
 .cc-code-block {
   background: var(--cc-deep);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(27, 25, 22, 0.08);
   border-radius: var(--cc-radius-md);
   padding: var(--cc-space-4);
   margin: var(--cc-space-3) 0;
@@ -359,12 +353,12 @@
   line-height: 1.7;
   color: var(--cc-text-secondary);
   overflow-x: auto;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) inset;
+  box-shadow: 0 4px 16px rgba(27, 25, 22, 0.06) inset;
 }
 
 .cc-code-inline {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  background: rgba(47, 75, 107, 0.08);
+  border: 1px solid rgba(47, 75, 107, 0.18);
   border-radius: var(--cc-radius-sm);
   padding: 0.125rem 0.375rem;
   font-family: var(--cc-font-mono);
@@ -379,8 +373,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--cc-space-2);
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: rgba(47, 75, 107, 0.1);
+  border: 1px solid rgba(47, 75, 107, 0.18);
   border-radius: var(--cc-radius-full);
   padding: 0.25rem 0.625rem;
   font-family: var(--cc-font-body);
@@ -508,8 +502,8 @@
 
 .cc-glow {
   box-shadow:
-    0 0 20px rgba(99, 102, 241, 0.15),
-    0 0 40px rgba(99, 102, 241, 0.08);
+    0 0 20px rgba(47, 75, 107, 0.18),
+    0 0 40px rgba(47, 75, 107, 0.08);
 }
 
 .cc-divider {
@@ -536,170 +530,6 @@
   .cc-message-assistant {
     padding: var(--cc-space-3) var(--cc-space-4);
   }
-}
-
-/* ============================================
-   LIGHT MODE SUPPORT
-   ============================================ */
-:root:not(.dark) {
-  /* Light Mode Color Palette */
-  --cc-void: #f8fafc;
-  --cc-deep: #f1f5f9;
-  --cc-surface: #e2e8f0;
-  --cc-elevated: #ffffff;
-
-  /* Light Mode Gradients */
-  --cc-gradient-bg: linear-gradient(180deg,
-    #ffffff 0%,
-    #f8fafc 100%);
-  --cc-gradient-mesh:
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.02) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
-
-  /* Light Mode Text Colors */
-  --cc-text-primary: #0f172a;
-  --cc-text-secondary: #334155;
-  --cc-text-tertiary: #64748b;
-  --cc-text-muted: #94a3b8;
-
-  /* Light Mode Glass Morphism */
-  --cc-glass-bg: rgba(255, 255, 255, 0.8);
-  --cc-glass-border: rgba(0, 0, 0, 0.08);
-  --cc-glass-highlight: rgba(255, 255, 255, 0.5);
-  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
-                     0 2px 8px rgba(0, 0, 0, 0.04);
-
-  /* Light Mode Shadows */
-  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
-  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-/* Dark Mode (default) */
-.dark {
-  /* Command Center Color Palette */
-  --cc-void: #0a0a0f;
-  --cc-deep: #12121a;
-  --cc-surface: #1a1a26;
-  --cc-elevated: #22223a;
-
-  /* Atmospheric Gradients - Subtle and refined */
-  --cc-gradient-bg: linear-gradient(180deg,
-    #0c0c12 0%,
-    #101018 100%);
-  --cc-gradient-mesh:
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.02) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
-
-  /* Text Colors */
-  --cc-text-primary: #f8fafc;
-  --cc-text-secondary: #cbd5e1;
-  --cc-text-tertiary: #64748b;
-  --cc-text-muted: #475569;
-
-  /* Glass Morphism */
-  --cc-glass-bg: rgba(26, 26, 38, 0.7);
-  --cc-glass-border: rgba(255, 255, 255, 0.06);
-  --cc-glass-highlight: rgba(255, 255, 255, 0.02);
-  --cc-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
-                     0 2px 8px rgba(0, 0, 0, 0.2);
-
-  /* Elevation Shadows - Softer, more subtle */
-  --cc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-  --cc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --cc-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.18);
-  --cc-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.22);
-}
-
-/* Light Mode Message Styles */
-:root:not(.dark) .cc-message-user {
-  background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(139, 92, 246, 0.06) 100%);
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-:root:not(.dark) .cc-message-assistant {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-:root:not(.dark) .cc-message-assistant:hover {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-
-/* Light Mode Avatar Styles */
-:root:not(.dark) .cc-avatar-assistant {
-  background: #ffffff;
-  color: var(--cc-primary);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-/* Light Mode Input Container */
-:root:not(.dark) .cc-input-container {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-:root:not(.dark) .cc-input-container:focus-within {
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow:
-    0 8px 32px rgba(99, 102, 241, 0.1),
-    0 0 0 3px rgba(99, 102, 241, 0.05),
-    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
-}
-
-/* Light Mode Code Blocks */
-:root:not(.dark) .cc-code-block {
-  background: #f1f5f9;
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) inset;
-}
-
-:root:not(.dark) .cc-code-inline {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-/* Light Mode Button Secondary */
-:root:not(.dark) .cc-button-secondary {
-  background: #ffffff;
-  color: var(--cc-text-primary);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-:root:not(.dark) .cc-button-secondary:hover {
-  background: #f8fafc;
-  border-color: rgba(0, 0, 0, 0.12);
-}
-
-/* Light Mode Scrollbar */
-:root:not(.dark) .cc-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-:root:not(.dark) .cc-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-/* Light Mode Tool Indicator */
-:root:not(.dark) .cc-tool-indicator {
-  background: linear-gradient(135deg,
-    rgba(139, 92, 246, 0.06) 0%,
-    rgba(99, 102, 241, 0.04) 100%);
-  border-color: rgba(139, 92, 246, 0.2);
-}
-
-/* Light Mode Badge */
-:root:not(.dark) .cc-badge {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.25);
 }
 
 /* ============================================

@@ -4,7 +4,7 @@
  */
 
 import { Component } from './Component';
-import { store, actions } from '../store';
+import { store } from '../store';
 import { isActive, createLink } from '../router';
 import { createElement } from '../utils/dom';
 
@@ -45,11 +45,11 @@ export class Sidebar extends Component {
   render(): void {
     const collapsed = store.sidebarCollapsed.get();
     this.container.innerHTML = '';
-    this.container.className = 'h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden';
+    this.container.className = 'h-full border-r border-border/70 bg-sidebar flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden';
 
     // Fixed toggle button
     const toggleButton = document.createElement('button');
-    toggleButton.className = 'fixed top-[6px] flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary transition-colors';
+    toggleButton.className = 'fixed top-[7px] flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary/80 transition-colors';
     toggleButton.style.cssText = 'left: 90px; -webkit-app-region: no-drag; z-index: 9999; cursor: pointer;';
     toggleButton.setAttribute('aria-label', 'Toggle sidebar');
     toggleButton.innerHTML = `
@@ -89,17 +89,17 @@ export class Sidebar extends Component {
       className: 'pt-2 px-3',
     });
 
-    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/50 transition-colors');
+    const logoLink = createLink('/', this.createLogoContent(collapsed), 'flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/70 transition-colors');
     header.appendChild(logoLink);
     this.container.appendChild(header);
 
     // Navigation
     this.navContainer = createElement('nav', {
-      className: 'flex-1 px-3 py-4',
+      className: 'flex-1 px-3 py-3',
     });
 
     const navList = createElement('ul', {
-      className: 'space-y-1',
+      className: 'space-y-0.5',
     });
 
     for (const item of navItems) {
@@ -110,16 +110,6 @@ export class Sidebar extends Component {
     this.navContainer.appendChild(navList);
     this.container.appendChild(this.navContainer);
 
-    // Footer with theme toggle
-    const footer = createElement('footer', {
-      className: 'p-4 border-t border-border/50',
-    });
-
-    if (!collapsed) {
-      footer.appendChild(this.createThemeToggle());
-    }
-
-    this.container.appendChild(footer);
   }
 
   private createLogoContent(collapsed: boolean): HTMLElement {
@@ -128,7 +118,7 @@ export class Sidebar extends Component {
     });
 
     const iconWrapper = createElement('div', {
-      className: 'flex aspect-square size-9 items-center justify-center rounded-xl bg-secondary/50',
+      className: 'flex aspect-square size-8 items-center justify-center rounded-lg bg-secondary/80 border border-border/60',
     });
 
     const icon = createElement('img', {
@@ -148,12 +138,12 @@ export class Sidebar extends Component {
       });
 
       const title = createElement('span', {
-        className: 'truncate font-semibold text-sm',
+        className: 'truncate font-semibold text-[13px] tracking-tight',
         textContent: 'Cortex',
       });
 
       const subtitle = createElement('span', {
-        className: 'truncate text-xs text-muted-foreground',
+        className: 'truncate text-[11px] text-muted-foreground',
         textContent: 'Your personal timeline',
       });
 
@@ -181,7 +171,7 @@ export class Sidebar extends Component {
 
     if (!collapsed) {
       const text = createElement('span', {
-        className: 'text-sm font-medium',
+        className: 'text-[13px] font-medium',
         textContent: item.title,
       });
       linkContent.appendChild(text);
@@ -191,8 +181,8 @@ export class Sidebar extends Component {
       item.url,
       linkContent,
       `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${active
-        ? 'bg-primary/10 text-primary'
-        : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
+        ? 'bg-card text-foreground border border-border/70 shadow-sm'
+        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
       }`
     );
 
@@ -202,64 +192,6 @@ export class Sidebar extends Component {
     return li;
   }
 
-  private createThemeToggle(): HTMLElement {
-    const wrapper = createElement('div', {
-      className: 'flex items-center justify-between',
-    });
-
-    const label = createElement('span', {
-      className: 'text-sm text-muted-foreground',
-      textContent: 'Theme',
-    });
-    wrapper.appendChild(label);
-
-    const toggleGroup = createElement('div', {
-      className: 'flex items-center gap-1 bg-secondary rounded-xl p-1',
-    });
-
-    const themes: Array<{ value: 'light' | 'dark' | 'system'; icon: string; label: string }> = [
-      {
-        value: 'light',
-        label: 'Light',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
-      },
-      {
-        value: 'dark',
-        label: 'Dark',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
-      },
-      {
-        value: 'system',
-        label: 'System',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>`,
-      },
-    ];
-
-    for (const theme of themes) {
-      const button = createElement('button', {
-        className: `p-2 rounded-lg transition-all ${store.theme.get() === theme.value
-            ? 'bg-card text-foreground shadow-sm glow-primary'
-            : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
-          }`,
-        attributes: {
-          'aria-label': theme.label,
-          title: theme.label,
-        },
-        innerHTML: theme.icon,
-      });
-
-      this.addListener(button, 'click', () => {
-        actions.setTheme(theme.value);
-        this.render();
-      });
-
-      toggleGroup.appendChild(button);
-    }
-
-    wrapper.appendChild(toggleGroup);
-
-    return wrapper;
-  }
 
   private updateActiveStates(): void {
     if (!this.navContainer) return;

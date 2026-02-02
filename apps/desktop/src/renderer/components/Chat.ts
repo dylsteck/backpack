@@ -123,13 +123,13 @@ export class Chat extends Component {
     header.appendChild(icon);
 
     const title = createElement('h2', {
-      className: 'text-lg font-mono uppercase tracking-wider text-foreground',
+      className: 'text-[15px] font-semibold tracking-tight text-foreground',
       textContent: `${providerConfig.displayName} API Key Required`,
     });
     header.appendChild(title);
 
     const description = createElement('p', {
-      className: 'text-sm text-muted-foreground font-mono',
+      className: 'text-[13px] text-muted-foreground',
       textContent: `Encrypted and stored locally. ${providerConfig.keyHint}`,
     });
     header.appendChild(description);
@@ -146,7 +146,7 @@ export class Chat extends Component {
     });
 
     const input = createElement('input', {
-      className: 'w-full px-4 py-3 bg-card border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary',
+      className: 'w-full px-4 py-3 bg-card border border-border text-foreground placeholder:text-muted-foreground text-[13px] focus:outline-none focus:ring-1 focus:ring-primary',
       attributes: {
         type: 'password',
         placeholder: providerConfig.keyPrefix ? `${providerConfig.keyPrefix}...` : 'Enter API key...',
@@ -157,13 +157,13 @@ export class Chat extends Component {
 
     // Validation message
     const validationMsg = createElement('p', {
-      className: 'text-xs text-destructive font-mono hidden',
+      className: 'text-[11px] text-destructive hidden',
       attributes: { id: 'validation-msg' },
     });
     form.appendChild(validationMsg);
 
     const button = createElement('button', {
-      className: 'w-full px-4 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm border border-border hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+      className: 'w-full px-4 py-3 bg-primary text-primary-foreground font-semibold text-[13px] border border-border hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
       textContent: 'Save API Key',
     });
 
@@ -215,13 +215,13 @@ export class Chat extends Component {
     });
 
     const label = createElement('span', {
-      className: 'text-xs font-mono text-muted-foreground uppercase tracking-wider',
+      className: 'text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]',
       textContent: 'Provider:',
     });
     wrapper.appendChild(label);
 
     const select = createElement('select', {
-      className: 'bg-card border border-border text-foreground font-mono text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer',
+      className: 'bg-card border border-border text-foreground text-[13px] px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer',
     }) as HTMLSelectElement;
 
     getProviderIds().forEach(providerId => {

@@ -38,7 +38,7 @@ export class AddAppsModal extends Component {
     
     // Backdrop with blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 modal-backdrop-enter',
+      className: 'fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-6 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -50,26 +50,26 @@ export class AddAppsModal extends Component {
     
     // Modal container
     const modal = createElement('div', {
-      className: 'glass-panel bg-card border border-border/50 w-full max-w-5xl max-h-[85vh] flex flex-col elevation-3 rounded-3xl modal-enter relative overflow-hidden',
+      className: 'bg-card border border-border/60 w-full max-w-5xl max-h-[85vh] flex flex-col elevation-2 rounded-2xl modal-enter relative overflow-hidden',
     });
     
     // Header
     const header = createElement('div', {
-      className: 'flex items-center justify-between p-6 border-b border-border/50',
+      className: 'flex items-center justify-between p-5 border-b border-border/60',
     });
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-xl text-foreground',
+      className: 'text-[17px] text-foreground',
       textContent: 'Add Apps',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-display, 'Fraunces', serif);
       font-weight: 600;
-      letter-spacing: 0.01em;
+      letter-spacing: -0.01em;
     `;
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground mt-1',
+      className: 'text-[13px] text-muted-foreground mt-1',
       textContent: 'Browse and connect apps to your vault',
     });
     (subtitle as HTMLElement).style.cssText = `
@@ -81,7 +81,7 @@ export class AddAppsModal extends Component {
     
     // Close button
     const closeBtn = createElement('button', {
-      className: 'p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground',
+      className: 'p-2 hover:bg-secondary/70 rounded-lg transition-all text-muted-foreground hover:text-foreground',
       innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
@@ -95,12 +95,12 @@ export class AddAppsModal extends Component {
     
     // Content area (scrollable)
     const content = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-6',
+      className: 'flex-1 overflow-y-auto p-5',
     });
     
     // Apps grid container
     const gridContainer = createElement('div', {
-      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
+      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3',
       id: 'add-apps-grid',
     });
     
@@ -137,7 +137,7 @@ export class AddAppsModal extends Component {
     if (apps.length === 0) {
       // Apps haven't loaded yet - show loading state
       gridContainer.innerHTML = `
-        <div class="col-span-full text-center py-12 text-muted-foreground font-mono uppercase tracking-wider text-sm">
+        <div class="col-span-full text-center py-12 text-muted-foreground font-semibold uppercase tracking-[0.18em] text-[11px]">
           <div class="flex items-center justify-center gap-2">
             <div class="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
             Loading apps...
@@ -150,12 +150,12 @@ export class AddAppsModal extends Component {
     if (unconnectedApps.length === 0) {
       gridContainer.innerHTML = `
         <div class="col-span-full text-center py-12 px-6">
-          <div class="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary">
+          <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <p class="text-sm text-muted-foreground font-mono">All available apps are connected!</p>
+          <p class="text-[13px] text-muted-foreground">All available apps are connected!</p>
         </div>
       `;
       return;
@@ -171,10 +171,10 @@ export class AddAppsModal extends Component {
     const isConnected = app.connection?.status === 'connected';
 
     const card = createElement('div', {
-      className: `glass-panel group relative flex flex-col items-center p-6 border transition-all cursor-pointer rounded-2xl ${
+      className: `card-modern group relative flex flex-col items-center p-5 border transition-all cursor-pointer rounded-xl ${
         isConnected 
-          ? 'bg-primary/5 border-primary/30 hover:bg-primary/10' 
-          : 'bg-card hover:bg-accent hover-lift'
+          ? 'bg-secondary/70 border-border/70' 
+          : 'bg-card hover:bg-secondary/60 hover-lift'
       }`,
       dataset: { appId: app.id },
     });
@@ -182,13 +182,13 @@ export class AddAppsModal extends Component {
     // Connection status indicator or checkmark
     if (isConnected) {
       const checkmark = createElement('div', {
-        className: 'absolute top-3 right-3 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center',
+        className: 'absolute top-3 right-3 w-6 h-6 rounded-full bg-secondary flex items-center justify-center border border-border/60',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="20 6 9 17 4 12"/></svg>`,
       });
       card.appendChild(checkmark);
     } else {
       const plusIcon = createElement('div', {
-        className: 'absolute top-3 right-3 w-6 h-6 rounded-full bg-muted/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity',
+        className: 'absolute top-3 right-3 w-6 h-6 rounded-full bg-secondary/70 border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
       });
       card.appendChild(plusIcon);
@@ -197,7 +197,7 @@ export class AddAppsModal extends Component {
     // Icon
     if (app.iconUrl) {
       const icon = createElement('img', {
-        className: 'w-12 h-12 object-contain mb-3',
+        className: 'w-10 h-10 object-contain mb-3',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
@@ -207,15 +207,15 @@ export class AddAppsModal extends Component {
       card.appendChild(icon);
     } else {
       const placeholder = createElement('div', {
-        className: 'w-12 h-12 bg-muted mb-3 flex items-center justify-center text-muted-foreground rounded-lg',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
+        className: 'w-10 h-10 bg-muted mb-3 flex items-center justify-center text-muted-foreground rounded-lg',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
       });
       card.appendChild(placeholder);
     }
     
     // Name
     const name = createElement('p', {
-      className: 'font-mono uppercase tracking-wider text-sm text-center font-medium',
+      className: 'text-[13px] text-center font-semibold tracking-tight',
       textContent: app.name,
     });
     card.appendChild(name);
@@ -223,7 +223,7 @@ export class AddAppsModal extends Component {
     // Description (truncated)
     if (app.description) {
       const desc = createElement('p', {
-        className: 'text-xs text-muted-foreground text-center mt-1 line-clamp-2',
+        className: 'text-[11px] text-muted-foreground text-center mt-1 line-clamp-2',
         textContent: app.description,
       });
       card.appendChild(desc);
@@ -232,13 +232,13 @@ export class AddAppsModal extends Component {
     // Connection status badge
     if (isConnected) {
       const statusBadge = createElement('span', {
-        className: 'mt-2 px-2 py-0.5 text-xs font-mono uppercase tracking-wider bg-primary/20 text-primary rounded',
+        className: 'mt-2 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] bg-secondary text-foreground rounded border border-border/60',
         textContent: 'Connected',
       });
       card.appendChild(statusBadge);
     } else {
       const statusBadge = createElement('span', {
-        className: 'mt-2 px-2 py-0.5 text-xs font-mono uppercase tracking-wider border border-border text-muted-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity',
+        className: 'mt-2 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border text-muted-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity',
         textContent: 'Click to Add',
       });
       card.appendChild(statusBadge);

@@ -7,7 +7,6 @@
 import type { 
   SourceType, 
   FilterConfig, 
-  ThemeMode, 
   TimelineItem,
   AppServer,
   BrowserHistoryEntry,
@@ -131,9 +130,6 @@ export const store = {
   chatSidebarOpen: new Observable<boolean>(false),
   expandedItemId: new Observable<string | null>(null),
   
-  // Theme
-  theme: new Observable<ThemeMode>('system'),
-  
   // Filters
   selectedSources: new Observable<SourceType[]>(['all']),
   filterConfig: new Observable<FilterConfig>(null),
@@ -185,40 +181,6 @@ store.databasePath.subscribe((value) => {
   }
 });
 
-// Initialize theme from system/localStorage
-function initializeTheme(): void {
-  const savedTheme = localStorage.getItem('theme') as ThemeMode | null;
-  if (savedTheme) {
-    store.theme.set(savedTheme);
-  }
-  
-  // Apply theme to document
-  applyTheme(store.theme.get());
-  
-  // Subscribe to changes
-  store.theme.subscribe((theme) => {
-    localStorage.setItem('theme', theme);
-    applyTheme(theme);
-  });
-}
-
-function applyTheme(theme: ThemeMode): void {
-  const isDark = theme === 'dark' || 
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  
-  document.documentElement.classList.toggle('dark', isDark);
-}
-
-// Listen for system theme changes
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (store.theme.get() === 'system') {
-    applyTheme('system');
-  }
-});
-
-// Initialize on load
-initializeTheme();
-
 /**
  * Store actions - organized methods for state mutations
  */
@@ -237,17 +199,6 @@ export const actions = {
   
   collapseSidebar(): void {
     store.sidebarCollapsed.update(collapsed => !collapsed);
-  },
-  
-  // Theme
-  setTheme(theme: ThemeMode): void {
-    store.theme.set(theme);
-  },
-  
-  toggleTheme(): void {
-    const current = store.theme.get();
-    const next = current === 'dark' ? 'light' : 'dark';
-    store.theme.set(next);
   },
   
   // Timeline

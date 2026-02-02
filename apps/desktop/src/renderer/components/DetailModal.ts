@@ -65,7 +65,7 @@ export class DetailModal extends Component {
     
     // Backdrop with enhanced blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/85 backdrop-blur-[32px] saturate-180 z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
+      className: 'fixed inset-0 bg-background/80 backdrop-blur-[16px] saturate-140 z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -144,7 +144,7 @@ export class DetailModal extends Component {
     (contentArea as HTMLElement).style.cssText = `
       height: 100%;
       ${!this.isFullscreen ? 'max-height: 90vh;' : ''}
-      background: hsl(var(--background));
+      background: hsl(var(--card));
       color: hsl(var(--foreground));
       transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       margin-right: ${this.sidebarOpen ? '380px' : '0'};
@@ -165,9 +165,9 @@ export class DetailModal extends Component {
         right: ${this.sidebarOpen ? '0' : '-400px'};
         width: 380px;
         height: 100%;
-        background: hsl(var(--muted) / 0.3);
-        backdrop-filter: blur(12px);
-        border-left: 1px solid hsl(var(--border) / 0.3);
+        background: hsl(var(--secondary) / 0.7);
+        backdrop-filter: blur(10px);
+        border-left: 1px solid hsl(var(--border) / 0.35);
         transition: right 0.3s ease;
         z-index: 10;
       `;

@@ -57,17 +57,11 @@ export class Layout extends Component {
 
     // Main layout with sidebar
     this.container.innerHTML = '';
-    this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden';
-
-    // Subtle border line under topbar
-    const borderLine = createElement('div', {
-      className: 'fixed top-[44px] left-0 right-0 h-px bg-border/50 z-50',
-    });
-    this.container.appendChild(borderLine);
+    this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden text-foreground';
 
     // Topbar background (covers content area)
     this.topbarContainer = createElement('div', {
-      className: 'fixed top-0 h-[44px] z-40 bg-background/80 backdrop-blur-sm transition-all duration-300',
+      className: 'fixed top-0 h-[44px] z-40 bg-background/90 backdrop-blur-md border-b border-border/60 transition-all duration-300',
       attributes: {
         style: 'left: calc(16rem + 0.5rem); right: 0;',
       },
@@ -76,7 +70,7 @@ export class Layout extends Component {
 
     // Topbar title
     this.topbarTitleEl = createElement('div', {
-      className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-base font-medium text-foreground select-none pointer-events-none',
+      className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-[13px] font-medium text-foreground select-none pointer-events-none',
       attributes: {
         style: 'left: calc(16rem + 0.5rem);',
       },
@@ -87,14 +81,13 @@ export class Layout extends Component {
 
     // Sidebar (Left)
     this.sidebarContainer = createElement('aside', {
-      className: 'w-64 h-full border-r border-border/50 bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-300',
+      className: 'w-64 h-full border-r border-border/70 bg-sidebar flex-shrink-0 flex flex-col transition-[width] duration-300',
       dataset: { state: 'expanded', sidebar: 'true' },
     });
     (this.sidebarContainer as HTMLElement).style.cssText += `
       z-index: 100;
       position: relative;
       overflow: visible;
-      background-color: var(--bg-primary);
     `;
     this.container.appendChild(this.sidebarContainer);
     this.sidebar = new Sidebar(this.sidebarContainer);

@@ -29,7 +29,7 @@ export class ManageConnectionsModal extends Component {
     
     // Backdrop with blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-2xl z-[100] flex items-center justify-center p-6 modal-backdrop-enter',
+      className: 'fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-6 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -41,26 +41,26 @@ export class ManageConnectionsModal extends Component {
     
     // Modal container
     const modal = createElement('div', {
-      className: 'glass-panel bg-card border border-border/50 w-full max-w-4xl max-h-[85vh] flex flex-col elevation-3 rounded-3xl modal-enter relative overflow-hidden',
+      className: 'bg-card border border-border/60 w-full max-w-4xl max-h-[85vh] flex flex-col elevation-2 rounded-2xl modal-enter relative overflow-hidden',
     });
     
     // Header
     const header = createElement('div', {
-      className: 'flex items-center justify-between p-6 border-b border-border/50',
+      className: 'flex items-center justify-between p-5 border-b border-border/60',
     });
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-xl text-foreground',
+      className: 'text-[17px] text-foreground',
       textContent: 'Manage Connections',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-display, 'Fraunces', serif);
       font-weight: 600;
-      letter-spacing: 0.01em;
+      letter-spacing: -0.01em;
     `;
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground mt-1',
+      className: 'text-[13px] text-muted-foreground mt-1',
       textContent: 'View and manage your connected apps',
     });
     (subtitle as HTMLElement).style.cssText = `
@@ -72,7 +72,7 @@ export class ManageConnectionsModal extends Component {
     
     // Close button
     const closeBtn = createElement('button', {
-      className: 'p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground',
+      className: 'p-2 hover:bg-secondary/70 rounded-lg transition-all text-muted-foreground hover:text-foreground',
       innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
@@ -86,12 +86,12 @@ export class ManageConnectionsModal extends Component {
     
     // Content area (scrollable)
     const content = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-6',
+      className: 'flex-1 overflow-y-auto p-5',
     });
     
     // Connections list container
     const listContainer = createElement('div', {
-      className: 'space-y-4',
+      className: 'space-y-3',
       attributes: { id: 'manage-connections-list' },
     });
     
@@ -135,13 +135,13 @@ export class ManageConnectionsModal extends Component {
     if (connectedApps.length === 0) {
       listContainer.innerHTML = `
         <div class="text-center py-12 px-6">
-          <div class="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+          <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
               <path d="M5 12h14"/>
               <path d="M12 5v14"/>
             </svg>
           </div>
-          <p class="text-sm text-muted-foreground font-mono">No connected apps yet</p>
+          <p class="text-[13px] text-muted-foreground">No connected apps yet</p>
         </div>
       `;
       return;
@@ -157,19 +157,19 @@ export class ManageConnectionsModal extends Component {
     const isEditing = this.editingAppId === app.id;
     
     const item = createElement('div', {
-      className: 'glass-panel border bg-card rounded-xl overflow-hidden transition-all',
+      className: 'card-modern border border-border/70 bg-card rounded-xl overflow-hidden transition-all',
       dataset: { appId: app.id },
     });
     
     // Main content row
     const mainRow = createElement('div', {
-      className: 'flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors',
+      className: 'flex items-center gap-4 p-3.5 hover:bg-secondary/60 transition-colors',
     });
     
     // Icon
     if (app.iconUrl) {
       const icon = createElement('img', {
-        className: 'w-12 h-12 object-contain shrink-0',
+        className: 'w-10 h-10 object-contain shrink-0',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
@@ -179,8 +179,8 @@ export class ManageConnectionsModal extends Component {
       item.appendChild(icon);
     } else {
       const placeholder = createElement('div', {
-        className: 'w-12 h-12 bg-muted shrink-0 flex items-center justify-center text-muted-foreground rounded-lg',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
+        className: 'w-10 h-10 bg-muted shrink-0 flex items-center justify-center text-muted-foreground rounded-lg',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
       });
       mainRow.appendChild(placeholder);
     }
@@ -191,7 +191,7 @@ export class ManageConnectionsModal extends Component {
     });
     
     const name = createElement('p', {
-      className: 'font-mono uppercase tracking-wider text-sm font-medium',
+      className: 'text-[13px] font-semibold tracking-tight',
       textContent: app.name,
     });
     infoSection.appendChild(name);
@@ -210,7 +210,7 @@ export class ManageConnectionsModal extends Component {
     });
     statusRow.appendChild(statusDot);
     const statusText = createElement('span', {
-      className: 'text-xs text-muted-foreground font-mono',
+      className: 'text-[11px] text-muted-foreground',
       textContent: 'Connected',
     });
     statusRow.appendChild(statusText);
@@ -219,7 +219,7 @@ export class ManageConnectionsModal extends Component {
     // Connection type
     if (app.connectionType) {
       const typeBadge = createElement('span', {
-        className: 'px-2 py-0.5 bg-muted text-xs text-muted-foreground font-mono uppercase rounded',
+        className: 'px-2 py-0.5 bg-secondary text-[11px] text-muted-foreground font-semibold uppercase tracking-[0.12em] rounded border border-border/60',
         textContent: app.connectionType,
       });
       detailsRow.appendChild(typeBadge);
@@ -230,7 +230,7 @@ export class ManageConnectionsModal extends Component {
     if (lastSyncedAt && typeof lastSyncedAt === 'string') {
       const lastSynced = new Date(lastSyncedAt);
       const lastSyncedText = createElement('span', {
-        className: 'text-xs text-muted-foreground font-mono',
+        className: 'text-[11px] text-muted-foreground',
         textContent: `Last synced: ${formatDate(lastSynced)} ${formatTime(lastSynced)}`,
       });
       detailsRow.appendChild(lastSyncedText);
@@ -243,7 +243,7 @@ export class ManageConnectionsModal extends Component {
       const metadata = app.connection.connectionMetadata;
       if (metadata.localPath || metadata.fid) {
         const metadataRow = createElement('div', {
-          className: 'mt-2 text-xs text-muted-foreground font-mono',
+          className: 'mt-2 text-[11px] text-muted-foreground',
         });
         if (metadata.localPath) {
           metadataRow.textContent = `Path: ${metadata.localPath}`;
@@ -263,7 +263,7 @@ export class ManageConnectionsModal extends Component {
     
     // Edit button
     const editButton = createElement('button', {
-      className: `px-3 py-1.5 text-xs font-mono uppercase tracking-wider border border-border hover:bg-secondary transition-colors rounded ${
+      className: `px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border hover:bg-secondary/70 transition-colors rounded ${
         isEditing ? 'bg-primary text-primary-foreground border-primary' : ''
       }`,
       textContent: isEditing ? 'Cancel' : 'Edit',
@@ -284,7 +284,7 @@ export class ManageConnectionsModal extends Component {
     // View Details button (only show when not editing)
     if (!isEditing) {
       const viewButton = createElement('button', {
-        className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider border border-border hover:bg-secondary transition-colors rounded',
+        className: 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border hover:bg-secondary/70 transition-colors rounded',
         textContent: 'View Details',
       });
       
@@ -299,7 +299,7 @@ export class ManageConnectionsModal extends Component {
       
       // Disconnect button
       const disconnectButton = createElement('button', {
-        className: 'px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors rounded',
+        className: 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors rounded',
         textContent: 'Disconnect',
         dataset: { connectionId: app.connection?.id || '' },
       });
@@ -326,11 +326,11 @@ export class ManageConnectionsModal extends Component {
   
   private createEditForm(app: AppServer): HTMLElement {
     const form = createElement('div', {
-      className: 'border-t border-border/50 bg-muted/20 p-4 space-y-4',
+      className: 'border-t border-border/60 bg-secondary/40 p-4 space-y-4',
     });
     
     const formTitle = createElement('h3', {
-      className: 'text-sm font-mono uppercase tracking-wider mb-4',
+      className: 'text-[12px] font-semibold uppercase tracking-[0.2em] mb-3',
       textContent: 'Edit Connection Settings',
     });
     form.appendChild(formTitle);
@@ -342,7 +342,7 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyLabel = createElement('label', {
-        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
         textContent: 'Neynar API Key',
       });
       apiKeyGroup.appendChild(apiKeyLabel);
@@ -352,7 +352,7 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyInput = createElement('input', {
-        className: 'w-full px-3 py-2 pr-10 bg-background border border-border font-mono text-sm',
+        className: 'w-full px-3 py-2 pr-10 bg-card border border-border text-[13px]',
         attributes: {
           type: 'password',
           placeholder: 'Enter your Neynar API key',
@@ -363,8 +363,8 @@ export class ManageConnectionsModal extends Component {
       
       // Toggle visibility button
       const toggleBtn = createElement('button', {
-        className: 'absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent transition-colors',
-        attributes: { type: 'button' },
+        className: 'absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-secondary/70 transition-colors rounded',
+        attributes: { type: 'button', 'aria-label': 'Toggle API key visibility' },
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
       });
       
@@ -384,13 +384,13 @@ export class ManageConnectionsModal extends Component {
       });
       
       const fidLabel = createElement('label', {
-        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
         textContent: 'Farcaster ID (FID)',
       });
       fidGroup.appendChild(fidLabel);
       
       const fidInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-background border border-border font-mono text-sm',
+        className: 'w-full px-3 py-2 bg-card border border-border text-[13px]',
         attributes: {
           type: 'number',
           placeholder: 'Enter your Farcaster ID',
@@ -410,13 +410,13 @@ export class ManageConnectionsModal extends Component {
       });
       
       const pathLabel = createElement('label', {
-        className: 'block text-xs font-mono uppercase tracking-wider text-muted-foreground',
+        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
         textContent: 'Local Path',
       });
       pathGroup.appendChild(pathLabel);
       
       const pathInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-background border border-border font-mono text-sm',
+        className: 'w-full px-3 py-2 bg-card border border-border text-[13px]',
         attributes: {
           type: 'text',
           readonly: 'true',
@@ -426,7 +426,7 @@ export class ManageConnectionsModal extends Component {
       pathGroup.appendChild(pathInput);
       
       const pathNote = createElement('p', {
-        className: 'text-xs text-muted-foreground font-mono',
+        className: 'text-[11px] text-muted-foreground',
         textContent: 'To change the path, disconnect and reconnect this app.',
       });
       pathGroup.appendChild(pathNote);
@@ -439,7 +439,7 @@ export class ManageConnectionsModal extends Component {
     });
     
     const saveButton = createElement('button', {
-      className: 'px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs rounded transition-colors hover:bg-primary/90',
+      className: 'px-4 py-2 bg-primary text-primary-foreground font-semibold uppercase tracking-[0.18em] text-[11px] rounded transition-colors hover:bg-primary/90',
       textContent: 'Save Changes',
     });
     

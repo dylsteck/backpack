@@ -62,12 +62,12 @@ export class Timeline extends Component {
     
     // Scroll area
     const scrollArea = createElement('div', {
-      className: 'flex-1 overflow-y-auto min-h-0 pt-4',
+      className: 'flex-1 overflow-y-auto min-h-0 pt-2',
     });
     
     // Content wrapper
     const wrapper = createElement('div', {
-      className: 'max-w-5xl mx-auto pb-32 px-6 md:px-10 relative w-full',
+      className: 'max-w-4xl mx-auto pb-24 px-6 md:px-8 relative w-full',
     });
     
     this.itemsContainer = createElement('div', {
@@ -90,10 +90,15 @@ export class Timeline extends Component {
   
   private createHeader(): HTMLElement {
     const header = createElement('header', {
-      className: 'flex items-center justify-between px-8 py-6 z-20',
+      className: 'flex items-center justify-between px-6 pt-5 pb-2 z-20',
     });
-    
-    // Empty header - briefing section handles the greeting
+
+    const dateLabel = createElement('div', {
+      className: 'text-[11px] uppercase tracking-[0.2em] text-muted-foreground',
+      textContent: formatFullDate(new Date()),
+    });
+    header.appendChild(dateLabel);
+
     return header;
   }
   
@@ -122,24 +127,24 @@ export class Timeline extends Component {
   
   private renderOverview(items: TimelineItem[]): void {
     const groups = this.groupItemsByDay(items);
-    const container = createElement('div', { className: 'space-y-12' });
+    const container = createElement('div', { className: 'space-y-8' });
     
     for (const group of groups) {
       const section = createElement('div', { className: 'overview-section' });
       
       const header = createElement('div', {
-        className: 'flex items-center gap-2 mb-6 group cursor-pointer w-fit',
+        className: 'flex items-center gap-2 mb-4 group cursor-pointer w-fit',
       });
       header.innerHTML = `
-        <h2 class="text-2xl font-semibold text-foreground/80">${group.label}</h2>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/60 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">
+        <h2 class="text-xl font-semibold text-foreground/80">${group.label}</h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/60 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">
           <path d="M7 7h10v10"/><path d="M7 17 17 7"/>
         </svg>
       `;
       section.appendChild(header);
       
       const grid = createElement('div', {
-        className: 'grid grid-cols-1 md:grid-cols-2 gap-6',
+        className: 'grid grid-cols-1 md:grid-cols-2 gap-5',
       });
       
       const mainCard = this.renderOverviewCard(group);
@@ -159,12 +164,12 @@ export class Timeline extends Component {
   
   private renderOverviewCard(group: DayGroup): HTMLElement {
     const card = createElement('div', {
-      className: 'card-modern card-elevated hover-float flex flex-col gap-6 min-h-[400px] cursor-pointer border-l-4 border-l-primary/30 relative overflow-hidden',
+      className: 'card-modern hover-editorial flex flex-col gap-5 min-h-[320px] cursor-pointer border-l-2 border-l-destructive/40 relative overflow-hidden',
     });
 
     // Subtle gradient overlay
     const gradientOverlay = createElement('div', {
-      className: 'absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none',
+      className: 'absolute inset-0 bg-gradient-to-br from-secondary/40 via-transparent to-transparent pointer-events-none',
     });
     card.appendChild(gradientOverlay);
 
@@ -210,12 +215,12 @@ export class Timeline extends Component {
   
   private renderItemsOverviewCard(group: DayGroup): HTMLElement {
     const card = createElement('div', {
-      className: 'card-modern bg-gradient-to-br from-secondary/30 to-secondary/10 border border-border/40 p-0 overflow-hidden flex flex-col relative',
+      className: 'card-modern border border-border/70 p-0 overflow-hidden flex flex-col relative',
     });
 
     // Subtle accent line
     const accentLine = createElement('div', {
-      className: 'absolute top-0 left-0 right-0 h-[2px] bg-linear-to-r from-primary/40 via-primary/20 to-transparent',
+      className: 'absolute top-0 left-0 right-0 h-px bg-linear-to-r from-destructive/60 via-destructive/20 to-transparent',
     });
     card.appendChild(accentLine);
 
@@ -271,7 +276,7 @@ export class Timeline extends Component {
   
   private renderTimeline(items: TimelineItem[]): void {
     const grouped = groupByDate(items);
-    const container = createElement('div', { className: 'space-y-12 relative' });
+    const container = createElement('div', { className: 'space-y-8 relative' });
     
     // Vertical connecting line - runs down the left side
     // Aligned with briefing text start: icon (24px) + gap (12px) = 36px from container edge
@@ -279,9 +284,9 @@ export class Timeline extends Component {
       className: 'absolute top-0 bottom-0',
     });
     (connectingLine as HTMLElement).style.cssText = `
-      left: 36px;
+      left: 28px;
       width: 1px;
-      background: rgba(255, 255, 255, 0.08);
+      background: hsl(var(--border) / 0.8);
       z-index: 0;
     `;
     container.appendChild(connectingLine);
@@ -311,7 +316,7 @@ export class Timeline extends Component {
           left: 0;
           right: 0;
           height: 1px;
-          background: hsl(var(--destructive) / 0.6);
+          background: hsl(var(--destructive) / 0.25);
           z-index: 1;
         `;
         dateSection.appendChild(line);
@@ -329,12 +334,13 @@ export class Timeline extends Component {
         (badge as HTMLElement).style.cssText = `
           background: hsl(var(--destructive));
           color: white;
-          padding: 0.5rem 1rem;
+          padding: 0.4rem 0.85rem;
           border-radius: 9999px;
           font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.8125rem;
-          font-weight: 500;
-          box-shadow: 0 2px 8px hsl(var(--destructive) / 0.3);
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+          box-shadow: 0 2px 10px hsl(var(--destructive) / 0.28);
           white-space: nowrap;
         `;
         badge.textContent = formatFullDate(new Date(dateKey));
@@ -343,7 +349,7 @@ export class Timeline extends Component {
         dayWrapper.appendChild(dateSection);
       }
       
-      const itemsList = createElement('div', { className: 'space-y-6 relative z-10' });
+      const itemsList = createElement('div', { className: 'space-y-4 relative z-10' });
       
       dayItems.forEach((item, index) => {
         const isLast = index === dayItems.length - 1;
@@ -354,7 +360,7 @@ export class Timeline extends Component {
           className: 'relative group',
         });
         (messageWrapper as HTMLElement).style.cssText = `
-          padding-left: 48px;
+          padding-left: 40px;
           position: relative;
         `;
 
@@ -364,15 +370,15 @@ export class Timeline extends Component {
           className: 'absolute',
         });
         (node as HTMLElement).style.cssText = `
-          left: 36px;
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: rgba(99, 102, 241, 0.6);
-          border: 2px solid var(--background);
+          left: 28px;
+          width: 8px;
+          height: 8px;
+          border-radius: 9999px;
+          background: hsl(var(--foreground) / 0.28);
+          border: 1.5px solid hsl(var(--background));
           transform: translateX(-50%);
           z-index: 10;
-          top: 0.75rem;
+          top: 0.65rem;
         `;
         messageWrapper.appendChild(node);
 
@@ -382,11 +388,11 @@ export class Timeline extends Component {
             className: 'absolute',
           });
           (lineSegment as HTMLElement).style.cssText = `
-            left: 36px;
+            left: 28px;
             width: 1px;
-            height: calc(100% + 1.5rem);
-            background: rgba(255, 255, 255, 0.08);
-            top: 1.5rem;
+            height: calc(100% + 1rem);
+            background: hsl(var(--border) / 0.7);
+            top: 1.25rem;
             transform: translateX(-50%);
             z-index: 1;
           `;
@@ -395,7 +401,7 @@ export class Timeline extends Component {
 
         // Sender info (avatar + name) - positioned above bubble
         const senderInfo = createElement('div', {
-          className: 'flex items-center gap-2 mb-2',
+          className: 'flex items-center gap-2 mb-1.5',
         });
         
         // Avatar/icon
@@ -403,20 +409,21 @@ export class Timeline extends Component {
           className: 'flex-shrink-0',
         });
         (avatar as HTMLElement).style.cssText = `
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(99, 102, 241, 0.2);
+          width: 20px;
+          height: 20px;
+          border-radius: 9999px;
+          background: hsl(var(--secondary) / 0.9);
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          border: 1px solid hsl(var(--border) / 0.6);
         `;
         const iconUrl = this.iconUrls[item.source];
         if (iconUrl) {
           avatar.innerHTML = `<img src="${iconUrl}" style="width: 100%; height: 100%; object-fit: cover;" />`;
         } else {
-          avatar.innerHTML = `<div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(99, 102, 241, 0.6);"></div>`;
+          avatar.innerHTML = `<div style="width: 8px; height: 8px; border-radius: 9999px; background: hsl(var(--foreground) / 0.35);"></div>`;
         }
         senderInfo.appendChild(avatar);
         
@@ -428,10 +435,9 @@ export class Timeline extends Component {
         const senderName = createElement('span');
         (senderName as HTMLElement).style.cssText = `
           font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.8125rem;
-          font-weight: 500;
-          color: var(--muted-foreground);
-          opacity: 0.8;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: hsl(var(--foreground) / 0.6);
         `;
         senderName.textContent = displayName;
         senderInfo.appendChild(senderName);
@@ -440,9 +446,9 @@ export class Timeline extends Component {
         const timeIndicator = createElement('span');
         (timeIndicator as HTMLElement).style.cssText = `
           font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.75rem;
-          color: var(--muted-foreground);
-          opacity: 0.5;
+          font-size: 0.6875rem;
+          color: hsl(var(--muted-foreground));
+          opacity: 0.6;
           margin-left: 0.5rem;
         `;
         timeIndicator.textContent = this.getRelativeTime(item.timestamp);
@@ -456,37 +462,44 @@ export class Timeline extends Component {
         // Message bubble - chat-like appearance (or card-like for Obsidian)
         const bubble = createElement('div', {
           className: 'cursor-pointer',
+          attributes: {
+            role: 'button',
+            tabindex: '0',
+            'aria-label': 'Open item details',
+          },
         });
         (bubble as HTMLElement).style.cssText = `
-          background: ${isObsidianNote ? 'hsl(var(--card))' : 'hsl(var(--muted) / 0.3)'};
-          border: 1px solid ${isObsidianNote ? 'hsl(var(--border) / 0.5)' : 'hsl(var(--border) / 0.5)'};
-          border-radius: ${isObsidianNote ? '0.875rem' : '0.75rem'};
-          padding: ${isObsidianNote ? '1.25rem 1.5rem' : '1rem 1.25rem'};
+          background: hsl(var(--card));
+          border: 1px solid hsl(var(--border) / 0.7);
+          border-radius: ${isObsidianNote ? '0.75rem' : '0.65rem'};
+          padding: ${isObsidianNote ? '1rem 1.2rem' : '0.85rem 1rem'};
           transition: all 0.2s ease;
-          box-shadow: ${isObsidianNote ? '0 2px 8px hsl(var(--background) / 0.3)' : '0 1px 2px hsl(var(--background) / 0.05)'};
-          max-width: 85%;
+          box-shadow: ${isObsidianNote ? '0 6px 18px rgba(18, 16, 13, 0.08)' : '0 1px 2px rgba(18, 16, 13, 0.04)'};
+          max-width: 78%;
         `;
         bubble.addEventListener('mouseenter', () => {
-          (bubble as HTMLElement).style.background = isObsidianNote 
-            ? 'hsl(var(--card) / 0.95)' 
-            : 'hsl(var(--muted) / 0.5)';
-          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.8)';
+          (bubble as HTMLElement).style.background = 'hsl(var(--card) / 0.98)';
+          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.9)';
           (bubble as HTMLElement).style.transform = isObsidianNote ? 'translateY(-1px)' : 'none';
           (bubble as HTMLElement).style.boxShadow = isObsidianNote 
-            ? '0 4px 12px hsl(var(--background) / 0.4)' 
-            : '0 1px 2px hsl(var(--background) / 0.05)';
+            ? '0 10px 22px rgba(18, 16, 13, 0.12)' 
+            : '0 4px 12px rgba(18, 16, 13, 0.08)';
         });
         bubble.addEventListener('mouseleave', () => {
-          (bubble as HTMLElement).style.background = isObsidianNote 
-            ? 'hsl(var(--card))' 
-            : 'hsl(var(--muted) / 0.3)';
-          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.5)';
+          (bubble as HTMLElement).style.background = 'hsl(var(--card))';
+          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.7)';
           (bubble as HTMLElement).style.transform = 'none';
           (bubble as HTMLElement).style.boxShadow = isObsidianNote 
-            ? '0 2px 8px hsl(var(--background) / 0.3)' 
-            : '0 1px 2px rgba(0, 0, 0, 0.05)';
+            ? '0 6px 18px rgba(18, 16, 13, 0.08)' 
+            : '0 1px 2px rgba(18, 16, 13, 0.04)';
         });
         this.addListener(bubble, 'click', () => this.openItemDetail(item));
+        this.addListener(bubble, 'keydown', (event: KeyboardEvent) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            this.openItemDetail(item);
+          }
+        });
 
         // Content - special renderer for Obsidian notes
         const content = isObsidianNote 
@@ -496,10 +509,10 @@ export class Timeline extends Component {
         if (!isObsidianNote) {
           (content as HTMLElement).style.cssText = `
             font-family: var(--font-sans, 'Manrope', sans-serif);
-            font-size: 0.875rem;
-            line-height: 1.7;
+            font-size: 0.8125rem;
+            line-height: 1.55;
             color: var(--foreground);
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
           `;
         }
         bubble.appendChild(content);
@@ -512,27 +525,29 @@ export class Timeline extends Component {
         
         if (hasLinkedTodos) {
           const todosSection = createElement('div', {
-            className: 'mt-4 pt-4',
+            className: 'mt-3 pt-3',
           });
           (todosSection as HTMLElement).style.cssText = `
-            border-top: 1px solid hsl(var(--border) / 0.5);
-            margin-top: ${isObsidianNote ? '1rem' : '1rem'};
-            padding-top: ${isObsidianNote ? '1rem' : '1rem'};
+            border-top: 1px solid hsl(var(--border) / 0.6);
+            margin-top: ${isObsidianNote ? '0.75rem' : '0.75rem'};
+            padding-top: ${isObsidianNote ? '0.75rem' : '0.75rem'};
           `;
           
           // Todos header badge - nicer styling for Obsidian
           const todoItems = this.extractTodoItems(contentText);
           const todosHeader = createElement('div');
           (todosHeader as HTMLElement).style.cssText = `
-            background: hsl(var(--muted) / 0.4);
-            color: var(--muted-foreground);
-            padding: 0.375rem 0.625rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 500;
+            background: hsl(var(--secondary));
+            color: hsl(var(--foreground) / 0.6);
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.45rem;
+            font-size: 0.6875rem;
+            font-weight: 600;
             display: inline-block;
-            margin-bottom: 0.875rem;
-            opacity: 0.8;
+            margin-bottom: 0.625rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border: 1px solid hsl(var(--border) / 0.6);
             font-family: var(--font-sans, 'Manrope', sans-serif);
           `;
           // Count completed (first item is checked)
@@ -543,7 +558,7 @@ export class Timeline extends Component {
           // Todo items with checkboxes
           todoItems.forEach((todo, todoIndex) => {
             const todoItem = createElement('div', {
-              className: 'flex items-center gap-3 py-1.5',
+              className: 'flex items-center gap-3 py-1',
             });
             
             // Checkbox - circular, filled for first item
@@ -552,11 +567,11 @@ export class Timeline extends Component {
             });
             const isChecked = todoIndex === 0;
             (checkbox as HTMLElement).style.cssText = `
-              width: 18px;
-              height: 18px;
+              width: 16px;
+              height: 16px;
               border-radius: 50%;
-              border: ${isChecked ? 'none' : '1.5px solid hsl(var(--border) / 0.6)'};
-              background: ${isChecked ? 'hsl(var(--primary) / 0.8)' : 'transparent'};
+              border: ${isChecked ? 'none' : '1px solid hsl(var(--border) / 0.7)'};
+              background: ${isChecked ? 'hsl(var(--primary) / 0.85)' : 'transparent'};
               cursor: pointer;
               transition: all 0.15s;
               display: flex;
@@ -582,9 +597,9 @@ export class Timeline extends Component {
             const todoText = createElement('span');
             (todoText as HTMLElement).style.cssText = `
               font-family: var(--font-sans, 'Manrope', sans-serif);
-              font-size: 0.875rem;
+              font-size: 0.8125rem;
               color: ${isChecked ? 'hsl(var(--primary) / 0.9)' : 'var(--foreground)'};
-              opacity: ${isChecked ? '1' : '0.7'};
+              opacity: ${isChecked ? '1' : '0.75'};
               font-weight: ${isChecked ? '500' : '400'};
             `;
             todoText.textContent = todo;
@@ -598,7 +613,7 @@ export class Timeline extends Component {
 
         // Footer with source badge inline
         const footer = createElement('div', {
-          className: 'flex items-center gap-2 mt-3',
+          className: 'flex items-center gap-2 mt-2',
         });
         
         // Source badge ("using X") inline
@@ -606,13 +621,14 @@ export class Timeline extends Component {
           className: 'inline-flex items-center gap-1.5',
         });
         (sourceBadge as HTMLElement).style.cssText = `
-          background: hsl(var(--muted) / 0.5);
-          padding: 0.25rem 0.5rem;
+          background: hsl(var(--secondary));
+          padding: 0.2rem 0.45rem;
           border-radius: 0.375rem;
-          font-size: 0.75rem;
-          font-weight: 500;
-          color: var(--muted-foreground);
-          opacity: 0.7;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          color: hsl(var(--foreground) / 0.55);
+          border: 1px solid hsl(var(--border) / 0.6);
+          letter-spacing: 0.02em;
         `;
         
         const sourceIconSpan = createElement('span');
@@ -640,9 +656,9 @@ export class Timeline extends Component {
         });
         (absoluteTime as HTMLElement).style.cssText = `
           font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.75rem;
-          color: var(--muted-foreground);
-          opacity: 0.4;
+          font-size: 0.6875rem;
+          color: hsl(var(--muted-foreground));
+          opacity: 0.55;
           white-space: nowrap;
         `;
         const timeStr = formatTime(item.timestamp);
@@ -696,7 +712,7 @@ export class Timeline extends Component {
   
   private getSourceIconSmall(source: SourceType): string {
     const url = this.iconUrls[source];
-    return url ? `<img src="${url}" class="w-5 h-5 rounded-md" />` : `<div class="w-5 h-5 bg-muted rounded-md"></div>`;
+    return url ? `<img src="${url}" class="w-4 h-4 rounded-sm" />` : `<div class="w-4 h-4 bg-muted rounded-sm"></div>`;
   }
   
   private getSourceIconLarge(source: SourceType): string {
@@ -838,11 +854,11 @@ export class Timeline extends Component {
     // Title - prominent
     const title = createElement('h3');
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 1.125rem;
+      font-family: var(--font-display, 'Fraunces', serif);
+      font-size: 1rem;
       font-weight: 600;
       color: var(--foreground);
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.4rem 0;
       line-height: 1.4;
     `;
     title.textContent = note.title || 'Untitled';
@@ -852,10 +868,10 @@ export class Timeline extends Component {
     const date = createElement('div');
     (date as HTMLElement).style.cssText = `
       font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       color: var(--muted-foreground);
-      margin-bottom: 0.75rem;
-      opacity: 0.8;
+      margin-bottom: 0.5rem;
+      opacity: 0.75;
     `;
     const dateObj = new Date(note.mtime);
     date.textContent = dateObj.toLocaleDateString('en-US', { 
@@ -879,10 +895,10 @@ export class Timeline extends Component {
     const previewDiv = createElement('div');
     (previewDiv as HTMLElement).style.cssText = `
       font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 0.875rem;
-      line-height: 1.6;
+      font-size: 0.8125rem;
+      line-height: 1.55;
       color: var(--foreground);
-      margin-bottom: ${hasLink ? '0.5rem' : '0.75rem'};
+      margin-bottom: ${hasLink ? '0.4rem' : '0.6rem'};
       opacity: 0.9;
     `;
     
@@ -904,11 +920,11 @@ export class Timeline extends Component {
       });
       (linkEl as HTMLElement).style.cssText = `
         font-family: var(--font-sans, 'Manrope', sans-serif);
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: hsl(var(--primary));
         text-decoration: underline;
         text-underline-offset: 2px;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
         display: inline-block;
         transition: opacity 0.2s;
       `;
@@ -929,7 +945,7 @@ export class Timeline extends Component {
     const text = this.extractPreviewText(item) || 'No preview available';
 
     // Regular text content
-    const wrapper = createElement('div', { className: 'text-sm leading-relaxed' });
+    const wrapper = createElement('div', { className: 'text-[13px] leading-relaxed' });
     wrapper.textContent = text;
     return wrapper;
   }
@@ -947,12 +963,12 @@ export class Timeline extends Component {
   private renderEmptyState(): void {
     if (!this.itemsContainer) return;
     this.itemsContainer.innerHTML = `
-      <div class="flex flex-col items-center justify-center py-32 text-center opacity-50">
-        <div class="w-24 h-24 rounded-full bg-secondary mb-6 flex items-center justify-center">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div class="flex flex-col items-center justify-center py-24 text-center opacity-60">
+        <div class="w-20 h-20 rounded-full bg-secondary mb-5 flex items-center justify-center">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </div>
-        <h3 class="text-xl font-semibold">Your timeline is quiet</h3>
-        <p class="text-sm mt-2 max-w-xs">Connect more apps to see your day unfold here.</p>
+        <h3 class="text-lg font-semibold">Your timeline is quiet</h3>
+        <p class="text-[13px] mt-2 max-w-xs text-muted-foreground">Connect more apps to see your day unfold here.</p>
       </div>
     `;
   }

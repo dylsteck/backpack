@@ -53,9 +53,6 @@ export interface RouteParams {
   appId?: string;
 }
 
-// Theme
-export type ThemeMode = 'light' | 'dark' | 'system';
-
 // Filter configs
 export interface SourceFilterConfig {
   type: 'source';

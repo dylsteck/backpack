@@ -31,34 +31,6 @@ const net__namespace = /* @__PURE__ */ _interopNamespaceDefault(net);
 const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
 const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
 const os__namespace = /* @__PURE__ */ _interopNamespaceDefault(os);
-const THEME_MODE_CURRENT_CHANNEL = "theme-mode:current";
-const THEME_MODE_TOGGLE_CHANNEL = "theme-mode:toggle";
-const THEME_MODE_DARK_CHANNEL = "theme-mode:dark";
-const THEME_MODE_LIGHT_CHANNEL = "theme-mode:light";
-const THEME_MODE_SYSTEM_CHANNEL = "theme-mode:system";
-function addThemeEventListeners() {
-  require$$0.ipcMain.handle(THEME_MODE_CURRENT_CHANNEL, () => require$$0.nativeTheme.themeSource);
-  require$$0.ipcMain.handle(THEME_MODE_TOGGLE_CHANNEL, () => {
-    if (require$$0.nativeTheme.shouldUseDarkColors) {
-      require$$0.nativeTheme.themeSource = "light";
-    } else {
-      require$$0.nativeTheme.themeSource = "dark";
-    }
-    return require$$0.nativeTheme.shouldUseDarkColors;
-  });
-  require$$0.ipcMain.handle(
-    THEME_MODE_DARK_CHANNEL,
-    () => require$$0.nativeTheme.themeSource = "dark"
-  );
-  require$$0.ipcMain.handle(
-    THEME_MODE_LIGHT_CHANNEL,
-    () => require$$0.nativeTheme.themeSource = "light"
-  );
-  require$$0.ipcMain.handle(THEME_MODE_SYSTEM_CHANNEL, () => {
-    require$$0.nativeTheme.themeSource = "system";
-    return require$$0.nativeTheme.shouldUseDarkColors;
-  });
-}
 const WIN_MINIMIZE_CHANNEL = "window:minimize";
 const WIN_MAXIMIZE_CHANNEL = "window:maximize";
 const WIN_CLOSE_CHANNEL = "window:close";
@@ -840,7 +812,6 @@ function addObsidianEventListeners() {
 }
 function registerListeners(mainWindow2) {
   addWindowEventListeners(mainWindow2);
-  addThemeEventListeners();
   addChromeEventListeners();
   addBraveEventListeners();
   addDatabaseEventListeners();
