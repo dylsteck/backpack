@@ -97,7 +97,7 @@ export class Layout extends Component {
         id: 'search-button-topbar',
       },
     });
-    // Ensure button is clickable and above other elements
+    // Ensure button is clickable and above other elements - CRITICAL: must have pointer-events
     (this.searchButtonEl as HTMLElement).style.cssText = `
       pointer-events: auto !important;
       z-index: 101 !important;
@@ -105,6 +105,7 @@ export class Layout extends Component {
       cursor: pointer !important;
       -webkit-app-region: no-drag !important;
       user-select: none;
+      touch-action: manipulation;
     `;
     this.searchButtonEl.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -115,25 +116,55 @@ export class Layout extends Component {
       <kbd class="px-1.5 py-0.5 text-[10px] font-technical bg-muted/60 text-muted-foreground rounded-full border border-border/40">⌘K</kbd>
     `;
     
-    // Attach click handler directly - simple and direct
-    const handleClick = (e: Event) => {
+    // Attach click handler directly - ensure it works
+    const handleClick = (e: MouseEvent | PointerEvent) => {
+      console.log('[Layout] Search button clicked!', e.type, e.target, e.currentTarget);
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      console.log('[Layout] Search button clicked, navigating to /search');
-      // Direct navigation - set hash and update store
-      window.location.hash = '/search';
-      store.currentRoute.set('/search');
-      // Also trigger hashchange manually in case it doesn't fire
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      // Use router.navigate which handles both hash and store updates
+      router.navigate('/search');
+      return false;
     };
     
-    // Use both onclick and addEventListener for maximum compatibility
-    this.searchButtonEl.onclick = handleClick;
+    // Attach handler using component's method (for cleanup)
     this.addListener(this.searchButtonEl, 'click', handleClick);
+    
+    // Also attach directly as backup
+    this.searchButtonEl.onclick = handleClick;
+    
+    // Test if button receives events
+    this.searchButtonEl.addEventListener('mouseenter', () => {
+      console.log('[Layout] Search button mouseenter - button is interactive');
+    });
     
     this.topbarTitleEl.appendChild(this.searchButtonEl);
     this.container.appendChild(this.topbarTitleEl);
+    
+    // Ensure button handlers are attached after DOM insertion
+    // Use requestAnimationFrame to ensure button is fully in DOM
+    requestAnimationFrame(() => {
+      if (this.searchButtonEl && this.searchButtonEl.isConnected) {
+        // Re-attach handlers to ensure they work
+        const handleClick = (e: MouseEvent | PointerEvent) => {
+          console.log('[Layout] Search button clicked!', e.type, e.target, e.currentTarget);
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          router.navigate('/search');
+          return false;
+        };
+        
+        // Clear any existing handlers
+        this.searchButtonEl.onclick = null;
+        
+        // Attach fresh handlers
+        this.searchButtonEl.addEventListener('click', handleClick, { capture: true, passive: false });
+        this.searchButtonEl.onclick = handleClick;
+        
+        console.log('[Layout] Search button handlers attached, button:', this.searchButtonEl);
+      }
+    });
     
     this.searchHandlersAttached = true;
 
@@ -178,10 +209,14 @@ export class Layout extends Component {
       position: relative;
     `;
     
-    // Drag region
+    // Drag region - but don't block search button area
     const dragRegion = createElement('div', {
       className: 'draglayer h-[48px] shrink-0',
     });
+    (dragRegion as HTMLElement).style.cssText = `
+      pointer-events: auto;
+      -webkit-app-region: drag;
+    `;
     contentStack.appendChild(dragRegion);
 
     // Content container
@@ -246,15 +281,23 @@ export class Layout extends Component {
     const handleClick = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       console.log('[Layout] Search clicked, navigating to /search');
-      // Direct navigation - set hash and update store
-      window.location.hash = '/search';
-      store.currentRoute.set('/search');
+      // Use router.navigate which handles both hash and store updates
+      router.navigate('/search');
     };
     
     // Attach handler directly
     this.searchButtonEl.onclick = handleClick;
     this.addListener(this.searchButtonEl, 'click', handleClick);
+    
+    // Also add mousedown as backup
+    this.addListener(this.searchButtonEl, 'mousedown', (e) => {
+      if ((e as MouseEvent).button === 0) {
+        e.preventDefault();
+        router.navigate('/search');
+      }
+    });
 
     this.searchHandlersAttached = true;
   }

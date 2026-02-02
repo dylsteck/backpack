@@ -45,23 +45,24 @@ export class VaultGrid extends Component {
     });
     
     const title = createElement('h1', {
-      className: 'text-lg font-display tracking-tight',
+      className: 'text-lg font-sans tracking-tight',
       textContent: 'Vault',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-display);
+      font-family: var(--font-sans, 'Manrope', sans-serif);
       font-weight: 600;
       letter-spacing: -0.01em;
     `;
     titleSection.appendChild(title);
     
     const subtitle = createElement('p', {
-      className: 'text-[11px] font-technical uppercase tracking-[0.22em] text-muted-foreground',
+      className: 'text-[11px] font-sans uppercase tracking-wider text-muted-foreground',
       textContent: 'Connected Apps',
     });
     (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-mono);
-      letter-spacing: 0.22em;
+      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-weight: 500;
+      letter-spacing: 0.05em;
     `;
     titleSection.appendChild(subtitle);
     

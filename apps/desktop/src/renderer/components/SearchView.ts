@@ -35,10 +35,15 @@ export class SearchView extends Component {
 	private lastError: string | null = null;
 	private syncStartTime: number = 0;
 	private syncTimer: ReturnType<typeof setInterval> | null = null;
+	private loadMoreRef: HTMLElement | null = null;
+	private observer: IntersectionObserver | null = null;
+	private isLoadingMore: boolean = false;
+	private currentLimit: number = 50;
 
 	async init(): Promise<void> {
 		this.render();
 		this.setupKeyboardShortcuts();
+		this.setupInfiniteScroll();
 		// Focus input on mount
 		setTimeout(() => this.input?.focus(), 100);
 	}
@@ -85,7 +90,15 @@ export class SearchView extends Component {
 		});
 		(inputContainer as HTMLElement).style.cssText = `
 			-webkit-app-region: no-drag;
+			pointer-events: auto !important;
 		`;
+		// Ensure container doesn't block input clicks
+		this.addListener(inputContainer, 'click', (e) => {
+			if (e.target === inputContainer || (e.target as HTMLElement).tagName !== 'INPUT') {
+				console.log('[SearchView] Container clicked, focusing input...');
+				this.input?.focus();
+			}
+		});
 
 		// Search icon
 		const searchIcon = createElement('svg', {
@@ -107,7 +120,17 @@ export class SearchView extends Component {
 		}) as HTMLInputElement;
 		(this.input as HTMLInputElement).style.cssText = `
 			-webkit-app-region: no-drag;
+			pointer-events: auto !important;
+			cursor: text !important;
 		`;
+		// Ensure input is clickable and focusable
+		this.addListener(this.input, 'click', () => {
+			console.log('[SearchView] Input clicked, focusing...');
+			this.input?.focus();
+		});
+		this.addListener(this.input, 'focus', () => {
+			console.log('[SearchView] Input focused');
+		});
 		inputContainer.appendChild(this.input);
 
 		// Keyboard shortcut hint - subtle
@@ -162,6 +185,7 @@ export class SearchView extends Component {
 		this.resultsContainer = createElement('div', {
 			className: 'flex-1 overflow-y-auto px-8 py-6 max-w-6xl mx-auto w-full',
 		});
+		
 		this.container.appendChild(this.resultsContainer);
 
 		// Event listeners
@@ -215,23 +239,26 @@ export class SearchView extends Component {
 		this.renderResults();
 
 		this.searchTimeout = setTimeout(async () => {
-			await this.search(query);
+			this.currentLimit = 50; // Reset limit for new search
+			await this.search(query, false);
 		}, 100); // Reduced debounce from 150ms to 100ms for faster response
 	}
 
-	private async search(query: string): Promise<void> {
+	private async search(query: string, append: boolean = false): Promise<void> {
 		try {
 			if (!window.searchApi) {
 				console.error('Search API not available');
-				this.results = [];
-				this.lastError = 'Search API not available';
+				if (!append) {
+					this.results = [];
+					this.lastError = 'Search API not available';
+				}
 				this.isSearching = false;
 				this.renderResults();
 				return;
 			}
 
 			// Add timeout wrapper to prevent hanging forever - reduced to 8s for faster feedback
-			const searchPromise = window.searchApi.search(query, 50);
+			const searchPromise = window.searchApi.search(query, this.currentLimit);
 			const timeoutPromise = new Promise<never>((_, reject) => {
 				setTimeout(() => reject(new Error('Search timed out after 8 seconds')), 8000);
 			});
@@ -240,34 +267,58 @@ export class SearchView extends Component {
 
 			if (response?.error) {
 				console.warn('Search API error:', response.error);
-				this.results = [];
-				this.lastError = response.error;
+				if (!append) {
+					this.results = [];
+					this.lastError = response.error;
+				}
 			} else if (response && Array.isArray(response.results)) {
-				this.results = response.results;
+				if (append) {
+					// Append new results, avoiding duplicates
+					const existingIds = new Set(this.results.map(r => r.id));
+					const newResults = response.results.filter(r => !existingIds.has(r.id));
+					this.results = [...this.results, ...newResults];
+					console.log(`[Search] Loaded ${newResults.length} more results, total: ${this.results.length}`);
+				} else {
+					this.results = response.results;
+					this.currentLimit = 50; // Reset limit for new search
+				}
 			} else {
 				console.warn('Invalid search response:', response);
-				this.results = [];
-				this.lastError = 'Invalid search response';
+				if (!append) {
+					this.results = [];
+					this.lastError = 'Invalid search response';
+				}
 			}
 
 			this.isSearching = false;
-			this.selectedIndex = 0;
+			this.isLoadingMore = false;
+			if (!append) {
+				this.selectedIndex = 0;
+			}
 			this.renderResults();
 		} catch (error) {
 			console.error('Search error:', error);
-			this.results = [];
-			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			this.lastError = errorMessage.includes('timeout') || errorMessage.includes('timed out')
-				? 'Search timed out. Try a simpler query or check if QMD is running.'
-				: errorMessage;
+			if (!append) {
+				this.results = [];
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+				this.lastError = errorMessage.includes('timeout') || errorMessage.includes('timed out')
+					? 'Search timed out. Try a simpler query or check if QMD is running.'
+					: errorMessage;
+			}
 			this.isSearching = false;
+			this.isLoadingMore = false;
 			this.renderResults();
 		}
 	}
 
 	private renderResults(): void {
 		if (!this.resultsContainer) return;
+		
+		// Save loadMoreRef before clearing
+		const savedLoadMoreRef = this.loadMoreRef;
 		clearChildren(this.resultsContainer);
+		// Restore loadMoreRef
+		this.loadMoreRef = savedLoadMoreRef;
 
 		if (this.isSearching) {
 			const searching = createElement('div', {
@@ -494,6 +545,45 @@ export class SearchView extends Component {
 		});
 
 		this.resultsContainer.appendChild(resultsList);
+		
+		// Add load more trigger at the end for infinite scroll
+		if (this.results.length > 0 && !this.isSearching && !this.lastError) {
+			if (!this.loadMoreRef) {
+				this.loadMoreRef = createElement('div', { className: 'h-8' });
+			}
+			// Remove from old parent if exists
+			if (this.loadMoreRef.parentElement && this.loadMoreRef.parentElement !== this.resultsContainer) {
+				this.loadMoreRef.parentElement.removeChild(this.loadMoreRef);
+			}
+			// Add to results container
+			if (!this.resultsContainer.contains(this.loadMoreRef)) {
+				this.resultsContainer.appendChild(this.loadMoreRef);
+			}
+			
+			// Observe for infinite scroll
+			if (this.observer && this.loadMoreRef) {
+				this.observer.observe(this.loadMoreRef);
+			}
+		} else if (this.loadMoreRef && this.observer) {
+			// Disconnect observer when no more results to load
+			this.observer.unobserve(this.loadMoreRef);
+		}
+	}
+	
+	private setupInfiniteScroll(): void {
+		// Create observer that will observe loadMoreRef when it's added
+		this.observer = new IntersectionObserver((entries) => {
+			if (entries[0]?.isIntersecting && !this.isLoadingMore && !this.isSearching && this.lastQuery && this.results.length > 0) {
+				this.isLoadingMore = true;
+				this.currentLimit += 50; // Load 50 more results
+				console.log(`[Search] Loading more results, limit: ${this.currentLimit}`);
+				this.search(this.lastQuery, true).finally(() => {
+					this.isLoadingMore = false;
+				});
+			}
+		}, { rootMargin: '400px' });
+		
+		this.registerCleanup(() => this.observer?.disconnect());
 	}
 
 	private handleKeydown(e: KeyboardEvent): void {

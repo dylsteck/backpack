@@ -20,21 +20,42 @@ export class AddAppsModal extends Component {
     this.render();
 
     // Subscribe to apps and loading changes
-    this.subscribe(store.apps, () => this.renderAppsGrid());
-    this.subscribe(store.appsLoading, () => this.renderAppsGrid());
+    this.subscribe(store.apps, () => {
+      console.log('[AddAppsModal] Apps store updated, re-rendering grid');
+      this.renderAppsGrid();
+    });
+    this.subscribe(store.appsLoading, () => {
+      console.log('[AddAppsModal] Apps loading state changed:', store.appsLoading.get());
+      this.renderAppsGrid();
+    });
 
-    // Ensure apps are loaded
-    await this.loadApps();
+    // Ensure apps are loaded - don't wait, let it load in background
+    this.loadApps().catch(err => {
+      console.error('[AddAppsModal] Error loading apps:', err);
+      this.renderAppsGrid();
+    });
+    
+    // Also check if apps are already loaded
+    const currentApps = store.apps.get();
+    if (currentApps.length > 0) {
+      console.log('[AddAppsModal] Apps already in store, rendering immediately');
+      this.renderAppsGrid();
+    }
   }
 
   private async loadApps(): Promise<void> {
     try {
+      console.log('[AddAppsModal] Loading apps...');
       // Clear cache to ensure fresh data
       appsCache.clear();
-      await fetchAppsWithCache();
+      const apps = await fetchAppsWithCache();
+      console.log('[AddAppsModal] Loaded apps:', apps.length, apps.map(a => ({ id: a.id, name: a.name, connection: a.connection?.status })));
+      // Force re-render after loading
+      this.renderAppsGrid();
     } catch (error) {
-      console.error('Failed to load apps:', error);
+      console.error('[AddAppsModal] Failed to load apps:', error);
       // Even on error, renderAppsGrid will use fallback apps
+      this.renderAppsGrid();
     }
   }
 
@@ -134,11 +155,17 @@ export class AddAppsModal extends Component {
     if (!gridContainer) return;
 
     const apps = store.apps.get();
+    console.log('[AddAppsModal] Apps in store:', apps.length, apps.map(a => ({ id: a.id, name: a.name, connection: a.connection?.status })));
+    
     // Filter to show only unconnected apps (connection is null or status is not 'connected')
     const unconnectedApps = apps.filter(app => {
       const connectionStatus = app.connection?.status;
-      return connectionStatus !== 'connected';
+      const isUnconnected = connectionStatus !== 'connected';
+      console.log(`[AddAppsModal] App ${app.id}: connection=${connectionStatus}, isUnconnected=${isUnconnected}`);
+      return isUnconnected;
     });
+
+    console.log('[AddAppsModal] Unconnected apps:', unconnectedApps.length);
 
     clearChildren(gridContainer);
 
@@ -157,6 +184,7 @@ export class AddAppsModal extends Component {
 
     if (apps.length === 0) {
       // No apps available - show error state
+      console.warn('[AddAppsModal] No apps in store');
       gridContainer.innerHTML = `
         <div class="col-span-full text-center py-12 px-6">
           <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
@@ -173,6 +201,7 @@ export class AddAppsModal extends Component {
     }
 
     if (unconnectedApps.length === 0) {
+      console.log('[AddAppsModal] All apps are connected');
       gridContainer.innerHTML = `
         <div class="col-span-full text-center py-12 px-6">
           <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
@@ -187,6 +216,7 @@ export class AddAppsModal extends Component {
     }
 
     // Render unconnected apps
+    console.log('[AddAppsModal] Rendering', unconnectedApps.length, 'unconnected apps');
     for (const app of unconnectedApps) {
       const card = this.createAppCard(app);
       gridContainer.appendChild(card);

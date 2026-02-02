@@ -994,7 +994,7 @@ function registerSearchListeners() {
     if (limit) {
       args.push("-n", String(limit));
     }
-    const result = await execCli("cortex", args, { timeoutMs: 1e4 });
+    const result = await execCli("cortex", args, { timeoutMs: 8e3 });
     if (result.success && result.data) {
       return result.data;
     }
