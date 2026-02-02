@@ -30,56 +30,57 @@ export class VaultGrid extends Component {
   render(): void {
     this.container.innerHTML = '';
     
-    // Create inner wrapper for vault content
-    const wrapper = createElement('div', {
-      className: 'flex flex-col w-full p-5',
+    // Main container matching Timeline style
+    const mainContainer = createElement('div', {
+      className: 'flex flex-col h-full relative bg-gradient-soft',
     });
     
-    // Header with title and action buttons
-    this.headerContainer = createElement('div', {
-      className: 'flex items-center justify-between mb-5',
+    // Header matching Timeline style
+    const header = createElement('header', {
+      className: 'flex items-center justify-between px-6 pt-5 pb-2 z-20',
     });
     
     const titleSection = createElement('div', {
-      className: 'flex-1',
+      className: 'flex flex-col gap-0.5',
     });
     
     const title = createElement('h1', {
-      className: 'text-xl font-sans text-foreground',
+      className: 'text-lg font-display tracking-tight',
       textContent: 'Vault',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
+      font-family: var(--font-display);
       font-weight: 600;
-      font-size: 1.25rem;
       letter-spacing: -0.01em;
     `;
     titleSection.appendChild(title);
     
     const subtitle = createElement('p', {
-      className: 'text-xs text-muted-foreground mt-1',
-      textContent: 'Your connected apps',
+      className: 'text-[11px] font-technical uppercase tracking-[0.22em] text-muted-foreground',
+      textContent: 'Connected Apps',
     });
     (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
+      font-family: var(--font-mono);
+      letter-spacing: 0.22em;
     `;
     titleSection.appendChild(subtitle);
     
-    this.headerContainer.appendChild(titleSection);
+    header.appendChild(titleSection);
     
-    // Action buttons
+    // Action buttons - refined minimal style
     const actionsContainer = createElement('div', {
-      className: 'flex items-center gap-3',
+      className: 'flex items-center gap-2',
     });
     
     // Add Apps button
     const addButton = createElement('button', {
-      className: 'flex items-center justify-center w-9 h-9 rounded-lg bg-card border border-border/60 text-foreground transition-all hover-lift hover:bg-secondary/70',
+      className: 'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-border/40 bg-card/70',
       attributes: {
         'aria-label': 'Add Apps',
         'title': 'Add Apps',
+        type: 'button',
       },
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
     });
     
     this.addListener(addButton, 'click', () => {
@@ -90,12 +91,13 @@ export class VaultGrid extends Component {
     
     // Manage Connections button
     const manageButton = createElement('button', {
-      className: 'flex items-center justify-center w-9 h-9 rounded-lg bg-card border border-border/60 text-foreground transition-all hover-lift hover:bg-secondary/70',
+      className: 'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-border/40 bg-card/70',
       attributes: {
         'aria-label': 'Manage Connections',
         'title': 'Manage Connections',
+        type: 'button',
       },
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
     });
     
     this.addListener(manageButton, 'click', () => {
@@ -104,16 +106,29 @@ export class VaultGrid extends Component {
     
     actionsContainer.appendChild(manageButton);
     
-    this.headerContainer.appendChild(actionsContainer);
-    wrapper.appendChild(this.headerContainer);
+    header.appendChild(actionsContainer);
+    mainContainer.appendChild(header);
+    
+    // Scroll area matching Timeline
+    const scrollArea = createElement('div', {
+      className: 'flex-1 overflow-y-auto min-h-0 pt-2',
+    });
+    
+    // Content wrapper matching Timeline
+    const wrapper = createElement('div', {
+      className: 'max-w-6xl mx-auto pb-24 px-6 md:px-8 relative w-full',
+    });
     
     // Grid container
     this.gridContainer = createElement('div', {
-      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5',
+      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
     });
     wrapper.appendChild(this.gridContainer);
     
-    this.container.appendChild(wrapper);
+    scrollArea.appendChild(wrapper);
+    mainContainer.appendChild(scrollArea);
+    
+    this.container.appendChild(mainContainer);
     
     // Initial render
     this.renderGrid();
@@ -131,11 +146,23 @@ export class VaultGrid extends Component {
     const isLoading = store.appsLoading.get();
     
     if (isLoading && this.gridContainer) {
-      this.gridContainer.innerHTML = `
-        <div class="col-span-full flex items-center justify-center py-12">
-          <div class="text-sm text-muted-foreground">Loading...</div>
-        </div>
-      `;
+      const loadingState = createElement('div', {
+        className: 'col-span-full flex flex-col items-center justify-center min-h-[400px] text-center py-16',
+      });
+      
+      const spinner = createElement('div', {
+        className: 'w-8 h-8 rounded-full border-2 border-muted border-t-foreground/30 animate-spin mb-3',
+      });
+      loadingState.appendChild(spinner);
+      
+      const text = createElement('div', {
+        className: 'text-sm text-muted-foreground',
+        textContent: 'Loading apps...',
+      });
+      loadingState.appendChild(text);
+      
+      clearChildren(this.gridContainer);
+      this.gridContainer.appendChild(loadingState);
     }
   }
   
@@ -163,63 +190,57 @@ export class VaultGrid extends Component {
   private renderEmptyState(): void {
     if (!this.gridContainer) return;
     
-    this.gridContainer.innerHTML = `
-      <div class="col-span-full text-center py-14 px-6">
-        <div class="max-w-sm mx-auto space-y-4">
-          <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
-              <rect width="7" height="7" x="3" y="3" rx="1"/>
-              <rect width="7" height="7" x="14" y="3" rx="1"/>
-              <rect width="7" height="7" x="14" y="14" rx="1"/>
-              <rect width="7" height="7" x="3" y="14" rx="1"/>
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-semibold text-foreground mb-2">No Connected Apps</h3>
-            <p class="text-xs text-muted-foreground">Add apps to your vault to start syncing your data</p>
-          </div>
-          <button class="px-4 py-2 bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors mx-auto rounded-lg" data-add-apps>
-            Add Apps
-          </button>
-        </div>
-      </div>
+    const emptyState = createElement('div', {
+      className: 'col-span-full flex flex-col items-center justify-center min-h-[400px] text-center py-16',
+    });
+    
+    const icon = createElement('div', {
+      className: 'w-12 h-12 rounded-full bg-muted/40 flex items-center justify-center mb-3',
+    });
+    icon.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground">
+        <rect width="7" height="7" x="3" y="3" rx="1"/>
+        <rect width="7" height="7" x="14" y="3" rx="1"/>
+        <rect width="7" height="7" x="14" y="14" rx="1"/>
+        <rect width="7" height="7" x="3" y="14" rx="1"/>
+      </svg>
     `;
+    emptyState.appendChild(icon);
     
-    // Apply modern fonts to text elements
-    const heading = this.gridContainer.querySelector('h3');
-    if (heading) {
-      (heading as HTMLElement).style.cssText = `
-        font-family: var(--font-sans);
-        font-weight: 600;
-        letter-spacing: -0.01em;
-      `;
-    }
+    const text = createElement('div', {
+      className: 'text-muted-foreground',
+    });
+    text.innerHTML = `
+      <div class="text-sm font-medium mb-1">No Connected Apps</div>
+      <div class="text-xs text-muted-foreground/80">Add apps to your vault to start syncing your data</div>
+    `;
+    emptyState.appendChild(text);
     
-    const subtitle = this.gridContainer.querySelector('p');
-    if (subtitle) {
-      (subtitle as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, 'Manrope', sans-serif);
-      `;
-    }
+    const addButton = createElement('button', {
+      className: 'mt-4 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      attributes: {
+        type: 'button',
+        'aria-label': 'Add Apps',
+      },
+      textContent: 'Add Apps',
+    });
+    (addButton as HTMLElement).style.cssText = `
+      font-family: var(--font-sans);
+      font-weight: 500;
+    `;
+    this.addListener(addButton, 'click', () => {
+      this.showAddAppsModal();
+    });
+    emptyState.appendChild(addButton);
     
-    const addButton = this.gridContainer.querySelector('[data-add-apps]');
-    if (addButton) {
-      (addButton as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, 'Manrope', sans-serif);
-        font-weight: 500;
-        letter-spacing: 0.01em;
-      `;
-      this.addListener(addButton as HTMLElement, 'click', () => {
-        this.showAddAppsModal();
-      });
-    }
+    this.gridContainer.appendChild(emptyState);
   }
   
   private createAppCard(app: AppServer): HTMLElement {
     const isConnected = app.connection?.status === 'connected';
 
     const card = createElement('div', {
-      className: 'card-modern group relative flex flex-col items-center p-6 border border-border/70 bg-card hover:bg-secondary/60 transition-all cursor-pointer hover-lift rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+      className: 'group relative flex flex-col items-center p-5 border border-border/50 bg-card/70 hover:bg-muted/40 transition-all cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       dataset: { appId: app.id },
       attributes: {
         role: 'button',
@@ -228,18 +249,18 @@ export class VaultGrid extends Component {
       },
     });
 
-    // Connection status indicator
+    // Connection status indicator - refined minimal style
     const statusDot = createElement('div', {
       className: `absolute top-3 right-3 w-2 h-2 rounded-full ${
-        isConnected ? 'bg-status-connected pulse-slow' : 'bg-muted-foreground/30'
+        isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'
       }`,
     });
     card.appendChild(statusDot);
     
-    // Icon - larger size
+    // Icon - refined size
     if (app.iconUrl) {
       const icon = createElement('img', {
-        className: 'w-14 h-14 object-contain mb-3',
+        className: 'w-12 h-12 object-contain mb-3',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
@@ -249,27 +270,27 @@ export class VaultGrid extends Component {
       card.appendChild(icon);
     } else {
       const placeholder = createElement('div', {
-        className: 'w-14 h-14 bg-muted mb-3 flex items-center justify-center text-muted-foreground rounded-lg',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
+        className: 'w-12 h-12 bg-muted/40 mb-3 flex items-center justify-center text-muted-foreground rounded-lg',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
       });
       card.appendChild(placeholder);
     }
     
-    // Name
+    // Name - refined typography
     const name = createElement('p', {
-      className: 'text-sm text-center font-semibold',
+      className: 'text-sm text-center font-medium',
       textContent: app.name,
     });
     (name as HTMLElement).style.cssText = `
       font-family: var(--font-sans);
-      font-weight: 600;
+      font-weight: 500;
     `;
     card.appendChild(name);
     
-    // Description (truncated)
+    // Description (truncated) - refined style
     if (app.description) {
       const desc = createElement('p', {
-        className: 'text-xs text-muted-foreground text-center mt-2 line-clamp-2 px-2',
+        className: 'text-xs text-muted-foreground text-center mt-1.5 line-clamp-2 leading-relaxed',
         textContent: app.description,
       });
       (desc as HTMLElement).style.cssText = 'font-family: var(--font-sans);';

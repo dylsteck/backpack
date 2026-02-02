@@ -531,6 +531,10 @@ function addDatabaseEventListeners() {
   });
 }
 const SHELL_OPEN_EXTERNAL_CHANNEL = "shell:open-external";
+const SHELL_CHECK_CLI_INSTALLED = "shell:check-cli-installed";
+const SHELL_INSTALL_CLI = "shell:install-cli";
+const SHELL_CHECK_QMD_INSTALLED = "shell:check-qmd-installed";
+const SHELL_INSTALL_QMD = "shell:install-qmd";
 function addShellEventListeners() {
   require$$0.ipcMain.handle(SHELL_OPEN_EXTERNAL_CHANNEL, async (_event, url) => {
     try {
@@ -539,6 +543,122 @@ function addShellEventListeners() {
       console.error("[Shell] Failed to open external URL:", error);
       throw error;
     }
+  });
+  require$$0.ipcMain.handle(SHELL_CHECK_CLI_INSTALLED, async () => {
+    return new Promise((resolve) => {
+      const proc = child_process.spawn("cortex", ["--version"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: true
+      });
+      let stdout = "";
+      proc.stdout.on("data", (data) => {
+        stdout += data.toString();
+      });
+      proc.on("close", (code) => {
+        resolve({
+          installed: code === 0,
+          version: code === 0 ? stdout.trim() : void 0
+        });
+      });
+      proc.on("error", () => {
+        resolve({ installed: false });
+      });
+    });
+  });
+  require$$0.ipcMain.handle(SHELL_INSTALL_CLI, async () => {
+    return new Promise((resolve) => {
+      const cliPath = path__namespace.join(process.cwd(), "packages", "cli");
+      const buildProc = child_process.spawn("bun", ["run", "build"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: true,
+        cwd: cliPath
+      });
+      let buildStderr = "";
+      buildProc.stderr.on("data", (data) => {
+        buildStderr += data.toString();
+      });
+      buildProc.on("close", (buildCode) => {
+        if (buildCode !== 0) {
+          resolve({
+            success: false,
+            error: `Build failed: ${buildStderr}`
+          });
+          return;
+        }
+        const linkProc = child_process.spawn("bun", ["link"], {
+          stdio: ["ignore", "pipe", "pipe"],
+          shell: true,
+          cwd: cliPath
+        });
+        let linkStderr = "";
+        linkProc.stderr.on("data", (data) => {
+          linkStderr += data.toString();
+        });
+        linkProc.on("close", (linkCode) => {
+          resolve({
+            success: linkCode === 0,
+            error: linkCode !== 0 ? linkStderr : void 0
+          });
+        });
+        linkProc.on("error", (err) => {
+          resolve({
+            success: false,
+            error: err.message
+          });
+        });
+      });
+      buildProc.on("error", (err) => {
+        resolve({
+          success: false,
+          error: err.message
+        });
+      });
+    });
+  });
+  require$$0.ipcMain.handle(SHELL_CHECK_QMD_INSTALLED, async () => {
+    return new Promise((resolve) => {
+      const proc = child_process.spawn("qmd", ["--version"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: true
+      });
+      let stdout = "";
+      proc.stdout.on("data", (data) => {
+        stdout += data.toString();
+      });
+      proc.on("close", (code) => {
+        resolve({
+          installed: code === 0,
+          version: code === 0 ? stdout.trim() : void 0
+        });
+      });
+      proc.on("error", () => {
+        resolve({ installed: false });
+      });
+    });
+  });
+  require$$0.ipcMain.handle(SHELL_INSTALL_QMD, async () => {
+    return new Promise((resolve) => {
+      const proc = child_process.spawn("bun", ["install", "-g", "https://github.com/tobi/qmd"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: true
+      });
+      let stderr = "";
+      proc.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+      proc.on("close", (code) => {
+        resolve({
+          success: code === 0,
+          error: code !== 0 ? stderr : void 0
+        });
+      });
+      proc.on("error", (err) => {
+        resolve({
+          success: false,
+          error: err.message
+        });
+      });
+    });
   });
 }
 const OBSIDIAN_SELECT_VAULT_CHANNEL = "obsidian:select-vault";
@@ -810,6 +930,104 @@ function addObsidianEventListeners() {
     }
   });
 }
+const SEARCH_CHANNELS = {
+  SEARCH: "search:query",
+  EMBED_SYNC: "search:embed-sync"
+};
+async function execCli(cmd, args, options) {
+  return new Promise((resolve) => {
+    const bunBinPath = path.join(os.homedir(), ".bun", "bin");
+    const currentPath = process.env.PATH || "";
+    const env = {
+      ...process.env,
+      PATH: currentPath.includes(bunBinPath) ? currentPath : `${bunBinPath}:${currentPath}`
+    };
+    const proc = child_process.spawn(cmd, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      env,
+      shell: true
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timeoutMs = options?.timeoutMs;
+    const timeout = timeoutMs ? setTimeout(() => {
+      timedOut = true;
+      proc.kill("SIGKILL");
+    }, timeoutMs) : null;
+    proc.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+    proc.on("close", (code) => {
+      if (timeout) clearTimeout(timeout);
+      if (timedOut) {
+        resolve({ success: false, error: `Command timed out after ${timeoutMs}ms` });
+        return;
+      }
+      if (code !== 0) {
+        resolve({ success: false, error: stderr || `Exit code: ${code}` });
+        return;
+      }
+      try {
+        const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : stdout.trim();
+        const parsed = JSON.parse(jsonStr);
+        resolve({ success: true, data: parsed });
+      } catch (err) {
+        console.error("[Search] Failed to parse JSON:", stdout);
+        resolve({ success: false, error: `Failed to parse JSON: ${err instanceof Error ? err.message : "Unknown error"}` });
+      }
+    });
+    proc.on("error", (err) => {
+      if (timeout) clearTimeout(timeout);
+      resolve({ success: false, error: err.message });
+    });
+  });
+}
+function registerSearchListeners() {
+  require$$0.ipcMain.handle(SEARCH_CHANNELS.SEARCH, async (_event, query, limit) => {
+    console.log("[Search] Searching for:", query);
+    const args = ["search", query, "--json"];
+    if (limit) {
+      args.push("-n", String(limit));
+    }
+    const result = await execCli("cortex", args, { timeoutMs: 1e4 });
+    if (result.success && result.data) {
+      return result.data;
+    }
+    console.error("[Search] CLI error:", result.error);
+    return {
+      query,
+      results: [],
+      count: 0,
+      error: result.error
+    };
+  });
+  require$$0.ipcMain.handle(SEARCH_CHANNELS.EMBED_SYNC, async (_event, force) => {
+    console.log("[Search] Starting embed sync, force:", force);
+    const args = ["embed", "--json"];
+    if (force) {
+      args.push("--force");
+    }
+    const result = await execCli("cortex", args, { timeoutMs: 6e4 });
+    if (result.success && result.data) {
+      const data = result.data;
+      return {
+        success: data.success,
+        exportedCount: data.exportedCount,
+        timestamp: Date.now()
+      };
+    }
+    console.error("[Search] Embed sync error:", result.error);
+    return {
+      success: false,
+      error: result.error
+    };
+  });
+}
 function registerListeners(mainWindow2) {
   addWindowEventListeners(mainWindow2);
   addChromeEventListeners();
@@ -817,6 +1035,7 @@ function registerListeners(mainWindow2) {
   addDatabaseEventListeners();
   addShellEventListeners();
   addObsidianEventListeners();
+  registerSearchListeners();
 }
 const safeConsole = {
   log: (...args) => {

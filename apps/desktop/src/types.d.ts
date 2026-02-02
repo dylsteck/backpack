@@ -26,6 +26,14 @@ interface ElectronWindow {
   close: () => Promise<void>;
   openExternal: (url: string) => Promise<void>;
 }
+
+interface ShellApiContext {
+  openExternal: (url: string) => Promise<void>;
+  checkCliInstalled: () => Promise<{ installed: boolean; version?: string }>;
+  installCli: () => Promise<{ success: boolean; error?: string }>;
+  checkQmdInstalled: () => Promise<{ installed: boolean; version?: string }>;
+  installQmd: () => Promise<{ success: boolean; error?: string }>;
+}
 interface ChromeHistoryContext {
   detectHistoryPath: () => Promise<{
     success: boolean;
@@ -129,10 +137,38 @@ interface ObsidianVaultContext {
   }>;
 }
 
+interface SearchResult {
+  id: string;
+  source: string;
+  type: string;
+  title?: string;
+  snippet?: string;
+  score: number;
+  timestamp?: string;
+  data?: unknown;
+}
+
+interface SearchApiContext {
+  search: (query: string, limit?: number) => Promise<{
+    query: string;
+    results: SearchResult[];
+    count: number;
+    error?: string;
+  }>;
+  embedSync: (force?: boolean) => Promise<{
+    success: boolean;
+    exportedCount?: number;
+    error?: string;
+    timestamp?: number;
+  }>;
+}
+
 declare interface Window {
   electronWindow: ElectronWindow;
   chromeHistory: ChromeHistoryContext;
   braveHistory: BraveHistoryContext;
   serverApi: ServerApiContext;
   obsidianVault: ObsidianVaultContext;
+  searchApi: SearchApiContext;
+  shellApi: ShellApiContext;
 }

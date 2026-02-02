@@ -4,6 +4,7 @@ import * as schema from "./schema/mcp";
 import * as browserSchema from "./schema/browser";
 import path from "path";
 import fs from "fs";
+import { readFileSync } from "fs";
 
 // Global database instance
 let db: BunSQLiteDatabase<typeof schema> | null = null;
@@ -104,55 +105,8 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
 			CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
 			CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
-			
-			CREATE TABLE IF NOT EXISTS "browser_history" (
-				"id" text PRIMARY KEY NOT NULL,
-				"url" text NOT NULL,
-				"title" text,
-				"favicon" text,
-				"visited_at" integer NOT NULL,
-				"source" text DEFAULT 'browser' NOT NULL,
-				"created_at" integer NOT NULL
-			);
-			
-			CREATE TABLE IF NOT EXISTS "browser_sessions" (
-				"id" text PRIMARY KEY NOT NULL,
-				"tabs" text,
-				"active_tab_id" text,
-				"created_at" integer NOT NULL,
-				"updated_at" integer NOT NULL
-			);
-			
-			CREATE INDEX IF NOT EXISTS "browser_history_url_idx" ON "browser_history"("url");
-			CREATE INDEX IF NOT EXISTS "browser_history_visited_at_idx" ON "browser_history"("visited_at");
-			CREATE INDEX IF NOT EXISTS "browser_history_source_idx" ON "browser_history"("source");
 		`);
 	}
-	
-	// Always ensure browser tables exist (for existing databases)
-	sqliteDb.exec(`
-		CREATE TABLE IF NOT EXISTS "browser_history" (
-			"id" text PRIMARY KEY NOT NULL,
-			"url" text NOT NULL,
-			"title" text,
-			"favicon" text,
-			"visited_at" integer NOT NULL,
-			"source" text DEFAULT 'browser' NOT NULL,
-			"created_at" integer NOT NULL
-		);
-		
-		CREATE TABLE IF NOT EXISTS "browser_sessions" (
-			"id" text PRIMARY KEY NOT NULL,
-			"tabs" text,
-			"active_tab_id" text,
-			"created_at" integer NOT NULL,
-			"updated_at" integer NOT NULL
-		);
-		
-		CREATE INDEX IF NOT EXISTS "browser_history_url_idx" ON "browser_history"("url");
-		CREATE INDEX IF NOT EXISTS "browser_history_visited_at_idx" ON "browser_history"("visited_at");
-		CREATE INDEX IF NOT EXISTS "browser_history_source_idx" ON "browser_history"("source");
-	`);
 	
 	// Always ensure chat tables exist (for existing databases)
 	sqliteDb.exec(`
@@ -174,7 +128,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 		CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
 	`);
 	
-	// Always ensure apps table exists (for existing databases)
+	// Always ensure core tables exist (for existing databases)
 	sqliteDb.exec(`
 		CREATE TABLE IF NOT EXISTS "apps" (
 			"id" text PRIMARY KEY NOT NULL,
@@ -188,29 +142,69 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			"created_at" integer NOT NULL,
 			"updated_at" integer NOT NULL
 		);
+		
+		CREATE TABLE IF NOT EXISTS "connections" (
+			"id" text PRIMARY KEY NOT NULL,
+			"server_id" text NOT NULL,
+			"server_name" text NOT NULL,
+			"vendor" text,
+			"transport_type" text NOT NULL,
+			"transport_config" text NOT NULL,
+			"status" text DEFAULT 'disconnected' NOT NULL,
+			"secret_uri" text,
+			"credential_storage" text DEFAULT 'onepassword' NOT NULL,
+			"encrypted_credentials" text,
+			"connection_metadata" text,
+			"last_synced_at" integer,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+		
+		CREATE TABLE IF NOT EXISTS "items" (
+			"id" text PRIMARY KEY NOT NULL,
+			"source" text NOT NULL,
+			"type" text NOT NULL,
+			"timestamp" integer NOT NULL,
+			"data" text NOT NULL,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+		
+		CREATE INDEX IF NOT EXISTS "items_source_idx" ON "items"("source");
+		CREATE INDEX IF NOT EXISTS "items_timestamp_idx" ON "items"("timestamp");
+		CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
+		CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
 	`);
 	
-	// Ensure Obsidian exists in apps table (migration for existing DBs)
-	const obsidianExists = sqliteDb.query('SELECT 1 FROM apps WHERE id = ?').get('obsidian');
-	if (!obsidianExists) {
-		const now = Date.now();
-		sqliteDb.run(
-			`INSERT INTO apps (id, name, description, transport, oauth, icon_url, config, connection_type, created_at, updated_at) 
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				'obsidian',
-				'Obsidian',
-				'Connect your Obsidian vault to see notes on your timeline and use AI to edit them.',
-				'[]',
-				0,
-				'https://obsidian.md/images/obsidian-logo-gradient.svg',
-				'{}',
-				'local',
-				now,
-				now
-			]
-		);
-		console.log('[Database] Added Obsidian to existing database');
+	// Run migrations
+	const migrations = [
+		"0002_add_browser_tables.sql",
+		"0003_remove_unused_tables.sql",
+	];
+	
+	for (const migrationFile of migrations) {
+		try {
+			const migrationPath = path.join(__dirname, "migrations", migrationFile);
+			if (fs.existsSync(migrationPath)) {
+				const migrationSQL = readFileSync(migrationPath, "utf-8");
+				sqliteDb.exec(migrationSQL);
+				console.log(`[Database] Applied migration: ${migrationFile}`);
+			}
+		} catch (error) {
+			console.error(`[Database] Failed to run migration ${migrationFile}:`, error);
+			// Continue anyway - migrations might already be applied
+		}
+	}
+	
+	// Seed all default apps (for both new and existing databases)
+	// This ensures all apps are available in the UI
+	try {
+		const { seedDatabase } = require("./seed");
+		seedDatabase(db);
+	} catch (error) {
+		// Log but don't throw - seeding is optional
+		console.error("[Database] Failed to seed apps:", error instanceof Error ? error.message : error);
+		// Continue anyway - apps might already be seeded or database might be read-only
 	}
 
 	return { db, isNew };

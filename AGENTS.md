@@ -51,6 +51,7 @@ cortex/
 │   └── server/           # API server (Elysia + Bun)
 ├── packages/
 │   ├── api/              # Shared tRPC routers and business logic
+│   ├── cli/              # Command-line interface (@cortex/cli)
 │   ├── auth/             # Authentication (Better-Auth)
 │   └── db/               # Database schema and migrations (Drizzle ORM)
 ├── turbo.json           # Turborepo configuration
@@ -760,6 +761,80 @@ See **`apps/desktop/electron-performance-guide.md`** for comprehensive performan
 - First paint: <100ms
 - Frame rate: 60fps (16ms per frame)
 - Memory base: <250MB
+
+---
+
+## Cortex CLI {#cortex-cli}
+
+The CLI is the recommended way for AI agents to interact with Cortex data. All commands support `--json` for machine-readable output.
+
+### Installation
+
+```bash
+# Global install
+bun install -g @cortex/cli
+
+# Or run from monorepo
+cd packages/cli
+bun run src/index.ts <command>
+```
+
+### Available Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `cortex search` | Hybrid search (QMD) | `cortex search "API docs" --json` |
+| `cortex items` | Get items by source | `cortex items --source farcaster --json` |
+| `cortex timeline` | Get timeline items | `cortex timeline --json --limit 50` |
+| `cortex status` | Connection status | `cortex status --json` |
+| `cortex sync` | Trigger data sync | `cortex sync all --json` |
+| `cortex embed` | Update search index | `cortex embed --json` |
+| `cortex get` | Get specific item | `cortex get <id> --json` |
+
+### Agent Usage Examples
+
+```bash
+# Get all Farcaster posts as JSON
+cortex items --source farcaster --json
+
+# Get all Teller transactions
+cortex items --source teller --json
+
+# Search with semantic understanding
+cortex search "what did I post about AI last week" --json
+
+# Get paginated data
+cortex items --source farcaster --limit 100 --json
+# Use nextCursor from response for next page
+cortex items --source farcaster --limit 100 --cursor "..." --json
+
+# Export data as CSV
+cortex items --source teller --csv > transactions.csv
+```
+
+### Search Setup (QMD)
+
+For semantic search capabilities:
+
+```bash
+# Install QMD
+bun install -g https://github.com/tobi/qmd
+
+# Setup collections and context
+cortex embed --setup
+
+# Generate embeddings
+cortex embed
+
+# Now search works with semantic understanding
+cortex search "quarterly planning discussions" --json
+```
+
+### MCP Integration
+
+The MCP server at `apps/server` uses the CLI for data operations. Agents can use either:
+- **MCP tools**: Via the MCP protocol (JSON-RPC)
+- **CLI directly**: For more control and flexibility
 
 ---
 

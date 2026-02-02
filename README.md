@@ -102,6 +102,45 @@ pnpm dev
 
 
 
+## Search
+
+Cortex uses [QMD](https://github.com/tobi/qmd) for hybrid search across all your data (Farcaster posts, bank transactions, Obsidian notes, etc.).
+
+### Quick Start
+
+```bash
+# Install QMD
+bun install -g https://github.com/tobi/qmd
+
+# Setup search index
+cortex embed --setup
+
+# Search everything
+cortex search "meeting notes about project X"
+```
+
+### Desktop App
+
+Press `⌘K` (or click the search icon) to open the search modal. Use the "Sync" button to update the search index with new data.
+
+### CLI
+
+```bash
+# Install CLI globally
+bun install -g @cortex/cli
+
+# Get help
+cortex --help
+
+# Search
+cortex search "your query" --json
+
+# Get items by source
+cortex items --source farcaster --json
+```
+
+See [`packages/cli/README.md`](packages/cli/README.md) for full CLI documentation.
+
 ## Project Structure
 
 ```
@@ -111,6 +150,7 @@ cortex/
 │   └── server/      # Backend API (Elysia + tRPC + Bun)
 ├── packages/
 │   ├── api/         # API layer / business logic (tRPC routers)
+│   ├── cli/         # Command-line interface (@cortex/cli)
 │   ├── auth/        # Authentication configuration & logic
 │   └── db/          # Database schema & queries (Drizzle ORM)
 ```

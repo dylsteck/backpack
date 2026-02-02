@@ -32,6 +32,10 @@ declare global {
     };
     shellApi: {
       openExternal: (url: string) => Promise<void>;
+      checkCliInstalled: () => Promise<{ installed: boolean; version?: string }>;
+      installCli: () => Promise<{ success: boolean; error?: string }>;
+      checkQmdInstalled: () => Promise<{ installed: boolean; version?: string }>;
+      installQmd: () => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
@@ -294,6 +298,12 @@ export class Onboarding extends Component {
         
         // Now that database is ready, fetch apps for the next step
         fetchAppsWithCache();
+        
+        // Setup CLI automatically (non-blocking)
+        this.setupCLI().catch((error) => {
+          console.error('[Onboarding] CLI setup failed (non-critical):', error);
+          // Don't block onboarding if CLI setup fails
+        });
         
         this.nextStep();
       } else {
@@ -670,6 +680,37 @@ export class Onboarding extends Component {
     }
   }
   
+  private async setupCLI(): Promise<void> {
+    try {
+      // Check if CLI is already installed
+      const cliCheck = await window.shellApi?.checkCliInstalled();
+      if (cliCheck?.installed) {
+        console.log('[Onboarding] CLI already installed:', cliCheck.version);
+        return;
+      }
+
+      // Install CLI
+      console.log('[Onboarding] Installing Cortex CLI...');
+      const installResult = await window.shellApi?.installCli();
+      if (installResult?.success) {
+        console.log('[Onboarding] CLI installed successfully');
+      } else {
+        console.warn('[Onboarding] CLI installation failed:', installResult?.error);
+        // Non-critical, continue onboarding
+      }
+
+      // Check if QMD is installed (optional, for search)
+      const qmdCheck = await window.shellApi?.checkQmdInstalled();
+      if (!qmdCheck?.installed) {
+        console.log('[Onboarding] QMD not installed (optional for search)');
+        // Don't auto-install QMD - user can install it later if they want search
+      }
+    } catch (error) {
+      console.error('[Onboarding] Error during CLI setup:', error);
+      // Non-critical, don't block onboarding
+    }
+  }
+
   private completeOnboarding(): void {
     actions.completeOnboarding();
     router.navigate('/');

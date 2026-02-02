@@ -128,6 +128,7 @@ export const store = {
   sidebarCollapsed: new Observable<boolean>(true),
   chatSidebarOpen: new Observable<boolean>(false),
   expandedItemId: new Observable<string | null>(null),
+  selectedItemId: new Observable<string | null>(null), // For search result highlighting
   
   // Filters
   selectedSources: new Observable<SourceType[]>(['all']),

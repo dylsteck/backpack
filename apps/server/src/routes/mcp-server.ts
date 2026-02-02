@@ -1,6 +1,9 @@
 /**
  * MCP Server Routes
  * Exposes Cortex tools as an MCP server via Streamable HTTP transport
+ * 
+ * For data retrieval operations, this delegates to the Cortex CLI
+ * which provides consistent behavior across MCP, CLI, and desktop app.
  */
 
 import { Elysia } from "elysia";
@@ -9,6 +12,55 @@ import {
 	type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "../tools";
+import { spawn } from "child_process";
+
+/**
+ * Execute a Cortex CLI command and return the JSON result
+ */
+async function execCortexCli(args: string[]): Promise<{ success: boolean; data?: unknown; error?: string }> {
+	return new Promise((resolve) => {
+		// Try to find cortex in common locations
+		const cortexPaths = [
+			"cortex", // In PATH
+			"bun", // Use bun to run directly
+		];
+		
+		// First try direct cortex command
+		const proc = spawn("cortex", args, {
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env },
+		});
+
+		let stdout = "";
+		let stderr = "";
+
+		proc.stdout.on("data", (data) => {
+			stdout += data.toString();
+		});
+
+		proc.stderr.on("data", (data) => {
+			stderr += data.toString();
+		});
+
+		proc.on("close", (code) => {
+			if (code !== 0) {
+				resolve({ success: false, error: stderr || `Exit code: ${code}` });
+				return;
+			}
+			try {
+				const parsed = JSON.parse(stdout);
+				resolve({ success: true, data: parsed });
+			} catch {
+				resolve({ success: false, error: "Failed to parse JSON output" });
+			}
+		});
+
+		proc.on("error", (err) => {
+			// CLI not found, fall through to direct tool execution
+			resolve({ success: false, error: `CLI not found: ${err.message}` });
+		});
+	});
+}
 
 // Database schema for dynamic discovery (inlined to avoid build dependency)
 function getDatabaseSchema(): string {
@@ -134,6 +186,76 @@ async function executeTool(mcpToolName: string, args: unknown): Promise<CallTool
 		return {
 			content: [{ type: "text", text: getDatabaseSchema() }]
 		};
+	}
+
+	// Try to use CLI for search_items (delegates to cortex search/items)
+	if (mcpToolName === "search_items") {
+		const cliArgs: string[] = ["items", "--json"];
+		
+		if (typedArgs.source) {
+			cliArgs.push("--source", String(typedArgs.source));
+		}
+		if (typedArgs.type) {
+			cliArgs.push("--type", String(typedArgs.type));
+		}
+		if (typedArgs.limit) {
+			cliArgs.push("--limit", String(typedArgs.limit));
+		}
+		
+		const cliResult = await execCortexCli(cliArgs);
+		if (cliResult.success && cliResult.data) {
+			// If there's a query, filter results client-side
+			// (CLI search does more sophisticated filtering with QMD)
+			const data = cliResult.data as { items: Array<{ data: unknown }> };
+			let items = data.items || [];
+			
+			if (typedArgs.query && typeof typedArgs.query === "string") {
+				const query = typedArgs.query.toLowerCase();
+				items = items.filter((item) => {
+					const dataStr = JSON.stringify(item.data).toLowerCase();
+					return dataStr.includes(query);
+				});
+			}
+			
+			return {
+				content: [{ type: "text", text: JSON.stringify({ items, count: items.length }, null, 2) }]
+			};
+		}
+		// Fall through to direct tool execution if CLI fails
+		console.log("[MCP Server] CLI fallback for search_items:", cliResult.error);
+	}
+
+	// Try to use CLI for analyze_data (delegates to cortex status)
+	if (mcpToolName === "analyze_data") {
+		const cliResult = await execCortexCli(["status", "--json"]);
+		if (cliResult.success && cliResult.data) {
+			const data = cliResult.data as { items: Array<{ source: string; type: string; count: number }> };
+			
+			// Filter by source/type if provided
+			let items = data.items || [];
+			if (typedArgs.source) {
+				items = items.filter((i) => i.source === typedArgs.source);
+			}
+			if (typedArgs.type) {
+				items = items.filter((i) => i.type === typedArgs.type);
+			}
+			
+			const summary = items.map((i) => `${i.source}/${i.type}: ${i.count} items`).join("\n");
+			const totalCount = items.reduce((acc, i) => acc + i.count, 0);
+			
+			return {
+				content: [{ 
+					type: "text", 
+					text: JSON.stringify({
+						summary,
+						totalCount,
+						breakdown: items
+					}, null, 2) 
+				}]
+			};
+		}
+		// Fall through to direct tool execution if CLI fails
+		console.log("[MCP Server] CLI fallback for analyze_data:", cliResult.error);
 	}
 
 	// Handle write_obsidian with different modes

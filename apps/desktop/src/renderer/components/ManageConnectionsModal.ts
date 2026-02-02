@@ -51,20 +51,21 @@ export class ManageConnectionsModal extends Component {
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-lg text-foreground',
+      className: 'text-xl font-semibold text-foreground',
       textContent: 'Manage Connections',
     });
     (title as HTMLElement).style.cssText = `
       font-family: var(--font-sans);
       font-weight: 600;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     `;
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground mt-1',
+      className: 'text-sm text-muted-foreground mt-1.5',
       textContent: 'View and manage your connected apps',
     });
     (subtitle as HTMLElement).style.cssText = `
       font-family: var(--font-sans);
+      font-weight: 400;
     `;
     titleSection.appendChild(title);
     titleSection.appendChild(subtitle);
@@ -134,14 +135,15 @@ export class ManageConnectionsModal extends Component {
     
     if (connectedApps.length === 0) {
       listContainer.innerHTML = `
-        <div class="text-center py-12 px-6">
-          <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+        <div class="text-center py-16 px-6">
+          <div class="w-16 h-16 mx-auto bg-accent/30 rounded-2xl flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
               <path d="M5 12h14"/>
               <path d="M12 5v14"/>
             </svg>
           </div>
-          <p class="text-sm text-muted-foreground">No connected apps yet</p>
+          <p class="text-sm text-muted-foreground font-medium">No connected apps yet</p>
+          <p class="text-xs text-muted-foreground/70 mt-1">Connect apps from the Vault page to get started</p>
         </div>
       `;
       return;
@@ -157,30 +159,34 @@ export class ManageConnectionsModal extends Component {
     const isEditing = this.editingAppId === app.id;
     
     const item = createElement('div', {
-      className: 'card-modern border border-border/70 bg-card rounded-xl overflow-hidden transition-all',
+      className: 'border border-border/50 bg-card rounded-2xl overflow-hidden transition-all hover:border-border/80 hover:shadow-lg',
       dataset: { appId: app.id },
     });
     
     // Main content row
     const mainRow = createElement('div', {
-      className: 'flex items-center gap-4 p-3.5 hover:bg-secondary/60 transition-colors',
+      className: 'flex items-center gap-4 p-4 hover:bg-accent/30 transition-colors',
     });
     
     // Icon
     if (app.iconUrl) {
+      const iconWrapper = createElement('div', {
+        className: 'w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0 overflow-hidden',
+      });
       const icon = createElement('img', {
-        className: 'w-10 h-10 object-contain shrink-0',
+        className: 'w-10 h-10 object-contain',
         attributes: {
           src: app.iconUrl,
           alt: app.name,
           loading: 'lazy',
         },
       });
-      item.appendChild(icon);
+      iconWrapper.appendChild(icon);
+      mainRow.appendChild(iconWrapper);
     } else {
       const placeholder = createElement('div', {
-        className: 'w-10 h-10 bg-muted shrink-0 flex items-center justify-center text-muted-foreground rounded-lg',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
+        className: 'w-12 h-12 bg-accent/30 shrink-0 flex items-center justify-center text-muted-foreground rounded-xl',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`,
       });
       mainRow.appendChild(placeholder);
     }
@@ -191,40 +197,40 @@ export class ManageConnectionsModal extends Component {
     });
     
     const name = createElement('p', {
-      className: 'text-sm font-semibold tracking-tight',
+      className: 'text-base font-medium text-foreground',
       textContent: app.name,
     });
-    (name as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
+    (name as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
     infoSection.appendChild(name);
     
     // Connection details row
     const detailsRow = createElement('div', {
-      className: 'flex items-center gap-4 mt-2 flex-wrap',
+      className: 'flex items-center gap-3 mt-2 flex-wrap',
     });
     
     // Status
     const statusRow = createElement('div', {
-      className: 'flex items-center gap-2',
+      className: 'flex items-center gap-2 px-2 py-1 bg-green-500/10 text-green-600 rounded-full',
     });
     const statusDot = createElement('div', {
-      className: 'w-2 h-2 rounded-full bg-status-connected',
+      className: 'w-1.5 h-1.5 rounded-full bg-green-500',
     });
     statusRow.appendChild(statusDot);
     const statusText = createElement('span', {
-      className: 'text-xs text-muted-foreground',
+      className: 'text-xs font-medium',
       textContent: 'Connected',
     });
-    (statusText as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
+    (statusText as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
     statusRow.appendChild(statusText);
     detailsRow.appendChild(statusRow);
     
     // Connection type
     if (app.connectionType) {
       const typeBadge = createElement('span', {
-        className: 'px-2 py-0.5 bg-secondary text-xs text-muted-foreground font-semibold uppercase tracking-wider rounded border border-border/60',
+        className: 'px-2.5 py-1 bg-accent/50 text-xs text-muted-foreground font-medium rounded-md',
         textContent: app.connectionType,
       });
-      (typeBadge as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (typeBadge as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500; text-transform: capitalize;';
       detailsRow.appendChild(typeBadge);
     }
     
@@ -233,10 +239,10 @@ export class ManageConnectionsModal extends Component {
     if (lastSyncedAt && typeof lastSyncedAt === 'string') {
       const lastSynced = new Date(lastSyncedAt);
       const lastSyncedText = createElement('span', {
-        className: 'text-xs text-muted-foreground',
-        textContent: `Last synced: ${formatDate(lastSynced)} ${formatTime(lastSynced)}`,
+        className: 'text-xs text-muted-foreground/80',
+        textContent: `Last synced ${formatDate(lastSynced)} ${formatTime(lastSynced)}`,
       });
-      (lastSyncedText as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
+      (lastSyncedText as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 400;';
       detailsRow.appendChild(lastSyncedText);
     }
     
@@ -247,11 +253,11 @@ export class ManageConnectionsModal extends Component {
       const metadata = app.connection.connectionMetadata;
       if (metadata.localPath || metadata.fid) {
         const metadataRow = createElement('div', {
-          className: 'mt-2 text-xs text-muted-foreground',
+          className: 'mt-2 text-xs text-muted-foreground/70 font-mono',
         });
-        (metadataRow as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
+        (metadataRow as HTMLElement).style.cssText = 'font-family: var(--font-mono); font-size: 0.75rem;';
         if (metadata.localPath) {
-          metadataRow.textContent = `Path: ${metadata.localPath}`;
+          metadataRow.textContent = metadata.localPath;
         } else if (metadata.fid) {
           metadataRow.textContent = `FID: ${metadata.fid}`;
         }
@@ -268,12 +274,14 @@ export class ManageConnectionsModal extends Component {
     
     // Edit button
     const editButton = createElement('button', {
-      className: `px-3 py-1.5 text-xs font-semibold uppercase tracking-wider border border-border hover:bg-secondary/70 transition-colors rounded ${
-        isEditing ? 'bg-primary text-primary-foreground border-primary' : ''
+      className: `px-4 py-2 text-sm font-medium border transition-all rounded-lg ${
+        isEditing 
+          ? 'bg-muted text-foreground border-border hover:bg-muted/80' 
+          : 'bg-background text-foreground border-border/60 hover:bg-accent/50 hover:border-border'
       }`,
       textContent: isEditing ? 'Cancel' : 'Edit',
     });
-    (editButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+    (editButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
     
     this.addListener(editButton, 'click', (e) => {
       e.stopPropagation();
@@ -290,10 +298,10 @@ export class ManageConnectionsModal extends Component {
     // View Details button (only show when not editing)
     if (!isEditing) {
       const viewButton = createElement('button', {
-        className: 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider border border-border hover:bg-secondary/70 transition-colors rounded',
+        className: 'px-4 py-2 text-sm font-medium bg-background text-foreground border border-border/60 hover:bg-accent/50 hover:border-border transition-all rounded-lg',
         textContent: 'View Details',
       });
-      (viewButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (viewButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
       
       this.addListener(viewButton, 'click', (e) => {
         e.stopPropagation();
@@ -306,11 +314,11 @@ export class ManageConnectionsModal extends Component {
       
       // Disconnect button
       const disconnectButton = createElement('button', {
-        className: 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors rounded',
+        className: 'px-4 py-2 text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/50 hover:border-red-300 transition-all rounded-lg',
         textContent: 'Disconnect',
         dataset: { connectionId: app.connection?.id || '' },
       });
-      (disconnectButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (disconnectButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
       
       this.addListener(disconnectButton, 'click', async (e) => {
         e.stopPropagation();
@@ -334,14 +342,14 @@ export class ManageConnectionsModal extends Component {
   
   private createEditForm(app: AppServer): HTMLElement {
     const form = createElement('div', {
-      className: 'border-t border-border/60 bg-secondary/40 p-4 space-y-4',
+      className: 'border-t border-border/40 bg-accent/20 p-5 space-y-5',
     });
     
     const formTitle = createElement('h3', {
-      className: 'text-xs font-semibold uppercase tracking-wider mb-3',
+      className: 'text-sm font-semibold text-foreground mb-4',
       textContent: 'Edit Connection Settings',
     });
-    (formTitle as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.1em;';
+    (formTitle as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 600;';
     form.appendChild(formTitle);
     
     // API Key field (for Farcaster and other API-based apps)
@@ -351,10 +359,10 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyLabel = createElement('label', {
-        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        className: 'block text-sm font-medium text-foreground mb-1.5',
         textContent: 'Neynar API Key',
       });
-      (apiKeyLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (apiKeyLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
       apiKeyGroup.appendChild(apiKeyLabel);
       
       const apiKeyWrapper = createElement('div', {
@@ -362,7 +370,7 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyInput = createElement('input', {
-        className: 'w-full px-3 py-2 pr-10 bg-card border border-border text-sm',
+        className: 'w-full px-3.5 py-2.5 pr-10 bg-background border border-border/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all',
         attributes: {
           type: 'password',
           placeholder: 'Enter your Neynar API key',
@@ -395,14 +403,14 @@ export class ManageConnectionsModal extends Component {
       });
       
       const fidLabel = createElement('label', {
-        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        className: 'block text-sm font-medium text-foreground mb-1.5',
         textContent: 'Farcaster ID (FID)',
       });
-      (fidLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (fidLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
       fidGroup.appendChild(fidLabel);
       
       const fidInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-card border border-border text-sm',
+        className: 'w-full px-3.5 py-2.5 bg-background border border-border/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all',
         attributes: {
           type: 'number',
           placeholder: 'Enter your Farcaster ID',
@@ -423,14 +431,14 @@ export class ManageConnectionsModal extends Component {
       });
       
       const pathLabel = createElement('label', {
-        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        className: 'block text-sm font-medium text-foreground mb-1.5',
         textContent: 'Local Path',
       });
-      (pathLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+      (pathLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
       pathGroup.appendChild(pathLabel);
       
       const pathInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-card border border-border text-sm',
+        className: 'w-full px-3.5 py-2.5 bg-muted/50 border border-border/40 rounded-lg text-sm text-muted-foreground',
         attributes: {
           type: 'text',
           readonly: 'true',
@@ -455,10 +463,10 @@ export class ManageConnectionsModal extends Component {
     });
     
     const saveButton = createElement('button', {
-      className: 'px-4 py-2 bg-primary text-primary-foreground font-semibold uppercase tracking-wider text-xs rounded transition-colors hover:bg-primary/90',
+      className: 'px-5 py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg transition-all hover:bg-primary/90 hover:shadow-md',
       textContent: 'Save Changes',
     });
-    (saveButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
+    (saveButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); font-weight: 500;';
     
     this.addListener(saveButton, 'click', async () => {
       await this.handleSave(app, form);
@@ -537,29 +545,32 @@ export class ManageConnectionsModal extends Component {
     const confirmed = confirm(`Are you sure you want to disconnect ${app.name}? This will stop syncing data from this app.`);
     if (!confirmed) return;
     
+    const connectionId = app.connection.id;
+    const appName = app.name;
+    
     try {
-      // Find the disconnect button to show loading state
-      const disconnectButton = this.container.querySelector(`[data-connection-id="${app.connection.id}"]`) as HTMLButtonElement;
-      if (disconnectButton) {
-        disconnectButton.disabled = true;
-        disconnectButton.textContent = 'Disconnecting...';
-      }
+      // Optimistic update: immediately remove connection from app object
+      // This will cause the app to disappear from the connected list instantly
+      app.connection = undefined;
+      this.renderConnectionsList(); // Re-render immediately
       
-      // Remove the connection
+      // Remove the connection via API
       await api.apps.removeConnection.mutate({
-        id: app.connection.id,
+        id: connectionId,
       });
       
-      // Refresh apps to get updated connection status
+      // Refresh apps to get updated connection status from server
       await fetchAppsWithCache();
       
       // Re-render list (will automatically update via subscription)
     } catch (error) {
       console.error('Failed to disconnect app:', error);
-      alert(`Failed to disconnect ${app.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
-      // Re-render to restore button state
+      // Revert optimistic update on error
+      await fetchAppsWithCache();
       this.renderConnectionsList();
+      
+      alert(`Failed to disconnect ${appName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   

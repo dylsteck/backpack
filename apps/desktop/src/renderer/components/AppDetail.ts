@@ -304,7 +304,7 @@ export class AppDetail extends Component {
     
     for (const tab of tabs) {
       const button = createElement('button', {
-        className: `px-4 py-2 text-sm font-mono uppercase tracking-wider border-b-2 transition-colors ${
+        className: `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
           this.currentTab === tab.value
             ? 'border-primary text-foreground'
             : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -331,7 +331,7 @@ export class AppDetail extends Component {
     buttons.forEach(btn => {
       const tab = (btn as HTMLElement).dataset.tab as TabType;
       const isActive = tab === this.currentTab;
-      btn.className = `px-4 py-2 text-sm font-mono uppercase tracking-wider border-b-2 transition-colors ${
+      btn.className = `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
         isActive
           ? 'border-primary text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -355,7 +355,7 @@ export class AppDetail extends Component {
           if (this.contentContainer) {
             this.contentContainer.innerHTML = `
               <div class="p-6 border bg-card">
-                <div class="text-status-error font-mono uppercase tracking-wider text-sm text-center py-8">
+                <div class="text-red-600 font-medium text-sm text-center py-8">
                   Failed to load data
                 </div>
               </div>
@@ -377,20 +377,20 @@ export class AppDetail extends Component {
     });
     
     statusCard.innerHTML = `
-      <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Connection Status</h3>
+      <h3 class="text-lg font-semibold mb-4">Connection Status</h3>
       <div class="flex items-center gap-3">
         <div class="w-2 h-2 rounded-full ${isConnected ? 'bg-status-connected' : 'bg-muted-foreground/30'}"></div>
-        <span class="font-mono uppercase">${isConnected ? 'Connected' : 'Not Connected'}</span>
+        <span class="font-medium">${isConnected ? 'Connected' : 'Not Connected'}</span>
       </div>
       <div class="mt-4 pt-4 border-t border-border">
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span class="text-muted-foreground font-mono uppercase tracking-wider text-xs">Connection Type</span>
-            <p class="font-mono mt-1">${this.app.connectionType}</p>
+            <span class="text-muted-foreground text-xs font-medium mb-1 block">Connection Type</span>
+            <p class="text-sm font-medium mt-1">${this.app.connectionType}</p>
           </div>
           <div>
-            <span class="text-muted-foreground font-mono uppercase tracking-wider text-xs">ID</span>
-            <p class="font-mono mt-1">${this.app.id}</p>
+            <span class="text-muted-foreground text-xs font-medium mb-1 block">ID</span>
+            <p class="text-sm font-mono mt-1 text-muted-foreground">${this.app.id}</p>
           </div>
         </div>
       </div>
@@ -409,15 +409,15 @@ export class AppDetail extends Component {
       
       if (needsApiKey) {
         actionCard.innerHTML = `
-          <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Get Started</h3>
+          <h3 class="text-lg font-semibold mb-4">Get Started</h3>
           <p class="text-muted-foreground mb-4">Connect this app to start seeing data in your timeline.</p>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-mono uppercase tracking-wider mb-2">Neynar API Key</label>
+              <label class="block text-sm font-medium mb-2">Neynar API Key</label>
               <div class="relative">
                 <input 
                   type="password" 
-                  class="w-full px-3 py-2 pr-10 bg-background border border-border font-mono text-sm" 
+                  class="w-full px-3.5 py-2.5 pr-10 bg-background border border-border/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" 
                   placeholder="Enter your Neynar API key"
                   data-api-key-input
                 />
@@ -439,19 +439,19 @@ export class AppDetail extends Component {
                   </svg>
                 </button>
               </div>
-              <p class="text-xs text-muted-foreground mt-2 font-mono">Get your API key from <a href="https://neynar.com" target="_blank" class="underline">neynar.com</a></p>
+              <p class="text-xs text-muted-foreground mt-2">Get your API key from <a href="https://neynar.com" target="_blank" class="underline hover:text-foreground transition-colors">neynar.com</a></p>
             </div>
             <div>
-              <label class="block text-sm font-mono uppercase tracking-wider mb-2">Farcaster ID (FID)</label>
+              <label class="block text-sm font-medium mb-2">Farcaster ID (FID)</label>
               <input 
                 type="number" 
-                class="w-full px-3 py-2 bg-background border border-border font-mono text-sm" 
+                class="w-full px-3.5 py-2.5 bg-background border border-border/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" 
                 placeholder="Enter your Farcaster ID"
                 data-fid-input
               />
-              <p class="text-xs text-muted-foreground mt-2 font-mono">Your FID is your unique Farcaster identifier (e.g., 12345)</p>
+              <p class="text-xs text-muted-foreground mt-2">Your FID is your unique Farcaster identifier (e.g., 12345)</p>
             </div>
-            <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-connect>
+            <button class="px-5 py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:bg-primary/90 hover:shadow-md transition-all" data-connect>
               Connect ${this.app.name}
             </button>
           </div>
@@ -475,7 +475,7 @@ export class AppDetail extends Component {
         actionCard.innerHTML = `
           <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Get Started</h3>
           <p class="text-muted-foreground mb-4">Connect this app to start seeing data in your timeline.</p>
-          <button class="px-4 py-2 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-connect>
+          <button class="px-5 py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:bg-primary/90 hover:shadow-md transition-all" data-connect>
             Connect ${this.app.name}
           </button>
         `;
@@ -491,17 +491,17 @@ export class AppDetail extends Component {
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-3">
                 <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                <span class="text-sm font-mono uppercase tracking-wider">Running in background</span>
+                <span class="text-sm font-medium">Running in background</span>
               </div>
               <button 
-                class="px-3 py-1 text-xs bg-background border border-border hover:bg-muted font-mono uppercase tracking-wider transition-colors rounded"
+                class="px-3 py-1.5 text-xs font-medium bg-background border border-border/60 hover:bg-accent/50 transition-all rounded-lg"
                 data-stop-backfill
                 title="Stop backfill"
               >
                 Stop
               </button>
             </div>
-            <p class="text-xs text-muted-foreground font-mono mt-1">Historical data is being synced. This may take a few minutes.</p>
+            <p class="text-xs text-muted-foreground mt-1">Historical data is being synced. This may take a few minutes.</p>
           </div>
         `;
       } else if (backfillStatus.status === 'success') {
@@ -509,9 +509,9 @@ export class AppDetail extends Component {
           <div class="mt-4 p-4 bg-status-connected/10 border border-status-connected/30">
             <div class="flex items-center gap-3">
               <div class="w-2 h-2 rounded-full bg-status-connected"></div>
-              <span class="text-sm font-mono uppercase tracking-wider text-status-connected">Backfill complete</span>
+              <span class="text-sm font-medium text-green-600">Backfill complete</span>
             </div>
-            ${backfillStatus.message ? `<p class="text-xs text-muted-foreground font-mono mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
+            ${backfillStatus.message ? `<p class="text-xs text-muted-foreground mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
           </div>
         `;
       } else if (backfillStatus.status === 'error') {
@@ -521,17 +521,17 @@ export class AppDetail extends Component {
               <div class="w-2 h-2 rounded-full bg-status-error"></div>
               <span class="text-sm font-mono uppercase tracking-wider text-status-error">Backfill error</span>
             </div>
-            ${backfillStatus.message ? `<p class="text-xs text-status-error font-mono mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
+            ${backfillStatus.message ? `<p class="text-xs text-red-600 mt-1">${escapeHtml(backfillStatus.message)}</p>` : ''}
           </div>
         `;
       }
       
       actionCard.innerHTML = `
-        <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Manage Connection</h3>
+        <h3 class="text-lg font-semibold mb-4">Manage Connection</h3>
         <p class="text-muted-foreground mb-4">This app is connected and syncing data.</p>
         ${backfillIndicator}
         <div class="mt-4">
-          <button class="px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors rounded" data-disconnect>
+          <button class="px-4 py-2 text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/50 hover:border-red-300 transition-all rounded-lg" data-disconnect>
             Disconnect
           </button>
         </div>
@@ -569,7 +569,7 @@ export class AppDetail extends Component {
       });
       
       settingsCard.innerHTML = `
-        <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Configuration</h3>
+        <h3 class="text-lg font-semibold mb-4">Configuration</h3>
         <div class="mt-4">
           <label class="text-sm text-muted-foreground font-mono uppercase tracking-wider">Local Path</label>
           <p class="font-mono text-sm mt-1 p-2 bg-muted border border-border">${escapeHtml(this.app.connection.connectionMetadata.localPath)}</p>
@@ -1650,20 +1650,38 @@ export class AppDetail extends Component {
   private async handleDisconnect(): Promise<void> {
     if (!this.app || !this.app.connection?.id) return;
     
+    const connectionId = this.app.connection.id;
+    const appName = this.app.name;
+    
     try {
-      // Remove the connection
+      // Optimistic update: immediately update UI to show disconnected state
+      if (this.app) {
+        this.app.connection = undefined;
+        this.render(); // Re-render immediately to show disconnected state
+      }
+      
+      // Remove the connection via API
       await api.apps.removeConnection.mutate({
-        id: this.app.connection.id,
+        id: connectionId,
       });
       
-      // Refresh apps to get updated connection status
+      // Refresh apps to get updated connection status from server
+      appsCache.clear();
       await fetchAppsWithCache();
       
-      // Re-render to show updated status
+      // Update app reference and re-render
+      this.app = getAppById(this.app.id) || null;
       this.render();
     } catch (error) {
       console.error('Failed to disconnect app:', error);
-      alert(`Failed to disconnect ${this.app.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Revert optimistic update on error
+      appsCache.clear();
+      await fetchAppsWithCache();
+      this.app = getAppById(this.app?.id || '') || null;
+      this.render();
+      
+      alert(`Failed to disconnect ${appName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

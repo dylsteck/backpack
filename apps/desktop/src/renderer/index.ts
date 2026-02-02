@@ -69,6 +69,9 @@ class App {
     // Start router
     router.start();
 
+    // Setup global keyboard shortcuts
+    this.setupGlobalShortcuts();
+
     // Prefetch data in background (only if onboarding is complete)
     if (store.hasSeenOnboarding.get()) {
       this.prefetchData();
@@ -126,6 +129,10 @@ class App {
         path: '/onboarding',
         render: () => this.layout?.showRoute('onboarding'),
       },
+      {
+        path: '/search',
+        render: () => this.layout?.showRoute('search'),
+      },
     ]);
 
     router.notFound(() => {
@@ -148,6 +155,32 @@ class App {
     } catch (error) {
       console.error('Failed to prefetch data:', error);
     }
+  }
+
+  private setupGlobalShortcuts(): void {
+    // Global Command+K / Ctrl+K to open search
+    const handler = (e: KeyboardEvent) => {
+      // Only trigger if not typing in an input/textarea
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k' || e.code === 'KeyK')) {
+        // If already in search view and input is focused, don't navigate
+        if (router.getCurrentPath() === '/search' && isInput) {
+          return; // Let SearchView handle it
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        console.log('[App] Command+K pressed, navigating to /search');
+        router.navigate('/search');
+      }
+    };
+    
+    // Use capture phase to ensure we catch it early
+    document.addEventListener('keydown', handler, true);
+    this.cleanups.push(() => document.removeEventListener('keydown', handler, true));
   }
 
   private logPerformance(): void {

@@ -9,4 +9,5 @@ export { TopbarTitle } from './TopbarTitle';
 export { Timeline } from './Timeline';
 export { AppDetail } from './AppDetail';
 export { Onboarding } from './Onboarding';
+export { SearchView } from './SearchView';
 

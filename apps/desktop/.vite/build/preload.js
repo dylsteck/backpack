@@ -81,10 +81,26 @@ function exposeDatabaseContext() {
   electron.contextBridge.exposeInMainWorld("databaseApi", databaseContext);
 }
 const SHELL_OPEN_EXTERNAL_CHANNEL = "shell:open-external";
+const SHELL_CHECK_CLI_INSTALLED = "shell:check-cli-installed";
+const SHELL_INSTALL_CLI = "shell:install-cli";
+const SHELL_CHECK_QMD_INSTALLED = "shell:check-qmd-installed";
+const SHELL_INSTALL_QMD = "shell:install-qmd";
 function exposeShellContext() {
   electron.contextBridge.exposeInMainWorld("shellApi", {
     openExternal: (url) => {
       return electron.ipcRenderer.invoke(SHELL_OPEN_EXTERNAL_CHANNEL, url);
+    },
+    checkCliInstalled: () => {
+      return electron.ipcRenderer.invoke(SHELL_CHECK_CLI_INSTALLED);
+    },
+    installCli: () => {
+      return electron.ipcRenderer.invoke(SHELL_INSTALL_CLI);
+    },
+    checkQmdInstalled: () => {
+      return electron.ipcRenderer.invoke(SHELL_CHECK_QMD_INSTALLED);
+    },
+    installQmd: () => {
+      return electron.ipcRenderer.invoke(SHELL_INSTALL_QMD);
     }
   });
 }
@@ -108,6 +124,26 @@ function exposeObsidianContext() {
     searchNotes: (vaultPath, query) => ipcRenderer.invoke(OBSIDIAN_SEARCH_NOTES_CHANNEL, vaultPath, query)
   });
 }
+const SEARCH_CHANNELS = {
+  SEARCH: "search:query",
+  EMBED_SYNC: "search:embed-sync"
+};
+function exposeSearchContext() {
+  electron.contextBridge.exposeInMainWorld("searchApi", {
+    /**
+     * Search across all Cortex data
+     */
+    search: (query, limit) => {
+      return electron.ipcRenderer.invoke(SEARCH_CHANNELS.SEARCH, query, limit);
+    },
+    /**
+     * Trigger embedding sync for search index
+     */
+    embedSync: (force) => {
+      return electron.ipcRenderer.invoke(SEARCH_CHANNELS.EMBED_SYNC, force);
+    }
+  });
+}
 function exposeContexts() {
   exposeWindowContext();
   exposeChromeContext();
@@ -117,5 +153,6 @@ function exposeContexts() {
   exposeDatabaseContext();
   exposeShellContext();
   exposeObsidianContext();
+  exposeSearchContext();
 }
 exposeContexts();

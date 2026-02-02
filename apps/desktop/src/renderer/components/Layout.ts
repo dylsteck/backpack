@@ -13,8 +13,9 @@ import { VaultGrid } from './VaultGrid';
 import { AppDetail } from './AppDetail';
 import { Onboarding } from './Onboarding';
 import { TopbarTitle } from './TopbarTitle';
+import { SearchView } from './SearchView';
 
-type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding';
+type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'search';
 
 export class Layout extends Component {
   private sidebar: Sidebar | null = null;
@@ -24,6 +25,8 @@ export class Layout extends Component {
   private sidebarContainer: HTMLElement | null = null;
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
+  private searchButtonEl: HTMLElement | null = null;
+  private searchHandlersAttached: boolean = false;
   private lastViewWasOnboarding: boolean = false;
   private lastView: RouteView | null = null;
 
@@ -63,21 +66,76 @@ export class Layout extends Component {
     this.topbarContainer = createElement('div', {
       className: 'fixed top-0 h-[48px] z-40 bg-background/95 backdrop-blur-sm border-b border-border/40 transition-all duration-300',
       attributes: {
-        style: 'left: calc(16rem + 0.5rem); right: 0;',
+        style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: none;',
       },
     });
     this.container.appendChild(this.topbarContainer);
 
-    // Topbar title - cleaner typography
+    // Topbar title container with integrated search
     this.topbarTitleEl = createElement('div', {
-      className: 'fixed top-0 h-[48px] flex items-center z-40 transition-[left] duration-200 ease-linear px-6 text-foreground select-none pointer-events-none',
+      className: 'fixed top-0 h-[48px] flex items-center justify-between z-[100] transition-[left] duration-200 ease-linear px-6 text-foreground select-none',
       attributes: {
-        style: 'left: calc(16rem + 0.5rem);',
+        style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: auto; -webkit-app-region: no-drag;',
       },
     });
-    this.container.appendChild(this.topbarTitleEl);
-    this.topbar = new TopbarTitle(this.topbarTitleEl);
+    
+    // Title section
+    const titleSection = createElement('div', {
+      className: 'flex items-center pointer-events-none',
+    });
+    this.topbarTitleEl.appendChild(titleSection);
+    this.topbar = new TopbarTitle(titleSection);
     this.topbar.init();
+
+    // Search button - inline with topbar
+    this.searchButtonEl = createElement('button', {
+      className: 'flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-accent/60 text-muted-foreground hover:text-foreground cursor-pointer transition-all border border-border/40 bg-card/70 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      attributes: {
+        title: 'Search (⌘K)',
+        type: 'button',
+        'aria-label': 'Open search',
+        id: 'search-button-topbar',
+      },
+    });
+    // Ensure button is clickable and above other elements
+    (this.searchButtonEl as HTMLElement).style.cssText = `
+      pointer-events: auto !important;
+      z-index: 101 !important;
+      position: relative;
+      cursor: pointer !important;
+      -webkit-app-region: no-drag !important;
+      user-select: none;
+    `;
+    this.searchButtonEl.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.3-4.3"/>
+      </svg>
+      <span class="text-xs font-medium">Search</span>
+      <kbd class="px-1.5 py-0.5 text-[10px] font-technical bg-muted/60 text-muted-foreground rounded-full border border-border/40">⌘K</kbd>
+    `;
+    
+    // Attach click handler directly - simple and direct
+    const handleClick = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      console.log('[Layout] Search button clicked, navigating to /search');
+      // Direct navigation - set hash and update store
+      window.location.hash = '/search';
+      store.currentRoute.set('/search');
+      // Also trigger hashchange manually in case it doesn't fire
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    };
+    
+    // Use both onclick and addEventListener for maximum compatibility
+    this.searchButtonEl.onclick = handleClick;
+    this.addListener(this.searchButtonEl, 'click', handleClick);
+    
+    this.topbarTitleEl.appendChild(this.searchButtonEl);
+    this.container.appendChild(this.topbarTitleEl);
+    
+    this.searchHandlersAttached = true;
 
     // Sidebar (Left)
     this.sidebarContainer = createElement('aside', {
@@ -163,6 +221,42 @@ export class Layout extends Component {
     if (this.topbarTitleEl) {
       this.topbarTitleEl.style.left = collapsed ? collapsedLeft : expandedLeft;
     }
+    
+    // Ensure search button stays attached when sidebar changes
+    if (this.searchButtonEl && this.topbarTitleEl && !this.searchButtonEl.parentElement) {
+      this.topbarTitleEl.appendChild(this.searchButtonEl);
+    }
+  }
+
+  private attachSearchHandlers(): void {
+    // Find button by ID if searchButtonEl is null (in case of re-render)
+    if (!this.searchButtonEl) {
+      this.searchButtonEl = document.getElementById('search-button-topbar') as HTMLButtonElement;
+      if (!this.searchButtonEl) {
+        console.warn('[Layout] Search button not found when attaching handlers');
+        return;
+      }
+    }
+
+    // Don't re-attach if already attached
+    if (this.searchHandlersAttached) {
+      return;
+    }
+
+    const handleClick = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[Layout] Search clicked, navigating to /search');
+      // Direct navigation - set hash and update store
+      window.location.hash = '/search';
+      store.currentRoute.set('/search');
+    };
+    
+    // Attach handler directly
+    this.searchButtonEl.onclick = handleClick;
+    this.addListener(this.searchButtonEl, 'click', handleClick);
+
+    this.searchHandlersAttached = true;
   }
 
   /**
@@ -175,14 +269,33 @@ export class Layout extends Component {
       this.currentView = null;
     }
 
-    // Re-render layout if switching to/from onboarding
+    // Re-render layout if switching to/from onboarding or search
     const isOnboarding = view === 'onboarding';
+    const isSearch = view === 'search';
     const wasOnboarding = this.lastViewWasOnboarding && view !== 'onboarding';
 
     this.lastViewWasOnboarding = isOnboarding;
 
-    if (!this.contentContainer || isOnboarding || wasOnboarding) {
+    if (!this.contentContainer || isOnboarding || isSearch || wasOnboarding) {
+      // Hide sidebar and topbar for search view
+      if (isSearch) {
+        if (this.sidebarContainer) this.sidebarContainer.style.display = 'none';
+        if (this.topbarContainer) this.topbarContainer.style.display = 'none';
+        if (this.topbarTitleEl) this.topbarTitleEl.style.display = 'none';
+      } else {
+        if (this.sidebarContainer) this.sidebarContainer.style.display = '';
+        if (this.topbarContainer) this.topbarContainer.style.display = '';
+        if (this.topbarTitleEl) this.topbarTitleEl.style.display = '';
+      }
       this.render();
+      // Re-attach search handlers after re-render - only if not on search page
+      if (!isSearch) {
+        this.searchHandlersAttached = false;
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          this.attachSearchHandlers();
+        }, 10);
+      }
     }
 
     if (!this.contentContainer) return;
@@ -214,6 +327,9 @@ export class Layout extends Component {
         break;
       case 'onboarding':
         this.currentView = new Onboarding(this.contentContainer);
+        break;
+      case 'search':
+        this.currentView = new SearchView(this.contentContainer);
         break;
     }
 

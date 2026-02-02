@@ -1,146 +1,122 @@
-# electron-shadcn
+# Cortex Desktop App
 
-Electron in all its glory. Everything you will need to develop your beautiful desktop application.
+The primary desktop application for Cortex - your personal data operating system. Built with **vanilla TypeScript** (no React) for maximum performance.
 
-![Demo GIF](https://github.com/LuanRoger/electron-shadcn/blob/main/images/demo.gif)
+## Features
 
-## Libs and tools
+- **Timeline View**: Aggregated view of all your data (Farcaster, Teller, Obsidian, etc.)
+- **Global Search**: Press `⌘K` to search across all sources using QMD hybrid search
+- **App Connections**: Connect and manage data sources
+- **Obsidian Integration**: View and edit notes from your vault
+- **Performance-First**: Vanilla TypeScript for sub-200ms startup times
 
-To develop a Electron app, you probably will need some UI, test, formatter, style or other kind of library or framework, so let me install and configure some of them to you.
+## Architecture
 
-### Core 🏍️
+The desktop app follows a performance-first architecture inspired by Obsidian, VS Code, and Figma:
 
-- [Electron 38](https://www.electronjs.org)
-- [Vite 7](https://vitejs.dev)
+- **Vanilla TypeScript** - No React overhead, direct DOM manipulation
+- **esbuild** - Fast bundling (~500ms builds)
+- **Custom Components** - Lightweight component pattern with automatic cleanup
+- **Observable State** - Reactive state management (~100 lines)
+- **Event Delegation** - Efficient event handling
+- **IPC Communication** - Type-safe API calls via Electron IPC
 
-### DX 🛠️
+See [`electron-performance-guide.md`](electron-performance-guide.md) for detailed architecture documentation.
 
-- [TypeScript 5.9](https://www.typescriptlang.org)
-- [Prettier](https://prettier.io)
-- [ESLint 9](https://eslint.org)
-- [Zod 4](https://zod.dev)
-- [React Query (TanStack)](https://react-query.tanstack.com)
+## Directory Structure
 
-### UI 🎨
-
-- [React 19](https://reactjs.org)
-- [Tailwind 4](https://tailwindcss.com)
-- [Shadcn UI](https://ui.shadcn.com)
-- [Geist](https://vercel.com/font) as default font
-- [i18next](https://www.i18next.com)
-- [TanStack Router](https://tanstack.com/router) (with file based routing)
-- [Lucide](https://lucide.dev)
-
-### Test 🧪
-
-- [Vitest](https://vitest.dev)
-- [Playwright](https://playwright.dev)
-- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro)
-
-### Packing and distribution 📦
-
-- [Electron Forge](https://www.electronforge.io)
-
-### CI/CD 🚀
-
-- Pre-configured [GitHub Actions workflow](https://github.com/LuanRoger/electron-shadcn/blob/main/.github/workflows/playwright.yml), for test with Playwright
-
-### Project preferences 🎯
-
-- Use Context isolation
-- [React Compiler](https://react.dev/learn/react-compiler) is enabled by default.
-- `titleBarStyle`: hidden (Using custom title bar)
-- Geist as default font
-- Some default styles was applied, check the [`styles`](https://github.com/LuanRoger/electron-shadcn/tree/main/src/styles) directory
-- React DevTools are installed by default
-
-## Directory structure
-
-```plaintext
-.
-└── ./src/
-    ├── ./src/assets/
-    │   └── ./src/assets/fonts/
-    ├── ./src/components/
-    │   ├── ./src/components/template
-    │   └── ./src/components/ui/
-    ├── ./src/helpers/
-    │   └── ./src/helpers/ipc/
-    ├── ./src/layout/
-    ├── ./src/lib/
-    ├── ./src/pages/
-    ├── ./src/style/
-    └── ./src/tests/
+```
+src/
+├── main.ts              # Electron main process entry
+├── preload.ts           # Preload script (context bridge)
+├── renderer/            # Renderer process (browser)
+│   ├── index.ts         # Renderer entry
+│   ├── components/      # UI components (vanilla TS)
+│   │   ├── Component.ts # Base component class
+│   │   ├── Layout.ts    # Main layout with sidebar
+│   │   ├── Timeline.ts  # Timeline view
+│   │   ├── SearchModal.ts # Global search modal
+│   │   └── ...
+│   ├── store.ts         # Observable state management
+│   ├── router.ts        # Client-side routing
+│   └── utils/           # DOM helpers, markdown, etc.
+├── helpers/
+│   └── ipc/             # IPC channel definitions
+│       ├── search/      # Search IPC (CLI integration)
+│       ├── obsidian/    # Obsidian vault operations
+│       ├── chrome/      # Chrome history
+│       └── ...
+└── styles/
+    └── global.css       # Tailwind CSS
 ```
 
-- `src/`: Main directory
-  - `assets/`: Store assets like images, fonts, etc.
-  - `components/`: Store UI components
-    - `template/`: Store the all not important components used by the template. It doesn't include the `WindowRegion` or the theme toggler, if you want to start an empty project, you can safely delete this directory.
-    - `ui/`: Store Shadcn UI components (this is the default direcotry used by Shadcn UI)
-  - `helpers/`: Store IPC related functions to be called in the renderer process
-    - `ipc/`: Directory to store IPC context and listener functions
-      - Some implementations are already done, like `theme` and `window` for the custom title bar
-  - `layout/`: Directory to store layout components
-  - `lib/`: Store libraries and other utilities
-  - `pages/`: Store app's pages
-  - `style/`: Store global styles
-  - `tests/`: Store tests (from Vitest and Playwright)
+## Search
 
-## NPM script
+The app includes a global search feature powered by the Cortex CLI and QMD.
 
-To run any of those scripts:
+### Keyboard Shortcut
+
+Press `⌘K` (macOS) or `Ctrl+K` (Windows/Linux) to open the search modal.
+
+### Features
+
+- **Instant search** across all connected data sources
+- **Hybrid search** using QMD (BM25 + vector + re-ranking)
+- **Score-based ranking** with visual indicators
+- **Navigate to results** by pressing Enter
+
+### Sync Search Index
+
+Click the "Sync" button in the search modal footer to update the search index with new data. This exports timeline items and generates embeddings via the CLI.
+
+## Development
 
 ```bash
-npm run <script>
+# Start in development mode
+pnpm dev:desktop
+
+# Or from workspace root
+pnpm dev
+
+# Build only
+node esbuild.config.mjs
+
+# Run tests
+pnpm test
 ```
 
-- `start`: Start the app in development mode
-- `package`: Package your application into a platform-specific executable bundle and put the result in a folder.
-- `make`: Generate platform-specific distributables (e.g. .exe, .dmg, etc) of your application for distribution.
-- `publish`: Electron Forge's way of taking the artifacts generated by the `make` command and sending them to a service somewhere for you to distribute or use as updates.
-- `lint`: Run ESLint to lint the code
-- `format`: Run Prettier to check the code (it doesn't change the code)
-- `format:write`: Run Prettier to format the code
-- `test`: Run the default unit-test script (Vitest)
-- `test:watch`: Run the default unit-test script in watch mode (Vitest)
-- `test:unit`: Run the Vitest tests
-- `test:e2e`: Run the Playwright tests
-- `test:all`: Run all tests (Vitest and Playwright)
+## Scripts
 
-> The test scripts involving Playwright require the app be builded before running the tests. So, before run the tests, run the `package`, `make` or `publish` script.
+| Script | Description |
+|--------|-------------|
+| `dev` | Start with hot reload |
+| `build:vanilla` | Build with esbuild |
+| `test` | Run unit tests (Vitest) |
+| `test:e2e` | Run E2E tests (Playwright) |
 
-## How to use
+## Environment Variables
 
-1. Clone this repository
+Create `.env` in this directory:
 
 ```bash
-git clone https://github.com/LuanRoger/electron-shadcn.git
+VITE_API_URL=http://localhost:3000
+VITE_TELLER_APPLICATION_ID=app_xxxxxx
 ```
 
-Or use it as a template on GitHub
+## Performance Targets
 
-2. Install dependencies
+- Cold start: <200ms
+- First paint: <100ms
+- Frame rate: 60fps
+- Memory base: <250MB
 
-```bash
-npm install
-```
+## Tech Stack
 
-3. Run the app
-
-```bash
-npm run start
-```
-
-## Used by
-
-- [yaste](https://github.com/LuanRoger/yaste) - yaste (Yet another super ₛᵢₘₚₗₑ text editor) is a text editor, that can be used as an alternative to the native text editor of your SO, maybe.
-- [eletric-drizzle](https://github.com/LuanRoger/electric-drizzle) - shadcn-ui and Drizzle ORM with Electron.
-- [Wordle Game](https://github.com/masonyekta/wordle-game) - A Wordle game which features interactive gameplay, cross-platform compatibility, and integration with a custom Wordle API for word validation and letter correctness.
-- [Mehr 🌟](https://github.com/xmannii/MehrLocalChat) - A modern, elegant local AI chatbot application using Electron, React, shadcn/ui, and Ollama.
-
-> Does you've used this template in your project? Add it here and open a PR.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/LuanRoger/electron-shadcn/blob/main/LICENSE) file for details.
+| Layer | Technology |
+|-------|-----------|
+| Desktop | Electron 38 |
+| UI | Vanilla TypeScript |
+| Styling | Tailwind CSS v4.1 |
+| Bundler | esbuild |
+| State | Custom Observable |
+| Markdown | marked.js + DOMPurify |
