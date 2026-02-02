@@ -299,6 +299,14 @@ export async function fetchApps(): Promise<AppServer[]> {
   try {
     const result = await api.apps.getAvailableServers.query() as { servers: AppServer[] };
     const apps = result.servers || [];
+    
+    // Use fallback if server returns empty list (DB not seeded)
+    if (apps.length === 0) {
+      console.log('[API] Server returned empty apps list, using fallback');
+      actions.setApps(DEFAULT_APPS_FALLBACK);
+      return DEFAULT_APPS_FALLBACK;
+    }
+    
     actions.setApps(apps);
     return apps;
   } catch (error) {

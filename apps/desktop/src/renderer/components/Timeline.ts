@@ -94,9 +94,13 @@ export class Timeline extends Component {
     });
 
     const dateLabel = createElement('div', {
-      className: 'text-[11px] uppercase tracking-[0.2em] text-muted-foreground',
+      className: 'text-xs uppercase tracking-wider text-muted-foreground',
       textContent: formatFullDate(new Date()),
     });
+    (dateLabel as HTMLElement).style.cssText = `
+      font-family: var(--font-sans);
+      letter-spacing: 0.1em;
+    `;
     header.appendChild(dateLabel);
 
     return header;
@@ -516,138 +520,6 @@ export class Timeline extends Component {
           `;
         }
         bubble.appendChild(content);
-        
-        // Check if item has linked todos
-        const contentText = this.extractPreviewText(item) || '';
-        const hasLinkedTodos = contentText.toLowerCase().includes('linear') || 
-                               contentText.toLowerCase().includes('des-') ||
-                               item.type === 'obsidian-note';
-        
-        if (hasLinkedTodos) {
-          const todosSection = createElement('div', {
-            className: 'mt-3 pt-3',
-          });
-          (todosSection as HTMLElement).style.cssText = `
-            border-top: 1px solid hsl(var(--border) / 0.6);
-            margin-top: ${isObsidianNote ? '0.75rem' : '0.75rem'};
-            padding-top: ${isObsidianNote ? '0.75rem' : '0.75rem'};
-          `;
-          
-          // Todos header badge - nicer styling for Obsidian
-          const todoItems = this.extractTodoItems(contentText);
-          const todosHeader = createElement('div');
-          (todosHeader as HTMLElement).style.cssText = `
-            background: hsl(var(--secondary));
-            color: hsl(var(--foreground) / 0.6);
-            padding: 0.3rem 0.5rem;
-            border-radius: 0.45rem;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 0.625rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            border: 1px solid hsl(var(--border) / 0.6);
-            font-family: var(--font-sans, 'Manrope', sans-serif);
-          `;
-          // Count completed (first item is checked)
-          const completedCount = todoItems.length > 0 ? 1 : 0;
-          todosHeader.textContent = `${completedCount}/${todoItems.length} Linked todos`;
-          todosSection.appendChild(todosHeader);
-          
-          // Todo items with checkboxes
-          todoItems.forEach((todo, todoIndex) => {
-            const todoItem = createElement('div', {
-              className: 'flex items-center gap-3 py-1',
-            });
-            
-            // Checkbox - circular, filled for first item
-            const checkbox = createElement('div', {
-              className: 'flex-shrink-0',
-            });
-            const isChecked = todoIndex === 0;
-            (checkbox as HTMLElement).style.cssText = `
-              width: 16px;
-              height: 16px;
-              border-radius: 50%;
-              border: ${isChecked ? 'none' : '1px solid hsl(var(--border) / 0.7)'};
-              background: ${isChecked ? 'hsl(var(--primary) / 0.85)' : 'transparent'};
-              cursor: pointer;
-              transition: all 0.15s;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            `;
-            if (isChecked) {
-              checkbox.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-            }
-            checkbox.addEventListener('mouseenter', () => {
-              if (!isChecked) {
-                (checkbox as HTMLElement).style.borderColor = 'hsl(var(--primary) / 0.6)';
-                (checkbox as HTMLElement).style.background = 'hsl(var(--primary) / 0.1)';
-              }
-            });
-            checkbox.addEventListener('mouseleave', () => {
-              if (!isChecked) {
-                (checkbox as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.6)';
-                (checkbox as HTMLElement).style.background = 'transparent';
-              }
-            });
-            
-            const todoText = createElement('span');
-            (todoText as HTMLElement).style.cssText = `
-              font-family: var(--font-sans, 'Manrope', sans-serif);
-              font-size: 0.8125rem;
-              color: ${isChecked ? 'hsl(var(--primary) / 0.9)' : 'var(--foreground)'};
-              opacity: ${isChecked ? '1' : '0.75'};
-              font-weight: ${isChecked ? '500' : '400'};
-            `;
-            todoText.textContent = todo;
-            todoItem.appendChild(checkbox);
-            todoItem.appendChild(todoText);
-            todosSection.appendChild(todoItem);
-          });
-          
-          bubble.appendChild(todosSection);
-        }
-
-        // Footer with source badge inline
-        const footer = createElement('div', {
-          className: 'flex items-center gap-2 mt-2',
-        });
-        
-        // Source badge ("using X") inline
-        const sourceBadge = createElement('span', {
-          className: 'inline-flex items-center gap-1.5',
-        });
-        (sourceBadge as HTMLElement).style.cssText = `
-          background: hsl(var(--secondary));
-          padding: 0.2rem 0.45rem;
-          border-radius: 0.375rem;
-          font-size: 0.6875rem;
-          font-weight: 600;
-          color: hsl(var(--foreground) / 0.55);
-          border: 1px solid hsl(var(--border) / 0.6);
-          letter-spacing: 0.02em;
-        `;
-        
-        const sourceIconSpan = createElement('span');
-        sourceIconSpan.innerHTML = this.getSourceIconSmall(item.source);
-        sourceBadge.appendChild(sourceIconSpan);
-        
-        const usingText = createElement('span', {
-          textContent: 'using',
-        });
-        sourceBadge.appendChild(usingText);
-        
-        const sourceNameSpan = createElement('span', {
-          className: 'font-semibold',
-          textContent: item.source.charAt(0).toUpperCase() + item.source.slice(1),
-        });
-        sourceBadge.appendChild(sourceNameSpan);
-        footer.appendChild(sourceBadge);
-
-        bubble.appendChild(footer);
         messageWrapper.appendChild(bubble);
 
         // Right-side timestamp
@@ -690,20 +562,6 @@ export class Timeline extends Component {
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
     return formatTime(date);
-  }
-  
-  private extractTodoItems(text: string): string[] {
-    // Extract todo items from text (e.g., "Linear DES-16 — ...")
-    const todoPattern = /(?:Linear\s+)?(DES-\d+[^•\n]+)/gi;
-    const matches = text.match(todoPattern);
-    if (matches) {
-      return matches.slice(0, 4).map(m => m.trim());
-    }
-    // Fallback: if text mentions todos, create placeholder items
-    if (text.toLowerCase().includes('todo') || text.toLowerCase().includes('ticket')) {
-      return ['Task item 1', 'Task item 2'];
-    }
-    return [];
   }
   
   // ============================================
@@ -854,7 +712,7 @@ export class Timeline extends Component {
     // Title - prominent
     const title = createElement('h3');
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-display, 'Fraunces', serif);
+      font-family: var(--font-sans);
       font-size: 1rem;
       font-weight: 600;
       color: var(--foreground);

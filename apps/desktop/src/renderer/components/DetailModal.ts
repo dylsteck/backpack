@@ -63,9 +63,9 @@ export class DetailModal extends Component {
     const appSidebar = document.querySelector('[data-sidebar]');
     if (appSidebar) appSidebar.classList.add('hidden');
     
-    // Backdrop with enhanced blur
+    // Backdrop - cleaner, less blur
     const backdrop = createElement('div', {
-      className: 'fixed inset-0 bg-background/80 backdrop-blur-[16px] saturate-140 z-[100] flex items-center justify-center p-6 md:p-12 modal-backdrop-enter',
+      className: 'fixed inset-0 bg-background/75 backdrop-blur-[8px] z-[100] flex items-center justify-center p-4 md:p-8 modal-backdrop-enter',
     });
     
     this.addListener(backdrop, 'click', (e: MouseEvent) => {
@@ -75,9 +75,9 @@ export class DetailModal extends Component {
       }
     });
     
-    // Modal container
+    // Modal container - cleaner, editorial minimal
     const modal = createElement('div', {
-      className: `modal-container-premium bg-card/80 border border-border/30 transition-all duration-500 ease-in-out flex flex-col md:flex-row elevation-4 rounded-[2rem] modal-enter relative ${this.isFullscreen ? 'w-full max-w-[98vw] h-[98vh] max-h-[98vh] overflow-hidden' : 'w-full max-w-6xl h-full max-h-[90vh] overflow-visible'}`,
+      className: `bg-card border border-border/70 transition-all duration-300 ease-out flex flex-col md:flex-row elevation-2 rounded-xl modal-enter relative ${this.isFullscreen ? 'w-full max-w-[98vw] h-[98vh] max-h-[98vh] overflow-hidden' : 'w-full max-w-5xl h-full max-h-[88vh] overflow-visible'}`,
     });
     // Ensure visibility and proper positioning for sidebar
     (modal as HTMLElement).style.cssText = `
@@ -85,36 +85,36 @@ export class DetailModal extends Component {
       position: relative;
     `;
     
-    // Top Right Controls Container
+    // Top Right Controls Container - cleaner alignment
     const controlsContainer = createElement('div', {
-      className: 'absolute top-8 right-8 flex items-center gap-3 z-[200]',
+      className: 'absolute top-5 right-5 flex items-center gap-2 z-[200]',
     });
 
-    // Sidebar Toggle Button (Info button)
+    // Sidebar Toggle Button (Info button) - cleaner
     const sidebarToggleBtn = createElement('button', {
-      className: 'modal-button-secondary p-3 rounded-2xl transition-all text-muted-foreground hover:text-foreground group',
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+      className: 'p-2 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary/70 group',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`,
       attributes: { 'aria-label': 'Toggle info sidebar', 'aria-expanded': String(this.sidebarOpen) }
     });
     (sidebarToggleBtn as HTMLElement).style.cssText = `
-      background: ${this.sidebarOpen ? 'hsl(var(--primary) / 0.15)' : 'transparent'};
-      color: ${this.sidebarOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'};
+      background: ${this.sidebarOpen ? 'hsl(var(--secondary))' : 'transparent'};
+      color: ${this.sidebarOpen ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))'};
     `;
     this.addListener(sidebarToggleBtn, 'click', (e) => {
       e.stopPropagation();
       this.toggleSidebar();
       sidebarToggleBtn.setAttribute('aria-expanded', String(this.sidebarOpen));
-      (sidebarToggleBtn as HTMLElement).style.background = this.sidebarOpen ? 'hsl(var(--primary) / 0.15)' : 'transparent';
-      (sidebarToggleBtn as HTMLElement).style.color = this.sidebarOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))';
+      (sidebarToggleBtn as HTMLElement).style.background = this.sidebarOpen ? 'hsl(var(--secondary))' : 'transparent';
+      (sidebarToggleBtn as HTMLElement).style.color = this.sidebarOpen ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))';
     });
     controlsContainer.appendChild(sidebarToggleBtn);
 
-    // Fullscreen Button
+    // Fullscreen Button - cleaner
     const fullscreenBtn = createElement('button', {
-      className: 'modal-button-secondary p-3 rounded-2xl transition-all text-muted-foreground hover:text-foreground group',
+      className: 'p-2 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary/70 group',
       innerHTML: this.isFullscreen 
-        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="m15 3 6 6m0-6-6 6M9 21l-6-6m0 6 6-6M21 3h-6m6 0v6M3 21h6m-6 0v-6"/></svg>`,
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 3 6 6m0-6-6 6M9 21l-6-6m0 6 6-6M21 3h-6m6 0v6M3 21h6m-6 0v-6"/></svg>`,
       attributes: { 'aria-label': this.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }
     });
     this.addListener(fullscreenBtn, 'click', (e) => {
@@ -123,10 +123,10 @@ export class DetailModal extends Component {
     });
     controlsContainer.appendChild(fullscreenBtn);
 
-    // Close button
+    // Close button - cleaner
     const closeBtn = createElement('button', {
-      className: 'modal-button-secondary p-3 rounded-2xl transition-all text-muted-foreground hover:text-foreground group',
-      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+      className: 'p-2 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary/70 group',
+      innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
     this.addListener(closeBtn, 'click', (e) => {
@@ -172,53 +172,54 @@ export class DetailModal extends Component {
         z-index: 10;
       `;
       
-      // Sidebar Header
+      // Sidebar Header - cleaner, more compact
       const sidebarHeader = createElement('div', {
-        className: 'modal-content-spacing space-y-6 pt-16 pr-16', 
+        className: 'modal-content-spacing space-y-5 pt-12 pr-12', 
       });
       
-      // Type badge
+      // Type badge - smaller, cleaner
       const typeBadge = createElement('div', {
-        className: 'inline-flex items-center px-4 py-2 rounded-full bg-primary/15 border border-primary/20 text-primary text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
+        className: 'inline-flex items-center px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/15 text-primary text-[9px] font-semibold uppercase tracking-wider',
         textContent: this.getTypeLabel(),
       });
       (typeBadge as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
-        letter-spacing: 0.1em;
+        font-family: var(--font-sans);
+        letter-spacing: 0.08em;
       `;
       sidebarHeader.appendChild(typeBadge);
       
       const metaTitle = createElement('h2', {
-        className: 'modal-title text-2xl text-foreground',
+        className: 'modal-title text-xl text-foreground',
         textContent: this.getItemTitle(),
       });
       (metaTitle as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
-        font-weight: 700;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
+        font-family: var(--font-sans);
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
         color: hsl(var(--foreground));
       `;
       sidebarHeader.appendChild(metaTitle);
       
-      // Actions Row
+      // Actions Row - cleaner, more compact
       const actionRow = createElement('div', {
-        className: 'flex gap-3 pt-2 relative',
+        className: 'flex gap-2 pt-3 relative',
       });
       
       const connectBtn = createElement('button', {
-        className: 'modal-button-primary flex-1 h-13 text-primary-foreground rounded-2xl flex items-center justify-center gap-2 font-semibold',
+        className: 'flex-1 h-10 text-primary-foreground rounded-lg flex items-center justify-center gap-2 font-medium text-sm bg-primary hover:bg-primary/90 transition-colors',
         innerHTML: `
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           <span>Connect</span>
         `,
+        attributes: { 'aria-label': 'Connect item' }
       });
       actionRow.appendChild(connectBtn);
       
       const actionsBtn = createElement('button', {
-        className: 'modal-button-secondary w-12 h-12 p-0 flex items-center justify-center text-secondary-foreground rounded-2xl relative z-[20]',
-        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
-        attributes: { 'id': this.triggerId },
+        className: 'w-10 h-10 p-0 flex items-center justify-center text-muted-foreground rounded-lg hover:bg-secondary/70 transition-colors relative z-[20]',
+        innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+        attributes: { 'id': this.triggerId, 'aria-label': 'More actions' },
       });
       this.addListener(actionsBtn, 'click', (e) => {
         e.stopPropagation();
@@ -227,15 +228,16 @@ export class DetailModal extends Component {
       });
       actionRow.appendChild(actionsBtn);
       
-      // Actions Dropdown
+      // Actions Dropdown - cleaner styling
       const actionsDropdown = createElement('div', {
-        className: 'absolute right-0 top-full mt-3 w-56 modal-container-premium p-2 rounded-2xl elevation-4 z-[100] hidden flex-col overflow-hidden',
+        className: 'absolute right-0 top-full mt-2 w-52 bg-card border border-border/60 rounded-lg shadow-lg z-[100] hidden flex-col overflow-hidden p-1',
         attributes: { 'id': this.dropdownId },
       });
       
       const deleteBtn = createElement('button', {
-        className: 'w-full px-4 py-3 text-left text-sm text-destructive hover:bg-destructive/10 transition-all rounded-xl flex items-center gap-3 border-none bg-transparent cursor-pointer font-medium',
+        className: 'w-full px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10 transition-colors rounded-md flex items-center gap-2.5 border-none bg-transparent cursor-pointer font-medium',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Delete Item`,
+        attributes: { 'aria-label': 'Delete item' }
       });
       this.addListener(deleteBtn, 'click', (e) => {
         e.stopPropagation();
@@ -271,31 +273,34 @@ export class DetailModal extends Component {
       
       sidebarPanel.appendChild(metadata);
 
-      // Connections section
+      // Connections section - cleaner
       const connectionsSection = createElement('div', {
-        className: 'mt-auto border-t border-border/30 modal-content-spacing bg-muted/10 backdrop-blur-sm',
+        className: 'mt-auto border-t border-border/20 pt-6 pb-6 px-6',
       });
       
       const connectionsHeader = createElement('div', {
-        className: 'text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-8',
+        className: 'text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-4',
         textContent: 'Connections (0)',
       });
       (connectionsHeader as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);
+        font-family: var(--font-sans);
+        letter-spacing: 0.08em;
       `;
       connectionsSection.appendChild(connectionsHeader);
       
-      connectionsSection.innerHTML += `
-        <div class="flex flex-col items-center justify-center py-8 text-center space-y-6 opacity-60">
-          <div class="modal-metadata-card w-16 h-16 rounded-3xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-          </div>
-          <span class="text-sm font-medium text-muted-foreground">No graph connections available</span>
+      const emptyConnections = createElement('div', {
+        className: 'flex flex-col items-center justify-center py-6 text-center space-y-4 opacity-50',
+      });
+      emptyConnections.innerHTML = `
+        <div class="w-12 h-12 rounded-lg bg-secondary/40 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
         </div>
+        <span class="text-xs font-medium text-muted-foreground" style="font-family: var(--font-sans);">No connections</span>
       `;
+      connectionsSection.appendChild(emptyConnections);
       
       sidebarPanel.appendChild(connectionsSection);
       modal.appendChild(sidebarPanel);
@@ -401,11 +406,11 @@ export class DetailModal extends Component {
 
   private createMetaSection(label: string, value: string): HTMLElement {
     const section = createElement('div', {
-      className: 'modal-metadata-card p-5 rounded-2xl space-y-2',
+      className: 'p-4 rounded-lg bg-secondary/30 border border-border/30 space-y-1.5',
     });
     section.innerHTML = `
-      <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">${label}</div>
-      <div class="text-sm font-semibold text-foreground transition-colors">${escapeHtml(value)}</div>
+      <div class="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider" style="font-family: var(--font-sans); letter-spacing: 0.08em;">${label}</div>
+      <div class="text-sm font-medium text-foreground transition-colors" style="font-family: var(--font-sans);">${escapeHtml(value)}</div>
     `;
     return section;
   }
@@ -445,12 +450,12 @@ export class DetailModal extends Component {
         
         const article = createElement('article', { className: `modal-visual-hierarchy ${this.isFullscreen ? 'py-12' : ''}` });
 
-        const header = createElement('header', { className: 'modal-section-spacing space-y-6 pb-10 border-b border-border/20' });
+        const header = createElement('header', { className: 'modal-section-spacing space-y-5 pb-8 border-b border-border/15' });
         header.innerHTML = `
-          <div class="space-y-5">
-            <h1 class="text-foreground leading-tight tracking-tight font-bold" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); font-size: clamp(2.25rem, 4vw, 3.5rem); line-height: 1.2; letter-spacing: -0.02em;">${escapeHtml(note.title)}</h1>
-            <div class="flex items-center gap-3 text-muted-foreground font-sans text-xs bg-secondary/40 px-4 py-2 rounded-lg w-fit border border-border/20 overflow-hidden max-w-full" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-70 shrink-0"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <div class="space-y-4">
+            <h1 class="text-foreground leading-tight tracking-tight font-bold" style="font-family: var(--font-sans); font-size: clamp(2rem, 3.5vw, 3rem); line-height: 1.2; letter-spacing: -0.02em;">${escapeHtml(note.title)}</h1>
+            <div class="flex items-center gap-2.5 text-muted-foreground text-xs bg-secondary/30 px-3 py-1.5 rounded-md w-fit border border-border/15 overflow-hidden max-w-full" style="font-family: var(--font-sans);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-60 shrink-0"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               <span class="truncate">${escapeHtml(note.path)}</span>
             </div>
           </div>
@@ -478,10 +483,10 @@ export class DetailModal extends Component {
 
         if (note.tags?.length) {
           const tagsContainer = createElement('div', {
-            className: 'modal-section-spacing flex flex-wrap gap-3 pt-10'
+            className: 'modal-section-spacing flex flex-wrap gap-2 pt-8'
           });
           tagsContainer.innerHTML = note.tags.map(t =>
-            `<span class="px-4 py-2 bg-primary/12 border border-primary/25 text-primary text-xs font-semibold rounded-full hover:bg-primary/20 transition-all cursor-pointer backdrop-blur-sm" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">#${escapeHtml(t)}</span>`
+            `<span class="px-3 py-1.5 bg-primary/10 border border-primary/15 text-primary text-xs font-medium rounded-md hover:bg-primary/15 transition-colors cursor-pointer" style="font-family: var(--font-sans);">#${escapeHtml(t)}</span>`
           ).join('');
           article.appendChild(tagsContainer);
         }
@@ -495,34 +500,34 @@ export class DetailModal extends Component {
         const article = createElement('article', { className: 'max-w-2xl mx-auto modal-visual-hierarchy' });
 
         article.innerHTML = `
-          <header class="flex items-center gap-4 pb-8">
-            <img src="${cast.author.pfp_url}" class="w-16 h-16 rounded-2xl elevation-2 border border-border/30" />
+          <header class="flex items-center gap-3 pb-6">
+            <img src="${cast.author.pfp_url}" class="w-12 h-12 rounded-lg border border-border/20" />
             <div>
-              <div class="modal-subtitle text-xl text-foreground" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); font-weight: 600; line-height: 1.3;">${escapeHtml(cast.author.display_name)}</div>
-              <div class="text-muted-foreground text-sm font-sans" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">@${escapeHtml(cast.author.username)}</div>
+              <div class="text-lg text-foreground" style="font-family: var(--font-sans); font-weight: 600; line-height: 1.3;">${escapeHtml(cast.author.display_name)}</div>
+              <div class="text-muted-foreground text-xs" style="font-family: var(--font-sans);">@${escapeHtml(cast.author.username)}</div>
             </div>
           </header>
 
           <div class="modal-section-spacing">
-            <p class="modal-content-readable text-foreground text-xl leading-relaxed whitespace-pre-wrap font-normal" style="font-family: var(--font-sans); line-height: 1.75; letter-spacing: -0.01em;">${escapeHtml(cast.text)}</p>
+            <p class="text-foreground text-lg leading-relaxed whitespace-pre-wrap font-normal" style="font-family: var(--font-sans); line-height: 1.7; letter-spacing: -0.005em;">${escapeHtml(cast.text)}</p>
           </div>
 
           ${cast.embeds?.length ? `
-            <div class="modal-section-spacing grid grid-cols-1 gap-4">
+            <div class="modal-section-spacing grid grid-cols-1 gap-3">
               ${cast.embeds.map(e => e.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ?
-                `<img src="${e.url}" class="w-full rounded-2xl elevation-2 border border-border/30" />` : ''
+                `<img src="${e.url}" class="w-full rounded-lg border border-border/20" />` : ''
               ).join('')}
             </div>
           ` : ''}
 
-          <div class="flex gap-8 pt-8 border-t border-border/20">
-            <div class="flex items-center gap-3">
-              <span class="text-xl font-bold text-primary animated-counter" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">${cast.reactions?.likes_count || 0}</span>
-              <span class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); letter-spacing: 0.1em;">Likes</span>
+          <div class="flex gap-6 pt-6 border-t border-border/15">
+            <div class="flex items-center gap-2.5">
+              <span class="text-lg font-semibold text-primary" style="font-family: var(--font-sans);">${cast.reactions?.likes_count || 0}</span>
+              <span class="text-[9px] font-medium uppercase tracking-wider text-muted-foreground" style="font-family: var(--font-sans); letter-spacing: 0.08em;">Likes</span>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-xl font-bold text-secondary-foreground animated-counter" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif);">${cast.reactions?.recasts_count || 0}</span>
-              <span class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); letter-spacing: 0.1em;">Recasts</span>
+            <div class="flex items-center gap-2.5">
+              <span class="text-lg font-semibold text-foreground" style="font-family: var(--font-sans);">${cast.reactions?.recasts_count || 0}</span>
+              <span class="text-[9px] font-medium uppercase tracking-wider text-muted-foreground" style="font-family: var(--font-sans); letter-spacing: 0.08em;">Recasts</span>
             </div>
           </div>
         `;
@@ -534,32 +539,40 @@ export class DetailModal extends Component {
       case 'transaction': {
         const tx = this.item.data as TellerTransaction;
         const amount = parseFloat(tx.amount);
+        const isPositive = amount > 0;
         wrapper.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center text-center modal-visual-hierarchy">
-            <div class="space-y-6">
-              <div class="inline-flex items-center px-5 py-2 rounded-full ${amount > 0 ? 'bg-green-500/12 border border-green-500/25 text-green-500' : 'bg-amber-500/12 border border-amber-500/25 text-amber-500'} text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
-                ${tx.details.category || 'Transaction'}
+          <div class="h-full flex flex-col items-center justify-center text-center px-6">
+            <div class="space-y-6 w-full max-w-2xl">
+              <!-- Category Badge -->
+              <div class="flex justify-center">
+                <div class="inline-flex items-center px-3 py-1.5 rounded-md ${isPositive ? 'bg-green-500/10 border border-green-500/20 text-green-700' : 'bg-amber-500/10 border border-amber-500/20 text-amber-700'} text-xs font-semibold uppercase tracking-wider" style="font-family: var(--font-sans); letter-spacing: 0.1em;">
+                  ${escapeHtml(tx.details.category || 'Transaction')}
+                </div>
               </div>
-              <div class="modal-title text-foreground leading-none" style="font-size: clamp(4rem, 8vw, 7rem);">
-                <span class="opacity-30 text-[clamp(1.5rem, 3vw, 2.5rem)] align-top mr-2 mt-6 inline-block font-sans font-light">$</span>${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              
+              <!-- Amount -->
+              <div class="text-foreground leading-none" style="font-family: var(--font-sans); font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 700; letter-spacing: -0.02em;">
+                <span class="opacity-40 text-[clamp(1rem, 2vw, 1.75rem)] align-top mr-1.5 mt-3 inline-block font-light">$</span>${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-            </div>
-            
-            <div class="max-w-xl space-y-4">
-              <h2 class="modal-subtitle text-2xl text-foreground" style="font-family: var(--font-sans); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em;">${escapeHtml(tx.description)}</h2>
-              <p class="text-muted-foreground text-base font-sans" style="font-family: var(--font-sans);">${formatFullDate(this.item.timestamp)}</p>
-            </div>
+              
+              <!-- Merchant Name -->
+              <div class="space-y-2">
+                <h2 class="text-2xl text-foreground" style="font-family: var(--font-sans); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em;">${escapeHtml(tx.description)}</h2>
+                <p class="text-muted-foreground text-sm" style="font-family: var(--font-sans);">${formatFullDate(this.item.timestamp)}</p>
+              </div>
 
-            <div class="w-full max-w-sm grid grid-cols-2 gap-6 p-8 modal-metadata-card rounded-3xl">
-              <div class="text-left space-y-2">
-                <div class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); letter-spacing: 0.08em;">Account</div>
-                <div class="text-foreground font-medium text-base" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); line-height: 1.5;">${escapeHtml(tx.account_id || 'Checking Account')}</div>
-              </div>
-              <div class="text-left space-y-2">
-                <div class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); letter-spacing: 0.08em;">Status</div>
-                <div class="text-green-500 font-medium text-base flex items-center gap-2" style="font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif); line-height: 1.5;">
-                  <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  Cleared
+              <!-- Details Card -->
+              <div class="w-full max-w-md mx-auto grid grid-cols-2 gap-6 p-6 bg-card border border-border/30 rounded-lg mt-8">
+                <div class="text-left space-y-1.5">
+                  <div class="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider" style="font-family: var(--font-sans); letter-spacing: 0.1em;">Account</div>
+                  <div class="text-foreground font-medium text-sm break-all" style="font-family: var(--font-sans); line-height: 1.5;">${escapeHtml(tx.account_id || 'Checking Account')}</div>
+                </div>
+                <div class="text-left space-y-1.5">
+                  <div class="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider" style="font-family: var(--font-sans); letter-spacing: 0.1em;">Status</div>
+                  <div class="text-green-600 font-medium text-sm flex items-center gap-2" style="font-family: var(--font-sans); line-height: 1.5;">
+                    <div class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></div>
+                    <span>Cleared</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -575,18 +588,18 @@ export class DetailModal extends Component {
 
         wrapper.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-center modal-visual-hierarchy">
-            <div class="relative mb-8">
-              <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 opacity-60"></div>
-              <div class="modal-container-premium relative z-10 w-28 h-28 rounded-3xl p-6 flex items-center justify-center">
+            <div class="relative mb-6">
+              <div class="absolute inset-0 bg-primary/10 blur-2xl rounded-full scale-150 opacity-40"></div>
+              <div class="relative z-10 w-20 h-20 rounded-xl p-4 flex items-center justify-center bg-card border border-border/20">
                 <img src="${favicon}" class="w-full h-full object-contain" />
               </div>
             </div>
 
-            <div class="max-w-xl space-y-6 relative z-10">
-              <h1 class="modal-title text-4xl text-foreground">${escapeHtml(entry.title || 'Web Discovery')}</h1>
-              <a href="${entry.url}" target="_blank" class="inline-flex items-center gap-3 text-primary hover:text-primary/80 transition-colors font-mono text-base modal-button-secondary px-4 py-2 rounded-xl">
+            <div class="max-w-xl space-y-4 relative z-10">
+              <h1 class="text-3xl text-foreground" style="font-family: var(--font-sans); font-weight: 700; line-height: 1.2;">${escapeHtml(entry.title || 'Web Discovery')}</h1>
+              <a href="${entry.url}" target="_blank" class="inline-flex items-center gap-2.5 text-primary hover:text-primary/80 transition-colors text-sm px-3 py-2 rounded-lg border border-border/20 hover:bg-secondary/30" style="font-family: var(--font-sans);">
                 <span class="truncate max-w-xs">${url.hostname}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
             </div>
           </div>

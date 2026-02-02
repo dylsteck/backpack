@@ -6,7 +6,7 @@
 import { Component } from './Component';
 import { store } from '../store';
 import { router } from '../router';
-import { fetchAppsWithCache } from '../api';
+import { fetchAppsWithCache, appsCache } from '../api';
 import { createElement, clearChildren } from '../utils/dom';
 import type { AppServer } from '../types';
 
@@ -16,10 +16,12 @@ export class AddAppsModal extends Component {
   }
 
   async init(): Promise<void> {
+    // Render first to show loading state
     this.render();
 
-    // Subscribe to apps changes
+    // Subscribe to apps and loading changes
     this.subscribe(store.apps, () => this.renderAppsGrid());
+    this.subscribe(store.appsLoading, () => this.renderAppsGrid());
 
     // Ensure apps are loaded
     await this.loadApps();
@@ -27,9 +29,12 @@ export class AddAppsModal extends Component {
 
   private async loadApps(): Promise<void> {
     try {
+      // Clear cache to ensure fresh data
+      appsCache.clear();
       await fetchAppsWithCache();
     } catch (error) {
       console.error('Failed to load apps:', error);
+      // Even on error, renderAppsGrid will use fallback apps
     }
   }
 
@@ -60,20 +65,20 @@ export class AddAppsModal extends Component {
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-[17px] text-foreground',
+      className: 'text-lg text-foreground',
       textContent: 'Add Apps',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-display, 'Fraunces', serif);
+      font-family: var(--font-sans);
       font-weight: 600;
       letter-spacing: -0.01em;
     `;
     const subtitle = createElement('p', {
-      className: 'text-[13px] text-muted-foreground mt-1',
+      className: 'text-sm text-muted-foreground mt-1',
       textContent: 'Browse and connect apps to your vault',
     });
     (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-sans);
     `;
     titleSection.appendChild(title);
     titleSection.appendChild(subtitle);
@@ -129,19 +134,39 @@ export class AddAppsModal extends Component {
     if (!gridContainer) return;
 
     const apps = store.apps.get();
-    // Filter to show only unconnected apps
-    const unconnectedApps = apps.filter(app => app.connection?.status !== 'connected');
+    // Filter to show only unconnected apps (connection is null or status is not 'connected')
+    const unconnectedApps = apps.filter(app => {
+      const connectionStatus = app.connection?.status;
+      return connectionStatus !== 'connected';
+    });
 
     clearChildren(gridContainer);
 
-    if (apps.length === 0) {
-      // Apps haven't loaded yet - show loading state
+    if (store.appsLoading.get()) {
+      // Apps are loading - show loading state
       gridContainer.innerHTML = `
-        <div class="col-span-full text-center py-12 text-muted-foreground font-semibold uppercase tracking-[0.18em] text-[11px]">
+        <div class="col-span-full text-center py-12 text-muted-foreground font-semibold uppercase tracking-wider text-xs">
           <div class="flex items-center justify-center gap-2">
             <div class="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
             Loading apps...
           </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (apps.length === 0) {
+      // No apps available - show error state
+      gridContainer.innerHTML = `
+        <div class="col-span-full text-center py-12 px-6">
+          <div class="w-14 h-14 mx-auto bg-secondary rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <p class="text-sm text-muted-foreground">No apps available. Please try again.</p>
         </div>
       `;
       return;
@@ -155,12 +180,13 @@ export class AddAppsModal extends Component {
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <p class="text-[13px] text-muted-foreground">All available apps are connected!</p>
+          <p class="text-sm text-muted-foreground">All available apps are connected!</p>
         </div>
       `;
       return;
     }
 
+    // Render unconnected apps
     for (const app of unconnectedApps) {
       const card = this.createAppCard(app);
       gridContainer.appendChild(card);
@@ -171,12 +197,17 @@ export class AddAppsModal extends Component {
     const isConnected = app.connection?.status === 'connected';
 
     const card = createElement('div', {
-      className: `card-modern group relative flex flex-col items-center p-5 border transition-all cursor-pointer rounded-xl ${
+      className: `card-modern group relative flex flex-col items-center p-5 border transition-all cursor-pointer rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
         isConnected 
           ? 'bg-secondary/70 border-border/70' 
           : 'bg-card hover:bg-secondary/60 hover-lift'
       }`,
       dataset: { appId: app.id },
+      attributes: {
+        role: 'button',
+        tabindex: '0',
+        'aria-label': isConnected ? `${app.name} - Already connected` : `Add ${app.name} to vault`,
+      },
     });
 
     // Connection status indicator or checkmark
@@ -215,41 +246,53 @@ export class AddAppsModal extends Component {
     
     // Name
     const name = createElement('p', {
-      className: 'text-[13px] text-center font-semibold tracking-tight',
+      className: 'text-sm text-center font-semibold tracking-tight',
       textContent: app.name,
     });
+    (name as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
     card.appendChild(name);
     
     // Description (truncated)
     if (app.description) {
       const desc = createElement('p', {
-        className: 'text-[11px] text-muted-foreground text-center mt-1 line-clamp-2',
+        className: 'text-xs text-muted-foreground text-center mt-1 line-clamp-2',
         textContent: app.description,
       });
+      (desc as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       card.appendChild(desc);
     }
     
     // Connection status badge
     if (isConnected) {
       const statusBadge = createElement('span', {
-        className: 'mt-2 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] bg-secondary text-foreground rounded border border-border/60',
+        className: 'mt-2 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-secondary text-foreground rounded border border-border/60',
         textContent: 'Connected',
       });
+      (statusBadge as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       card.appendChild(statusBadge);
     } else {
       const statusBadge = createElement('span', {
-        className: 'mt-2 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border text-muted-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity',
+        className: 'mt-2 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider border border-border text-muted-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity',
         textContent: 'Click to Add',
       });
+      (statusBadge as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       card.appendChild(statusBadge);
     }
     
-    // Click handler
-    this.addListener(card, 'click', () => {
+    // Click and keyboard handler
+    const handleActivate = () => {
       // Close modal and navigate to app detail
       this.cleanup();
       this.onClose();
       router.navigate(`/apps/${app.id}`);
+    };
+    
+    this.addListener(card, 'click', handleActivate);
+    this.addListener(card, 'keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleActivate();
+      }
     });
     
     return card;

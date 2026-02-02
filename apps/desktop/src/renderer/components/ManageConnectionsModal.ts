@@ -51,20 +51,20 @@ export class ManageConnectionsModal extends Component {
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-[17px] text-foreground',
+      className: 'text-lg text-foreground',
       textContent: 'Manage Connections',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-display, 'Fraunces', serif);
+      font-family: var(--font-sans);
       font-weight: 600;
       letter-spacing: -0.01em;
     `;
     const subtitle = createElement('p', {
-      className: 'text-[13px] text-muted-foreground mt-1',
+      className: 'text-sm text-muted-foreground mt-1',
       textContent: 'View and manage your connected apps',
     });
     (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-sans);
     `;
     titleSection.appendChild(title);
     titleSection.appendChild(subtitle);
@@ -141,7 +141,7 @@ export class ManageConnectionsModal extends Component {
               <path d="M12 5v14"/>
             </svg>
           </div>
-          <p class="text-[13px] text-muted-foreground">No connected apps yet</p>
+          <p class="text-sm text-muted-foreground">No connected apps yet</p>
         </div>
       `;
       return;
@@ -191,9 +191,10 @@ export class ManageConnectionsModal extends Component {
     });
     
     const name = createElement('p', {
-      className: 'text-[13px] font-semibold tracking-tight',
+      className: 'text-sm font-semibold tracking-tight',
       textContent: app.name,
     });
+    (name as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
     infoSection.appendChild(name);
     
     // Connection details row
@@ -210,18 +211,20 @@ export class ManageConnectionsModal extends Component {
     });
     statusRow.appendChild(statusDot);
     const statusText = createElement('span', {
-      className: 'text-[11px] text-muted-foreground',
+      className: 'text-xs text-muted-foreground',
       textContent: 'Connected',
     });
+    (statusText as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
     statusRow.appendChild(statusText);
     detailsRow.appendChild(statusRow);
     
     // Connection type
     if (app.connectionType) {
       const typeBadge = createElement('span', {
-        className: 'px-2 py-0.5 bg-secondary text-[11px] text-muted-foreground font-semibold uppercase tracking-[0.12em] rounded border border-border/60',
+        className: 'px-2 py-0.5 bg-secondary text-xs text-muted-foreground font-semibold uppercase tracking-wider rounded border border-border/60',
         textContent: app.connectionType,
       });
+      (typeBadge as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       detailsRow.appendChild(typeBadge);
     }
     
@@ -230,9 +233,10 @@ export class ManageConnectionsModal extends Component {
     if (lastSyncedAt && typeof lastSyncedAt === 'string') {
       const lastSynced = new Date(lastSyncedAt);
       const lastSyncedText = createElement('span', {
-        className: 'text-[11px] text-muted-foreground',
+        className: 'text-xs text-muted-foreground',
         textContent: `Last synced: ${formatDate(lastSynced)} ${formatTime(lastSynced)}`,
       });
+      (lastSyncedText as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       detailsRow.appendChild(lastSyncedText);
     }
     
@@ -243,8 +247,9 @@ export class ManageConnectionsModal extends Component {
       const metadata = app.connection.connectionMetadata;
       if (metadata.localPath || metadata.fid) {
         const metadataRow = createElement('div', {
-          className: 'mt-2 text-[11px] text-muted-foreground',
+          className: 'mt-2 text-xs text-muted-foreground',
         });
+        (metadataRow as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
         if (metadata.localPath) {
           metadataRow.textContent = `Path: ${metadata.localPath}`;
         } else if (metadata.fid) {
@@ -263,11 +268,12 @@ export class ManageConnectionsModal extends Component {
     
     // Edit button
     const editButton = createElement('button', {
-      className: `px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border hover:bg-secondary/70 transition-colors rounded ${
+      className: `px-3 py-1.5 text-xs font-semibold uppercase tracking-wider border border-border hover:bg-secondary/70 transition-colors rounded ${
         isEditing ? 'bg-primary text-primary-foreground border-primary' : ''
       }`,
       textContent: isEditing ? 'Cancel' : 'Edit',
     });
+    (editButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
     
     this.addListener(editButton, 'click', (e) => {
       e.stopPropagation();
@@ -284,9 +290,10 @@ export class ManageConnectionsModal extends Component {
     // View Details button (only show when not editing)
     if (!isEditing) {
       const viewButton = createElement('button', {
-        className: 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] border border-border hover:bg-secondary/70 transition-colors rounded',
+        className: 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider border border-border hover:bg-secondary/70 transition-colors rounded',
         textContent: 'View Details',
       });
+      (viewButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       
       this.addListener(viewButton, 'click', (e) => {
         e.stopPropagation();
@@ -299,10 +306,11 @@ export class ManageConnectionsModal extends Component {
       
       // Disconnect button
       const disconnectButton = createElement('button', {
-        className: 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors rounded',
+        className: 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors rounded',
         textContent: 'Disconnect',
         dataset: { connectionId: app.connection?.id || '' },
       });
+      (disconnectButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       
       this.addListener(disconnectButton, 'click', async (e) => {
         e.stopPropagation();
@@ -330,9 +338,10 @@ export class ManageConnectionsModal extends Component {
     });
     
     const formTitle = createElement('h3', {
-      className: 'text-[12px] font-semibold uppercase tracking-[0.2em] mb-3',
+      className: 'text-xs font-semibold uppercase tracking-wider mb-3',
       textContent: 'Edit Connection Settings',
     });
+    (formTitle as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.1em;';
     form.appendChild(formTitle);
     
     // API Key field (for Farcaster and other API-based apps)
@@ -342,9 +351,10 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyLabel = createElement('label', {
-        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
+        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
         textContent: 'Neynar API Key',
       });
+      (apiKeyLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       apiKeyGroup.appendChild(apiKeyLabel);
       
       const apiKeyWrapper = createElement('div', {
@@ -352,13 +362,14 @@ export class ManageConnectionsModal extends Component {
       });
       
       const apiKeyInput = createElement('input', {
-        className: 'w-full px-3 py-2 pr-10 bg-card border border-border text-[13px]',
+        className: 'w-full px-3 py-2 pr-10 bg-card border border-border text-sm',
         attributes: {
           type: 'password',
           placeholder: 'Enter your Neynar API key',
           'data-api-key-input': 'true',
         },
       });
+      (apiKeyInput as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       apiKeyWrapper.appendChild(apiKeyInput);
       
       // Toggle visibility button
@@ -384,13 +395,14 @@ export class ManageConnectionsModal extends Component {
       });
       
       const fidLabel = createElement('label', {
-        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
+        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
         textContent: 'Farcaster ID (FID)',
       });
+      (fidLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       fidGroup.appendChild(fidLabel);
       
       const fidInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-card border border-border text-[13px]',
+        className: 'w-full px-3 py-2 bg-card border border-border text-sm',
         attributes: {
           type: 'number',
           placeholder: 'Enter your Farcaster ID',
@@ -398,6 +410,7 @@ export class ManageConnectionsModal extends Component {
           value: (app.connection?.connectionMetadata?.fid as string) || '',
         },
       });
+      (fidInput as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       fidGroup.appendChild(fidLabel);
       fidGroup.appendChild(fidInput);
       form.appendChild(fidGroup);
@@ -410,25 +423,28 @@ export class ManageConnectionsModal extends Component {
       });
       
       const pathLabel = createElement('label', {
-        className: 'block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
+        className: 'block text-xs font-semibold uppercase tracking-wider text-muted-foreground',
         textContent: 'Local Path',
       });
+      (pathLabel as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
       pathGroup.appendChild(pathLabel);
       
       const pathInput = createElement('input', {
-        className: 'w-full px-3 py-2 bg-card border border-border text-[13px]',
+        className: 'w-full px-3 py-2 bg-card border border-border text-sm',
         attributes: {
           type: 'text',
           readonly: 'true',
           value: app.connection.connectionMetadata.localPath as string,
         },
       });
+      (pathInput as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       pathGroup.appendChild(pathInput);
       
       const pathNote = createElement('p', {
-        className: 'text-[11px] text-muted-foreground',
+        className: 'text-xs text-muted-foreground',
         textContent: 'To change the path, disconnect and reconnect this app.',
       });
+      (pathNote as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       pathGroup.appendChild(pathNote);
       form.appendChild(pathGroup);
     }
@@ -439,9 +455,10 @@ export class ManageConnectionsModal extends Component {
     });
     
     const saveButton = createElement('button', {
-      className: 'px-4 py-2 bg-primary text-primary-foreground font-semibold uppercase tracking-[0.18em] text-[11px] rounded transition-colors hover:bg-primary/90',
+      className: 'px-4 py-2 bg-primary text-primary-foreground font-semibold uppercase tracking-wider text-xs rounded transition-colors hover:bg-primary/90',
       textContent: 'Save Changes',
     });
+    (saveButton as HTMLElement).style.cssText = 'font-family: var(--font-sans); letter-spacing: 0.08em;';
     
     this.addListener(saveButton, 'click', async () => {
       await this.handleSave(app, form);

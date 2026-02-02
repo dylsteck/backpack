@@ -32,14 +32,15 @@ export class TopbarTitle extends Component {
     this.container.innerHTML = '';
     
     this.titleElement = createElement('span', {
-      className: 'pointer-events-auto font-sans tracking-normal uppercase',
+      className: 'pointer-events-auto uppercase',
       textContent: routeTitles[this.currentView],
     });
     (this.titleElement as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-sans);
       font-weight: 600;
-      font-size: 0.8125rem;
-      letter-spacing: 0.08em;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: hsl(var(--foreground));
     `;
     this.container.appendChild(this.titleElement);
   }

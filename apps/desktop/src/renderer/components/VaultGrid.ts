@@ -49,7 +49,7 @@ export class VaultGrid extends Component {
       textContent: 'Vault',
     });
     (title as HTMLElement).style.cssText = `
-      font-family: var(--font-display, 'Fraunces', serif);
+      font-family: var(--font-sans);
       font-weight: 600;
       font-size: 1.25rem;
       letter-spacing: -0.01em;
@@ -57,11 +57,11 @@ export class VaultGrid extends Component {
     titleSection.appendChild(title);
     
     const subtitle = createElement('p', {
-      className: 'text-[13px] text-muted-foreground mt-1',
+      className: 'text-xs text-muted-foreground mt-1',
       textContent: 'Your connected apps',
     });
     (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-sans);
     `;
     titleSection.appendChild(subtitle);
     
@@ -175,10 +175,10 @@ export class VaultGrid extends Component {
             </svg>
           </div>
           <div>
-            <h3 class="text-[15px] text-foreground mb-2">No Connected Apps</h3>
-            <p class="text-[13px] text-muted-foreground">Add apps to your vault to start syncing your data</p>
+            <h3 class="text-sm font-semibold text-foreground mb-2">No Connected Apps</h3>
+            <p class="text-xs text-muted-foreground">Add apps to your vault to start syncing your data</p>
           </div>
-          <button class="px-4 py-2 bg-primary text-primary-foreground text-[13px] hover:bg-primary/90 transition-colors mx-auto rounded-lg" data-add-apps>
+          <button class="px-4 py-2 bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors mx-auto rounded-lg" data-add-apps>
             Add Apps
           </button>
         </div>
@@ -189,7 +189,7 @@ export class VaultGrid extends Component {
     const heading = this.gridContainer.querySelector('h3');
     if (heading) {
       (heading as HTMLElement).style.cssText = `
-        font-family: var(--font-display, 'Fraunces', serif);
+        font-family: var(--font-sans);
         font-weight: 600;
         letter-spacing: -0.01em;
       `;
@@ -219,8 +219,13 @@ export class VaultGrid extends Component {
     const isConnected = app.connection?.status === 'connected';
 
     const card = createElement('div', {
-      className: 'card-modern group relative flex flex-col items-center p-6 border border-border/70 bg-card hover:bg-secondary/60 transition-all cursor-pointer hover-lift rounded-xl',
+      className: 'card-modern group relative flex flex-col items-center p-6 border border-border/70 bg-card hover:bg-secondary/60 transition-all cursor-pointer hover-lift rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
       dataset: { appId: app.id },
+      attributes: {
+        role: 'button',
+        tabindex: '0',
+        'aria-label': `View ${app.name} details`,
+      },
     });
 
     // Connection status indicator
@@ -252,11 +257,11 @@ export class VaultGrid extends Component {
     
     // Name
     const name = createElement('p', {
-      className: 'text-[13px] text-center font-semibold',
+      className: 'text-sm text-center font-semibold',
       textContent: app.name,
     });
     (name as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
+      font-family: var(--font-sans);
       font-weight: 600;
     `;
     card.appendChild(name);
@@ -264,15 +269,24 @@ export class VaultGrid extends Component {
     // Description (truncated)
     if (app.description) {
       const desc = createElement('p', {
-        className: 'text-[11px] text-muted-foreground text-center mt-2 line-clamp-2 px-2',
+        className: 'text-xs text-muted-foreground text-center mt-2 line-clamp-2 px-2',
         textContent: app.description,
       });
+      (desc as HTMLElement).style.cssText = 'font-family: var(--font-sans);';
       card.appendChild(desc);
     }
     
-    // Click handler
-    this.addListener(card, 'click', () => {
+    // Click and keyboard handler
+    const handleActivate = () => {
       router.navigate(`/apps/${app.id}`);
+    };
+    
+    this.addListener(card, 'click', handleActivate);
+    this.addListener(card, 'keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleActivate();
+      }
     });
     
     return card;

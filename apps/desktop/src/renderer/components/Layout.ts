@@ -59,18 +59,18 @@ export class Layout extends Component {
     this.container.innerHTML = '';
     this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden text-foreground';
 
-    // Topbar background (covers content area)
+    // Topbar background (covers content area) - cleaner, more minimal
     this.topbarContainer = createElement('div', {
-      className: 'fixed top-0 h-[44px] z-40 bg-background/90 backdrop-blur-md border-b border-border/60 transition-all duration-300',
+      className: 'fixed top-0 h-[48px] z-40 bg-background/95 backdrop-blur-sm border-b border-border/40 transition-all duration-300',
       attributes: {
         style: 'left: calc(16rem + 0.5rem); right: 0;',
       },
     });
     this.container.appendChild(this.topbarContainer);
 
-    // Topbar title
+    // Topbar title - cleaner typography
     this.topbarTitleEl = createElement('div', {
-      className: 'fixed top-0 h-[44px] flex items-center z-40 transition-[left] duration-200 ease-linear text-[13px] font-medium text-foreground select-none pointer-events-none',
+      className: 'fixed top-0 h-[48px] flex items-center z-40 transition-[left] duration-200 ease-linear px-6 text-foreground select-none pointer-events-none',
       attributes: {
         style: 'left: calc(16rem + 0.5rem);',
       },
@@ -122,7 +122,7 @@ export class Layout extends Component {
     
     // Drag region
     const dragRegion = createElement('div', {
-      className: 'draglayer h-[44px] shrink-0',
+      className: 'draglayer h-[48px] shrink-0',
     });
     contentStack.appendChild(dragRegion);
 
