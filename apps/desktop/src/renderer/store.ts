@@ -11,7 +11,6 @@ import type {
   AppServer,
   BrowserHistoryEntry,
   ObsidianNote,
-  ChatSessionTransfer,
 } from './types';
 
 type Listener<T> = (value: T, prevValue: T) => void;
@@ -162,9 +161,6 @@ export const store = {
   databasePath: new Observable<string | null>(
     localStorage.getItem('databasePath')
   ),
-  
-  // Chat session transfer (for moving chat from ChatPage to ChatSidebar when browser tools are used)
-  chatSessionTransfer: new Observable<ChatSessionTransfer | null>(null),
 };
 
 // Persist hasSeenOnboarding to localStorage

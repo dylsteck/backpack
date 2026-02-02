@@ -127,31 +127,4 @@ export interface ObsidianNote {
   backlinks?: string[];
 }
 
-export interface ChatSession {
-  id: string;
-  title?: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-}
-
-export interface ChatMessage {
-  id: string;
-  sessionId: string;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt: string | Date;
-}
-
-// Chat session transfer (for moving chat from ChatPage to ChatSidebar)
-export interface ChatSessionTransfer {
-  sessionId: string | null;
-  messages: Array<{
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    createdAt: Date;
-  }>;
-  provider: string;
-  model: string;
-}
 
