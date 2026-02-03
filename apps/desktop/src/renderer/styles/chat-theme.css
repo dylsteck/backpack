@@ -6,42 +6,38 @@
 /* ============================================
    CSS VARIABLES - Design Tokens (Light)
    ============================================ */
-:root {
-  /* Command Center Color Palette */
-  --cc-void: #fbf8f3;
-  --cc-deep: #f4efe7;
-  --cc-surface: #efe9e1;
-  --cc-elevated: #ffffff;
+ :root {
+  /* Command Center Palette aligned to global tokens */
+  --cc-void: hsl(var(--background));
+  --cc-deep: hsl(var(--secondary));
+  --cc-surface: hsl(var(--muted));
+  --cc-elevated: hsl(var(--card));
 
-  /* Atmospheric Gradients - Subtle and refined */
+  /* Subtle minimal gradients */
   --cc-gradient-bg: linear-gradient(180deg,
-    #fbf8f3 0%,
-    #f1ebe3 100%);
-  --cc-gradient-mesh:
-    radial-gradient(at 0% 0%, rgba(47, 75, 107, 0.06) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(198, 87, 73, 0.05) 0px, transparent 55%),
-    radial-gradient(at 100% 100%, rgba(75, 111, 92, 0.04) 0px, transparent 55%),
-    radial-gradient(at 0% 100%, rgba(120, 105, 90, 0.05) 0px, transparent 55%);
+    hsl(var(--background)) 0%,
+    hsl(var(--secondary) / 0.6) 100%);
+  --cc-gradient-mesh: none;
 
   /* Accent Colors */
-  --cc-primary: #2f4b6b;
-  --cc-primary-glow: rgba(47, 75, 107, 0.18);
-  --cc-secondary: #c65749;
-  --cc-accent: #7a6a5a;
-  --cc-success: #3b7a5a;
-  --cc-warning: #c27a2c;
+  --cc-primary: hsl(var(--primary));
+  --cc-primary-glow: hsla(var(--primary), 0.16);
+  --cc-secondary: hsl(var(--accent));
+  --cc-accent: hsl(var(--muted-foreground));
+  --cc-success: hsl(var(--status-connected));
+  --cc-warning: hsl(var(--status-warning));
 
   /* Text Colors */
-  --cc-text-primary: #1b1916;
-  --cc-text-secondary: #3d3832;
-  --cc-text-tertiary: #6b635a;
-  --cc-text-muted: #9c9288;
+  --cc-text-primary: hsl(var(--foreground));
+  --cc-text-secondary: hsl(var(--muted-foreground));
+  --cc-text-tertiary: hsl(var(--muted-foreground));
+  --cc-text-muted: hsl(var(--muted-foreground) / 0.8);
 
-  /* Glass Morphism */
-  --cc-glass-bg: rgba(255, 255, 255, 0.75);
-  --cc-glass-border: rgba(27, 25, 22, 0.08);
-  --cc-glass-highlight: rgba(255, 255, 255, 0.6);
-  --cc-glass-shadow: 0 6px 24px rgba(27, 25, 22, 0.08);
+  /* Glass Morphism (reduced) */
+  --cc-glass-bg: hsl(var(--card) / 0.75);
+  --cc-glass-border: hsl(var(--border) / 0.6);
+  --cc-glass-highlight: hsl(var(--background) / 0.8);
+  --cc-glass-shadow: 0 4px 16px rgba(18, 16, 13, 0.08);
 
   /* Elevation Shadows */
   --cc-shadow-sm: 0 1px 3px rgba(27, 25, 22, 0.08);
@@ -93,36 +89,34 @@
    ============================================ */
 .cc-glass {
   background: var(--cc-glass-bg);
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(110%);
+  -webkit-backdrop-filter: blur(10px) saturate(110%);
   border: 1px solid var(--cc-glass-border);
   box-shadow: var(--cc-glass-shadow);
 }
 
 .cc-glass-light {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  border: 1px solid rgba(27, 25, 22, 0.08);
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(8px) saturate(110%);
+  -webkit-backdrop-filter: blur(8px) saturate(110%);
+  border: 1px solid hsl(var(--border) / 0.6);
 }
 
 .cc-glass-subtle {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(27, 25, 22, 0.05);
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid hsl(var(--border) / 0.5);
 }
 
 /* ============================================
    MESSAGE BUBBLE STYLES
    ============================================ */
 .cc-message-user {
-  background: linear-gradient(135deg,
-    rgba(47, 75, 107, 0.12) 0%,
-    rgba(198, 87, 73, 0.08) 100%);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
-  border: 1px solid rgba(47, 75, 107, 0.18);
+  background: hsl(var(--secondary) / 0.6);
+  backdrop-filter: blur(6px) saturate(110%);
+  -webkit-backdrop-filter: blur(6px) saturate(110%);
+  border: 1px solid hsl(var(--border) / 0.6);
   border-radius: var(--cc-radius-lg);
   border-bottom-right-radius: var(--cc-radius-sm);
   padding: var(--cc-space-4) var(--cc-space-5);
@@ -130,9 +124,7 @@
   font-family: var(--cc-font-body);
   font-size: var(--cc-text-base);
   line-height: 1.6;
-  box-shadow:
-    0 4px 14px rgba(27, 25, 22, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  box-shadow: 0 4px 10px rgba(27, 25, 22, 0.08);
   transition: all var(--cc-transition-base);
 }
 
@@ -141,10 +133,10 @@
 }
 
 .cc-message-assistant {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  border: 1px solid var(--cc-glass-border);
+  background: hsl(var(--card) / 0.9);
+  backdrop-filter: blur(6px) saturate(110%);
+  -webkit-backdrop-filter: blur(6px) saturate(110%);
+  border: 1px solid hsl(var(--border) / 0.6);
   border-radius: var(--cc-radius-lg);
   border-top-left-radius: var(--cc-radius-sm);
   padding: var(--cc-space-4) var(--cc-space-5);
@@ -152,9 +144,7 @@
   font-family: var(--cc-font-body);
   font-size: var(--cc-text-base);
   line-height: 1.6;
-  box-shadow:
-    var(--cc-shadow-md),
-    0 0 0 1px var(--cc-glass-highlight) inset;
+  box-shadow: var(--cc-shadow-md);
   transition: all var(--cc-transition-base);
 }
 

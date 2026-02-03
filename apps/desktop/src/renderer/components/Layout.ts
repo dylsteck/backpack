@@ -64,7 +64,7 @@ export class Layout extends Component {
 
     // Topbar background (covers content area) - cleaner, more minimal
     this.topbarContainer = createElement('div', {
-      className: 'fixed top-0 h-[48px] z-40 bg-background/95 backdrop-blur-sm border-b border-border/40 transition-all duration-300',
+      className: 'fixed top-0 h-[var(--topbar-height)] z-40 bg-background/95 backdrop-blur-md border-b border-border/40 transition-all duration-300',
       attributes: {
         style: 'left: 0; right: 0; pointer-events: none;',
       },
@@ -73,23 +73,58 @@ export class Layout extends Component {
 
     // Topbar title container with integrated search
     this.topbarTitleEl = createElement('div', {
-      className: 'fixed top-0 h-[48px] flex items-center justify-between z-[100] transition-[left] duration-200 ease-linear px-6 text-foreground select-none',
+      className: 'fixed top-0 h-[var(--topbar-height)] z-[100] transition-[left] duration-200 ease-linear text-foreground select-none',
       attributes: {
         style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: auto; -webkit-app-region: drag;',
       },
     });
-    
+
+    const topbarInner = createElement('div', {
+      className: 'content-wrap-left w-full h-full flex items-center justify-between',
+    });
+    this.topbarTitleEl.appendChild(topbarInner);
+
+    const leftGroup = createElement('div', {
+      className: 'flex items-center gap-1.5',
+    });
+
+    const sidebarToggle = createElement('button', {
+      className: 'btn btn-ghost icon-btn',
+      attributes: {
+        type: 'button',
+        'aria-label': 'Toggle sidebar',
+        title: 'Toggle sidebar',
+      },
+    });
+    (sidebarToggle as HTMLElement).style.cssText = `
+      -webkit-app-region: no-drag;
+      pointer-events: auto;
+    `;
+    sidebarToggle.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="18" height="18" x="3" y="3" rx="3"/>
+        <line x1="9" x2="9" y1="3" y2="21"/>
+      </svg>
+    `;
+    this.addListener(sidebarToggle, 'click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      store.sidebarCollapsed.update(c => !c);
+    });
+    leftGroup.appendChild(sidebarToggle);
+
     // Title section
     const titleSection = createElement('div', {
       className: 'flex items-center pointer-events-none',
     });
-    this.topbarTitleEl.appendChild(titleSection);
+    leftGroup.appendChild(titleSection);
     this.topbar = new TopbarTitle(titleSection);
     this.topbar.init();
+    topbarInner.appendChild(leftGroup);
 
     // Search button - inline with topbar
     this.searchButtonEl = createElement('button', {
-      className: 'group flex h-8 items-center gap-2 px-3 rounded-full bg-secondary/60 text-foreground/80 hover:text-foreground hover:bg-secondary/80 border border-border/60 shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      className: 'topbar-pill',
       attributes: {
         title: 'Search (⌘K)',
         type: 'button',
@@ -112,11 +147,11 @@ export class Layout extends Component {
         <circle cx="11" cy="11" r="8"/>
         <path d="m21 21-4.3-4.3"/>
       </svg>
-      <span class="text-xs font-medium">Search</span>
-      <kbd class="px-1.5 py-0.5 text-[10px] font-technical bg-background/70 text-muted-foreground rounded-full border border-border/50">⌘K</kbd>
+      <span class="text-xs font-medium">Search...</span>
+      <kbd class="kbd">⌘K</kbd>
     `;
 
-    this.topbarTitleEl.appendChild(this.searchButtonEl);
+    topbarInner.appendChild(this.searchButtonEl);
     this.container.appendChild(this.topbarTitleEl);
     this.attachSearchHandlers();
 
@@ -191,11 +226,14 @@ export class Layout extends Component {
     mainWrapper.appendChild(contentStack);
 
     this.container.appendChild(mainWrapper);
+
+    // Ensure layout respects current sidebar state after re-render
+    this.updateSidebarState();
   }
 
   private updateSidebarState(): void {
     const collapsed = store.sidebarCollapsed.get();
-    const collapsedLeft = '130px';
+    const collapsedLeft = '76px'; // Just right of macOS traffic lights
     const expandedLeft = 'calc(16rem + 0.5rem)';
 
     if (this.sidebarContainer) {
@@ -204,6 +242,7 @@ export class Layout extends Component {
       this.sidebarContainer.style.borderRightWidth = collapsed ? '0' : '1px';
     }
 
+    // Keep topbar background full-width for consistent color
     if (this.topbarContainer) {
       this.topbarContainer.style.left = '0';
     }

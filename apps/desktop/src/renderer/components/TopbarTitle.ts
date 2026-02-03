@@ -4,7 +4,6 @@
  */
 
 import { Component } from './Component';
-import { store } from '../store';
 import { createElement } from '../utils/dom';
 
 type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'search';
@@ -24,33 +23,16 @@ export class TopbarTitle extends Component {
   
   async init(): Promise<void> {
     this.render();
-    
-    // Subscribe to sidebar collapsed state to update position
-    this.subscribe(store.sidebarCollapsed, () => this.updatePosition());
   }
   
   render(): void {
     this.container.innerHTML = '';
     
     this.titleElement = createElement('span', {
-      className: 'pointer-events-auto uppercase',
+      className: 'pointer-events-auto text-section',
       textContent: routeTitles[this.currentView],
     });
-    (this.titleElement as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      color: hsl(var(--muted-foreground));
-    `;
     this.container.appendChild(this.titleElement);
-  }
-  
-  private updatePosition(): void {
-    const collapsed = store.sidebarCollapsed.get();
-    this.container.style.left = collapsed
-      ? 'calc(76px + 3rem + 2rem)'
-      : 'calc(16rem + 0.5rem)';
   }
   
   /**

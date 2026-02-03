@@ -11987,7 +11987,7 @@ async function setupRemoteDebuggingPort() {
     safeConsole.log(`[MCP] Using Electron CDP port ${port}`);
     return port;
   } catch (error) {
-    console.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
+    safeConsole.error("[MCP] Failed to find available CDP port, falling back to 9222", error);
     remoteDebugPort = 9222;
     require$$0.app.commandLine.appendSwitch("remote-debugging-port", "9222");
     process.env.ELECTRON_CDP_PORT = "9222";
@@ -12057,7 +12057,7 @@ async function startServer() {
     }
     if (serverProcess.stdout) {
       serverProcess.stdout.on("data", (data) => {
-        console.log(`[Server] ${data.toString().trim()}`);
+        safeConsole.log(`[Server] ${data.toString().trim()}`);
       });
     }
     if (serverProcess.stderr) {
@@ -12066,7 +12066,7 @@ async function startServer() {
       });
     }
     serverProcess.on("error", (error) => {
-      console.error("Failed to start server:", error);
+      safeConsole.error("Failed to start server:", error);
       reject(error);
     });
     serverProcess.on("exit", (code) => {
@@ -12075,7 +12075,7 @@ async function startServer() {
     });
     waitForServer(port).then((ready) => {
       if (ready) {
-        console.log(`Server ready on port ${port}`);
+        safeConsole.log(`Server ready on port ${port}`);
         resolve(port);
       } else {
         reject(new Error("Server failed to start in time"));
@@ -12089,7 +12089,7 @@ function stopServer() {
     serverProcess.kill("SIGTERM");
     setTimeout(() => {
       if (serverProcess && !serverProcess.killed) {
-        console.log("Force killing server...");
+        safeConsole.log("Force killing server...");
         serverProcess.kill("SIGKILL");
       }
     }, 5e3);
@@ -12174,7 +12174,7 @@ function handleDeepLink(url) {
       mainWindow.focus();
     }
   } catch (error) {
-    console.error("Error parsing deep link:", error);
+    safeConsole.error("Error parsing deep link:", error);
   }
 }
 async function installExtensions() {
@@ -12182,7 +12182,7 @@ async function installExtensions() {
     const result = await distExports.installExtension(distExports.REACT_DEVELOPER_TOOLS);
     safeConsole.log(`Extensions installed successfully: ${result.name}`);
   } catch {
-    console.error("Failed to install extensions");
+    safeConsole.error("Failed to install extensions");
   }
 }
 const gotTheLock = require$$0.app.requestSingleInstanceLock();
@@ -12234,18 +12234,18 @@ if (!gotTheLock) {
     try {
       serverPort = await startServer();
       setServerPort(serverPort);
-      console.log(`API server running on http://127.0.0.1:${serverPort}`);
+      safeConsole.log(`API server running on http://127.0.0.1:${serverPort}`);
     } catch (error) {
       safeConsole.error("Failed to start API server:", error);
     }
     try {
       const mcpInstance2 = getMCPInstance();
       mcpInstance2.start().catch((error) => {
-        console.error("[MCP] Failed to start MCP server:", error);
+        safeConsole.error("[MCP] Failed to start MCP server:", error);
       });
       safeConsole.log("[MCP] Chrome DevTools MCP server starting...");
     } catch (error) {
-      console.error("[MCP] Failed to start MCP components:", error);
+      safeConsole.error("[MCP] Failed to start MCP components:", error);
     }
     createWindow();
     if (mainWindow) {

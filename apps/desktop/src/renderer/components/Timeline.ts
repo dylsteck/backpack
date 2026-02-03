@@ -62,12 +62,12 @@ export class Timeline extends Component {
     
     // Scroll area
     const scrollArea = createElement('div', {
-      className: 'flex-1 overflow-y-auto min-h-0 pt-2',
+      className: 'flex-1 overflow-y-auto min-h-0 pt-1',
     });
     
     // Content wrapper
     const wrapper = createElement('div', {
-      className: 'max-w-4xl mx-auto pb-24 px-6 md:px-8 relative w-full',
+      className: 'content-wrap pb-20 relative',
     });
     
     this.itemsContainer = createElement('div', {
@@ -90,17 +90,13 @@ export class Timeline extends Component {
   
   private createHeader(): HTMLElement {
     const header = createElement('header', {
-      className: 'flex items-center justify-between px-6 pt-5 pb-2 z-20',
+      className: 'page-header content-wrap z-20',
     });
 
     const dateLabel = createElement('div', {
-      className: 'text-xs uppercase tracking-wider text-muted-foreground',
+      className: 'text-label',
       textContent: formatFullDate(new Date()),
     });
-    (dateLabel as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-      letter-spacing: 0.1em;
-    `;
     header.appendChild(dateLabel);
 
     return header;

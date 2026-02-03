@@ -37,7 +37,7 @@ export class VaultGrid extends Component {
     
     // Header matching Timeline style
     const header = createElement('header', {
-      className: 'flex items-center justify-between px-6 pt-5 pb-2 z-20',
+      className: 'page-header content-wrap z-20',
     });
     
     const titleSection = createElement('div', {
@@ -45,25 +45,15 @@ export class VaultGrid extends Component {
     });
     
     const title = createElement('h1', {
-      className: 'text-lg font-sans tracking-tight',
+      className: 'text-title',
       textContent: 'Vault',
     });
-    (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    `;
     titleSection.appendChild(title);
     
     const subtitle = createElement('p', {
-      className: 'text-[11px] font-sans uppercase tracking-wider text-muted-foreground',
+      className: 'text-label',
       textContent: 'Connected Apps',
     });
-    (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-weight: 500;
-      letter-spacing: 0.05em;
-    `;
     titleSection.appendChild(subtitle);
     
     header.appendChild(titleSection);
@@ -75,7 +65,7 @@ export class VaultGrid extends Component {
     
     // Add Apps button
     const addButton = createElement('button', {
-      className: 'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-border/40 bg-card/70',
+      className: 'btn btn-ghost icon-btn',
       attributes: {
         'aria-label': 'Add Apps',
         'title': 'Add Apps',
@@ -92,7 +82,7 @@ export class VaultGrid extends Component {
     
     // Manage Connections button
     const manageButton = createElement('button', {
-      className: 'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all border border-border/40 bg-card/70',
+      className: 'btn btn-ghost icon-btn',
       attributes: {
         'aria-label': 'Manage Connections',
         'title': 'Manage Connections',
@@ -117,7 +107,7 @@ export class VaultGrid extends Component {
     
     // Content wrapper matching Timeline
     const wrapper = createElement('div', {
-      className: 'max-w-6xl mx-auto pb-24 px-6 md:px-8 relative w-full',
+      className: 'content-wrap pb-20 relative',
     });
     
     // Grid container
@@ -218,17 +208,13 @@ export class VaultGrid extends Component {
     emptyState.appendChild(text);
     
     const addButton = createElement('button', {
-      className: 'mt-4 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      className: 'btn btn-primary mt-4',
       attributes: {
         type: 'button',
         'aria-label': 'Add Apps',
       },
       textContent: 'Add Apps',
     });
-    (addButton as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-      font-weight: 500;
-    `;
     this.addListener(addButton, 'click', () => {
       this.showAddAppsModal();
     });
@@ -241,7 +227,7 @@ export class VaultGrid extends Component {
     const isConnected = app.connection?.status === 'connected';
 
     const card = createElement('div', {
-      className: 'group relative flex flex-col items-center p-5 border border-border/50 bg-card/70 hover:bg-muted/40 transition-all cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      className: 'card card-hover group relative flex flex-col items-center p-5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       dataset: { appId: app.id },
       attributes: {
         role: 'button',
@@ -338,4 +324,3 @@ export class VaultGrid extends Component {
 }
 
 export default VaultGrid;
-

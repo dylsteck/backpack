@@ -61,12 +61,12 @@ export class SearchView extends Component {
 		`;
 
 		const headerInner = createElement('div', {
-			className: 'flex items-center gap-3 px-6 h-[48px] max-w-5xl mx-auto w-full',
+			className: 'content-wrap flex items-center gap-3 h-[var(--topbar-height)]',
 		});
 
 		// Back button - refined minimal style
 		this.backButton = createElement('button', {
-			className: 'flex items-center justify-center w-8 h-8 rounded-full border border-border/50 bg-card/70 hover:bg-card text-muted-foreground hover:text-foreground transition-all group',
+			className: 'btn btn-ghost icon-btn',
 			attributes: {
 				'aria-label': 'Go back',
 				type: 'button',
@@ -89,7 +89,7 @@ export class SearchView extends Component {
 
 		// Search input container - cleaner, more refined
 		const inputContainer = createElement('div', {
-			className: 'flex-1 flex items-center gap-3 h-9 px-4 bg-card/80 border border-border/60 rounded-full focus-within:border-border focus-within:bg-card focus-within:shadow-sm transition-all',
+			className: 'flex-1 input-pill',
 		});
 		(inputContainer as HTMLElement).style.cssText = `
 			-webkit-app-region: no-drag;
@@ -98,7 +98,6 @@ export class SearchView extends Component {
 		// Ensure container doesn't block input clicks
 		this.addListener(inputContainer, 'click', (e) => {
 			if (e.target === inputContainer || (e.target as HTMLElement).tagName !== 'INPUT') {
-				console.log('[SearchView] Container clicked, focusing input...');
 				this.input?.focus();
 			}
 		});
@@ -128,17 +127,13 @@ export class SearchView extends Component {
 		`;
 		// Ensure input is clickable and focusable
 		this.addListener(this.input, 'click', () => {
-			console.log('[SearchView] Input clicked, focusing...');
 			this.input?.focus();
-		});
-		this.addListener(this.input, 'focus', () => {
-			console.log('[SearchView] Input focused');
 		});
 		inputContainer.appendChild(this.input);
 
 		// Keyboard shortcut hint - subtle
 		const shortcutHint = createElement('kbd', {
-			className: 'hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono bg-background/70 text-muted-foreground rounded-full border border-border/50',
+			className: 'hidden sm:inline-flex kbd',
 			textContent: '⌘K',
 		});
 		inputContainer.appendChild(shortcutHint);
@@ -157,7 +152,7 @@ export class SearchView extends Component {
 		syncContainer.appendChild(this.syncStatus);
 
 		this.syncButton = createElement('button', {
-			className: 'flex items-center gap-1.5 h-8 px-3 rounded-full border border-border/50 bg-card/70 hover:bg-card text-muted-foreground hover:text-foreground transition-colors',
+			className: 'btn btn-ghost',
 			attributes: {
 				title: 'Sync search index',
 				type: 'button',
@@ -186,7 +181,7 @@ export class SearchView extends Component {
 
 		// Results container - cleaner spacing
 		this.resultsContainer = createElement('div', {
-			className: 'flex-1 overflow-y-auto px-6 py-6 max-w-5xl mx-auto w-full',
+			className: 'flex-1 overflow-y-auto content-wrap py-6',
 		});
 		
 		this.container.appendChild(this.resultsContainer);
@@ -395,7 +390,7 @@ export class SearchView extends Component {
 
 		// Results list - styled like Timeline items
 		const resultsList = createElement('div', {
-			className: 'space-y-4 relative',
+			className: 'space-y-3 relative',
 		});
 
 		this.results.forEach((result, index) => {
@@ -437,34 +432,16 @@ export class SearchView extends Component {
 
 			// Card/bubble matching Timeline style
 			const bubble = createElement('div', {
-				className: 'flex-1 cursor-pointer',
+				className: 'search-result flex-1 cursor-pointer',
 				attributes: {
 					role: 'button',
 					tabindex: '0',
 					'aria-label': `Search result: ${result.title || result.id}`,
+					'aria-selected': String(index === this.selectedIndex),
 				},
 			});
-			(bubble as HTMLElement).style.cssText = `
-				background: hsl(var(--card));
-				border: 1px solid hsl(var(--border) / 0.7);
-				border-radius: 0.65rem;
-				padding: 0.85rem 1rem;
-				transition: all 0.2s ease;
-				box-shadow: 0 1px 2px rgba(18, 16, 13, 0.04);
-				position: relative;
-			`;
-			
-			// Hover effects matching Timeline
-			bubble.addEventListener('mouseenter', () => {
-				(bubble as HTMLElement).style.background = 'hsl(var(--card) / 0.98)';
-				(bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.9)';
-				(bubble as HTMLElement).style.boxShadow = '0 4px 12px rgba(18, 16, 13, 0.08)';
-			});
-			bubble.addEventListener('mouseleave', () => {
-				(bubble as HTMLElement).style.background = 'hsl(var(--card))';
-				(bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.7)';
-				(bubble as HTMLElement).style.boxShadow = '0 1px 2px rgba(18, 16, 13, 0.04)';
-			});
+			bubble.dataset.index = String(index);
+			bubble.dataset.selected = String(index === this.selectedIndex);
 
 			// Source badge - matching Timeline style
 			const sourceLabel = createElement('div', {
@@ -539,11 +516,6 @@ export class SearchView extends Component {
 					this.selectResult(result);
 				}
 			});
-			this.addListener(messageWrapper, 'mouseenter', () => {
-				this.selectedIndex = index;
-				this.renderResults();
-			});
-
 			resultsList.appendChild(messageWrapper);
 		});
 

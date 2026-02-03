@@ -152,7 +152,7 @@ export class AppDetail extends Component {
     });
     
     const contentInner = createElement('div', {
-      className: 'max-w-7xl mx-auto px-6 py-6',
+      className: 'content-wrap py-6',
     });
     
     // Tabs
@@ -177,7 +177,7 @@ export class AppDetail extends Component {
         <div class="text-center space-y-4">
           <h2 class="text-2xl">App not found</h2>
           <p class="text-muted-foreground">The app you're looking for doesn't exist.</p>
-          <button class="px-4 py-2 bg-primary text-primary-foreground flex items-center gap-2 mx-auto font-mono uppercase tracking-wider text-sm rounded hover:bg-primary/90 transition-colors" data-back>
+          <button class="btn btn-primary mx-auto" data-back>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
             Back to Apps
           </button>
@@ -199,17 +199,17 @@ export class AppDetail extends Component {
     });
     
     const content = createElement('div', {
-      className: 'max-w-7xl mx-auto px-6 py-8 relative',
+      className: 'content-wrap py-6 relative',
     });
     
     // Row with back button and app info
     const row = createElement('div', {
-      className: 'flex items-start gap-6 mb-4',
+      className: 'flex items-start gap-4',
     });
     
     // Back button
     const backButton = createElement('button', {
-      className: 'shrink-0 mt-1 p-2 hover:bg-accent transition-colors',
+      className: 'btn btn-ghost icon-btn shrink-0 mt-0.5',
       innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
     });
     this.addListener(backButton, 'click', () => {
@@ -225,7 +225,7 @@ export class AppDetail extends Component {
     // Icon
     if (this.app?.iconUrl) {
       const iconWrapper = createElement('div', {
-        className: 'h-16 w-16 bg-card p-3 flex items-center justify-center shrink-0 border border-border',
+        className: 'h-12 w-12 bg-card p-2 flex items-center justify-center shrink-0 border border-border/70 rounded-xl',
       });
       const icon = createElement('img', {
         className: 'h-full w-full object-contain',
@@ -240,7 +240,7 @@ export class AppDetail extends Component {
     
     // Text info
     const textInfo = createElement('div', {
-      className: 'flex flex-col gap-2 pt-0.5 flex-1',
+      className: 'flex flex-col gap-1.5 pt-0.5 flex-1',
     });
     
     const titleRow = createElement('div', {
@@ -248,20 +248,15 @@ export class AppDetail extends Component {
     });
     
     const title = createElement('h1', {
-      className: 'text-3xl text-foreground',
+      className: 'text-[1.1rem] text-foreground font-semibold tracking-tight',
       textContent: this.app?.name || '',
     });
-    (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-weight: 600;
-      letter-spacing: 0.01em;
-    `;
     titleRow.appendChild(title);
     
     // Refresh button (only show if connected)
     if (this.app?.connection?.status === 'connected') {
       const refreshButton = createElement('button', {
-        className: 'p-2 hover:bg-accent transition-colors shrink-0',
+        className: 'btn btn-ghost icon-btn shrink-0',
         innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>`,
         dataset: { refresh: 'true' },
         title: 'Refresh data',
@@ -274,7 +269,7 @@ export class AppDetail extends Component {
     
     if (this.app?.description) {
       const desc = createElement('p', {
-        className: 'text-base text-muted-foreground max-w-2xl leading-relaxed',
+        className: 'text-body text-muted-foreground max-w-2xl',
         textContent: this.app.description,
       });
       textInfo.appendChild(desc);
@@ -290,11 +285,11 @@ export class AppDetail extends Component {
   
   private createTabs(): HTMLElement {
     const tabsWrapper = createElement('div', {
-      className: 'border-b',
+      className: 'border-b border-border/60',
     });
     
     const tabsList = createElement('div', {
-      className: 'flex gap-4',
+      className: 'flex gap-2',
     });
     
     const tabs: { value: TabType; label: string }[] = [
@@ -304,9 +299,9 @@ export class AppDetail extends Component {
     
     for (const tab of tabs) {
       const button = createElement('button', {
-        className: `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+        className: `px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
           this.currentTab === tab.value
-            ? 'border-primary text-foreground'
+            ? 'border-foreground/70 text-foreground'
             : 'border-transparent text-muted-foreground hover:text-foreground'
         }`,
         textContent: tab.label,
@@ -331,9 +326,9 @@ export class AppDetail extends Component {
     buttons.forEach(btn => {
       const tab = (btn as HTMLElement).dataset.tab as TabType;
       const isActive = tab === this.currentTab;
-      btn.className = `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+      btn.className = `px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
         isActive
-          ? 'border-primary text-foreground'
+          ? 'border-foreground/70 text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground'
       }`;
     });
@@ -373,7 +368,7 @@ export class AppDetail extends Component {
     
     // Connection status card
     const statusCard = createElement('div', {
-      className: 'glass-panel p-6 border bg-card',
+      className: 'card p-6',
     });
     
     statusCard.innerHTML = `
@@ -400,7 +395,7 @@ export class AppDetail extends Component {
     
     // Connect/Disconnect button
     const actionCard = createElement('div', {
-      className: 'glass-panel mt-6 p-6 border bg-card',
+      className: 'card mt-6 p-6',
     });
     
     if (!isConnected) {
@@ -451,7 +446,7 @@ export class AppDetail extends Component {
               />
               <p class="text-xs text-muted-foreground mt-2">Your FID is your unique Farcaster identifier (e.g., 12345)</p>
             </div>
-            <button class="px-5 py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:bg-primary/90 hover:shadow-md transition-all" data-connect>
+            <button class="btn btn-primary" data-connect>
               Connect ${this.app.name}
             </button>
           </div>
@@ -473,9 +468,9 @@ export class AppDetail extends Component {
         }
       } else {
         actionCard.innerHTML = `
-          <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Get Started</h3>
+          <h3 class="text-section mb-4">Get Started</h3>
           <p class="text-muted-foreground mb-4">Connect this app to start seeing data in your timeline.</p>
-          <button class="px-5 py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:bg-primary/90 hover:shadow-md transition-all" data-connect>
+          <button class="btn btn-primary" data-connect>
             Connect ${this.app.name}
           </button>
         `;
@@ -648,7 +643,7 @@ export class AppDetail extends Component {
       });
       
       card.innerHTML = `
-        <h3 class="text-lg font-mono uppercase tracking-wider mb-4">Data</h3>
+        <h3 class="text-section mb-4">Data</h3>
         <p class="text-muted-foreground">No data available for ${escapeHtml(this.app.name)} yet.</p>
         <div class="mt-4 py-8 text-center text-muted-foreground">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mx-auto mb-4 opacity-40">
@@ -672,7 +667,7 @@ export class AppDetail extends Component {
       className: 'p-6 border bg-card',
     });
     header.innerHTML = `
-      <h3 class="text-lg font-mono uppercase tracking-wider mb-2">Data</h3>
+      <h3 class="text-section mb-2">Data</h3>
       <p class="text-sm text-muted-foreground font-mono">${totalCount.toLocaleString()} item${totalCount !== 1 ? 's' : ''} from ${escapeHtml(this.app.name)}</p>
     `;
     wrapper.appendChild(header);
@@ -1687,4 +1682,3 @@ export class AppDetail extends Component {
 }
 
 export default AppDetail;
-

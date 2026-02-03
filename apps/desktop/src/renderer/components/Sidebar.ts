@@ -47,38 +47,15 @@ export class Sidebar extends Component {
     this.container.innerHTML = '';
     this.container.className = 'h-full border-r border-border/70 bg-sidebar flex-shrink-0 flex flex-col transition-all duration-300 overflow-hidden';
 
-    // Fixed toggle button
-    const toggleButton = document.createElement('button');
-    toggleButton.className = 'fixed top-[7px] flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary/80 transition-colors';
-    toggleButton.style.cssText = 'left: 90px; -webkit-app-region: no-drag; z-index: 9999; cursor: pointer;';
-    toggleButton.setAttribute('aria-label', 'Toggle sidebar');
-    toggleButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground">
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-        <line x1="9" x2="9" y1="3" y2="21"/>
-      </svg>
-    `;
-
-    toggleButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      store.sidebarCollapsed.update(c => !c);
-    });
-
-    document.body.appendChild(toggleButton);
-
-    this.registerCleanup(() => {
-      toggleButton.remove();
-    });
-
     if (collapsed) {
       return;
     }
 
-    // Top bar area (traffic lights space)
+    // Top bar area (traffic lights space) - matches main topbar styling
     const topBar = createElement('div', {
-      className: 'relative flex h-[44px] items-center draglayer',
+      className: 'relative flex h-[var(--topbar-height)] items-center bg-background/95 backdrop-blur-md border-b border-border/40',
     });
+    (topBar as HTMLElement).style.cssText = '-webkit-app-region: drag;';
 
     const trafficLightsSpace = createElement('div', { className: 'w-[130px] flex-shrink-0' });
     topBar.appendChild(trafficLightsSpace);
@@ -180,10 +157,7 @@ export class Sidebar extends Component {
     const link = createLink(
       item.url,
       linkContent,
-      `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${active
-        ? 'bg-card text-foreground border border-border/70 shadow-sm'
-        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
-      }`
+      `nav-item ${active ? 'nav-item-active' : ''}`
     );
 
     link.dataset.navItem = item.url;
@@ -201,10 +175,7 @@ export class Sidebar extends Component {
       const url = (link as HTMLElement).dataset.navItem || '';
       const active = isActive(url);
 
-      link.className = `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${active
-          ? 'bg-primary/10 text-primary font-medium'
-          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-        }`;
+      link.className = `nav-item ${active ? 'nav-item-active' : ''}`;
     });
   }
 }

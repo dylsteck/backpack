@@ -76,38 +76,30 @@ export class AddAppsModal extends Component {
     
     // Modal container
     const modal = createElement('div', {
-      className: 'bg-card border border-border/60 w-full max-w-5xl max-h-[85vh] flex flex-col elevation-2 rounded-2xl modal-enter relative overflow-hidden',
+      className: 'modal-shell w-full max-w-5xl max-h-[85vh] flex flex-col elevation-2 modal-enter relative overflow-hidden',
     });
     
     // Header
     const header = createElement('div', {
-      className: 'flex items-center justify-between p-5 border-b border-border/60',
+      className: 'modal-header',
     });
     
     const titleSection = createElement('div');
     const title = createElement('h2', {
-      className: 'text-lg text-foreground',
+      className: 'text-section',
       textContent: 'Add Apps',
     });
-    (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    `;
     const subtitle = createElement('p', {
-      className: 'text-sm text-muted-foreground mt-1',
+      className: 'text-muted mt-1',
       textContent: 'Browse and connect apps to your vault',
     });
-    (subtitle as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-    `;
     titleSection.appendChild(title);
     titleSection.appendChild(subtitle);
     header.appendChild(titleSection);
     
     // Close button
     const closeBtn = createElement('button', {
-      className: 'p-2 hover:bg-secondary/70 rounded-lg transition-all text-muted-foreground hover:text-foreground',
+      className: 'btn btn-ghost icon-btn',
       innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
       attributes: { 'aria-label': 'Close' }
     });
@@ -121,7 +113,7 @@ export class AddAppsModal extends Component {
     
     // Content area (scrollable)
     const content = createElement('div', {
-      className: 'flex-1 overflow-y-auto p-5',
+      className: 'flex-1 overflow-y-auto modal-body',
     });
     
     // Apps grid container
@@ -334,4 +326,3 @@ export class AddAppsModal extends Component {
 }
 
 export default AddAppsModal;
-
