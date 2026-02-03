@@ -39,9 +39,9 @@ export class TopbarTitle extends Component {
     (this.titleElement as HTMLElement).style.cssText = `
       font-family: var(--font-sans);
       font-weight: 600;
-      font-size: 0.75rem;
-      letter-spacing: 0.1em;
-      color: hsl(var(--foreground));
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: hsl(var(--muted-foreground));
     `;
     this.container.appendChild(this.titleElement);
   }
@@ -80,4 +80,3 @@ export class TopbarTitle extends Component {
 }
 
 export default TopbarTitle;
-

@@ -56,14 +56,17 @@ export class SearchView extends Component {
 		const header = createElement('div', {
 			className: 'sticky top-0 z-20 border-b border-border/40 bg-background/95 backdrop-blur-md',
 		});
+		(header as HTMLElement).style.cssText = `
+			-webkit-app-region: drag;
+		`;
 
 		const headerInner = createElement('div', {
-			className: 'flex items-center gap-4 px-8 py-5 max-w-6xl mx-auto',
+			className: 'flex items-center gap-3 px-6 h-[48px] max-w-5xl mx-auto w-full',
 		});
 
 		// Back button - refined minimal style
 		this.backButton = createElement('button', {
-			className: 'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all group',
+			className: 'flex items-center justify-center w-8 h-8 rounded-full border border-border/50 bg-card/70 hover:bg-card text-muted-foreground hover:text-foreground transition-all group',
 			attributes: {
 				'aria-label': 'Go back',
 				type: 'button',
@@ -86,7 +89,7 @@ export class SearchView extends Component {
 
 		// Search input container - cleaner, more refined
 		const inputContainer = createElement('div', {
-			className: 'flex-1 flex items-center gap-3 px-4 py-2.5 bg-muted/30 border border-border/50 rounded-xl focus-within:border-border focus-within:bg-muted/40 focus-within:shadow-sm transition-all',
+			className: 'flex-1 flex items-center gap-3 h-9 px-4 bg-card/80 border border-border/60 rounded-full focus-within:border-border focus-within:bg-card focus-within:shadow-sm transition-all',
 		});
 		(inputContainer as HTMLElement).style.cssText = `
 			-webkit-app-region: no-drag;
@@ -135,7 +138,7 @@ export class SearchView extends Component {
 
 		// Keyboard shortcut hint - subtle
 		const shortcutHint = createElement('kbd', {
-			className: 'hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono bg-background/80 text-muted-foreground rounded border border-border/40',
+			className: 'hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono bg-background/70 text-muted-foreground rounded-full border border-border/50',
 			textContent: '⌘K',
 		});
 		inputContainer.appendChild(shortcutHint);
@@ -154,7 +157,7 @@ export class SearchView extends Component {
 		syncContainer.appendChild(this.syncStatus);
 
 		this.syncButton = createElement('button', {
-			className: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors',
+			className: 'flex items-center gap-1.5 h-8 px-3 rounded-full border border-border/50 bg-card/70 hover:bg-card text-muted-foreground hover:text-foreground transition-colors',
 			attributes: {
 				title: 'Sync search index',
 				type: 'button',
@@ -183,7 +186,7 @@ export class SearchView extends Component {
 
 		// Results container - cleaner spacing
 		this.resultsContainer = createElement('div', {
-			className: 'flex-1 overflow-y-auto px-8 py-6 max-w-6xl mx-auto w-full',
+			className: 'flex-1 overflow-y-auto px-6 py-6 max-w-5xl mx-auto w-full',
 		});
 		
 		this.container.appendChild(this.resultsContainer);

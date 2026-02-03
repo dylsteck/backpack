@@ -66,7 +66,7 @@ export class Layout extends Component {
     this.topbarContainer = createElement('div', {
       className: 'fixed top-0 h-[48px] z-40 bg-background/95 backdrop-blur-sm border-b border-border/40 transition-all duration-300',
       attributes: {
-        style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: none;',
+        style: 'left: 0; right: 0; pointer-events: none;',
       },
     });
     this.container.appendChild(this.topbarContainer);
@@ -205,7 +205,7 @@ export class Layout extends Component {
     }
 
     if (this.topbarContainer) {
-      this.topbarContainer.style.left = collapsed ? collapsedLeft : expandedLeft;
+      this.topbarContainer.style.left = '0';
     }
 
     if (this.topbarTitleEl) {
