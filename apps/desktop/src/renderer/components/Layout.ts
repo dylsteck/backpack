@@ -26,7 +26,6 @@ export class Layout extends Component {
   private topbarContainer: HTMLElement | null = null;
   private topbarTitleEl: HTMLElement | null = null;
   private searchButtonEl: HTMLElement | null = null;
-  private searchHandlersAttached: boolean = false;
   private lastViewWasOnboarding: boolean = false;
   private lastView: RouteView | null = null;
 
@@ -61,6 +60,7 @@ export class Layout extends Component {
     // Main layout with sidebar
     this.container.innerHTML = '';
     this.container.className = 'relative flex h-screen w-full bg-background overflow-hidden text-foreground';
+    this.searchButtonEl = null;
 
     // Topbar background (covers content area) - cleaner, more minimal
     this.topbarContainer = createElement('div', {
@@ -75,7 +75,7 @@ export class Layout extends Component {
     this.topbarTitleEl = createElement('div', {
       className: 'fixed top-0 h-[48px] flex items-center justify-between z-[100] transition-[left] duration-200 ease-linear px-6 text-foreground select-none',
       attributes: {
-        style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: auto; -webkit-app-region: no-drag;',
+        style: 'left: calc(16rem + 0.5rem); right: 0; pointer-events: auto; -webkit-app-region: drag;',
       },
     });
     
@@ -89,7 +89,7 @@ export class Layout extends Component {
 
     // Search button - inline with topbar
     this.searchButtonEl = createElement('button', {
-      className: 'flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-accent/60 text-muted-foreground hover:text-foreground cursor-pointer transition-all border border-border/40 bg-card/70 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      className: 'group flex h-8 items-center gap-2 px-3 rounded-full bg-secondary/60 text-foreground/80 hover:text-foreground hover:bg-secondary/80 border border-border/60 shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       attributes: {
         title: 'Search (⌘K)',
         type: 'button',
@@ -113,60 +113,12 @@ export class Layout extends Component {
         <path d="m21 21-4.3-4.3"/>
       </svg>
       <span class="text-xs font-medium">Search</span>
-      <kbd class="px-1.5 py-0.5 text-[10px] font-technical bg-muted/60 text-muted-foreground rounded-full border border-border/40">⌘K</kbd>
+      <kbd class="px-1.5 py-0.5 text-[10px] font-technical bg-background/70 text-muted-foreground rounded-full border border-border/50">⌘K</kbd>
     `;
-    
-    // Attach click handler directly - ensure it works
-    const handleClick = (e: MouseEvent | PointerEvent) => {
-      console.log('[Layout] Search button clicked!', e.type, e.target, e.currentTarget);
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      // Use router.navigate which handles both hash and store updates
-      router.navigate('/search');
-      return false;
-    };
-    
-    // Attach handler using component's method (for cleanup)
-    this.addListener(this.searchButtonEl, 'click', handleClick);
-    
-    // Also attach directly as backup
-    this.searchButtonEl.onclick = handleClick;
-    
-    // Test if button receives events
-    this.searchButtonEl.addEventListener('mouseenter', () => {
-      console.log('[Layout] Search button mouseenter - button is interactive');
-    });
-    
+
     this.topbarTitleEl.appendChild(this.searchButtonEl);
     this.container.appendChild(this.topbarTitleEl);
-    
-    // Ensure button handlers are attached after DOM insertion
-    // Use requestAnimationFrame to ensure button is fully in DOM
-    requestAnimationFrame(() => {
-      if (this.searchButtonEl && this.searchButtonEl.isConnected) {
-        // Re-attach handlers to ensure they work
-        const handleClick = (e: MouseEvent | PointerEvent) => {
-          console.log('[Layout] Search button clicked!', e.type, e.target, e.currentTarget);
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          router.navigate('/search');
-          return false;
-        };
-        
-        // Clear any existing handlers
-        this.searchButtonEl.onclick = null;
-        
-        // Attach fresh handlers
-        this.searchButtonEl.addEventListener('click', handleClick, { capture: true, passive: false });
-        this.searchButtonEl.onclick = handleClick;
-        
-        console.log('[Layout] Search button handlers attached, button:', this.searchButtonEl);
-      }
-    });
-    
-    this.searchHandlersAttached = true;
+    this.attachSearchHandlers();
 
     // Sidebar (Left)
     this.sidebarContainer = createElement('aside', {
@@ -210,14 +162,17 @@ export class Layout extends Component {
     `;
     
     // Drag region - but don't block search button area
-    const dragRegion = createElement('div', {
-      className: 'draglayer h-[48px] shrink-0',
+    const topbarSpacer = createElement('div', {
+      className: 'h-[48px] shrink-0',
+      attributes: {
+        'aria-hidden': 'true',
+      },
     });
-    (dragRegion as HTMLElement).style.cssText = `
-      pointer-events: auto;
-      -webkit-app-region: drag;
+    (topbarSpacer as HTMLElement).style.cssText = `
+      pointer-events: none;
+      -webkit-app-region: no-drag;
     `;
-    contentStack.appendChild(dragRegion);
+    contentStack.appendChild(topbarSpacer);
 
     // Content container
     this.contentContainer = createElement('div', {
@@ -273,33 +228,14 @@ export class Layout extends Component {
       }
     }
 
-    // Don't re-attach if already attached
-    if (this.searchHandlersAttached) {
-      return;
-    }
-
     const handleClick = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
-      console.log('[Layout] Search clicked, navigating to /search');
       // Use router.navigate which handles both hash and store updates
       router.navigate('/search');
     };
     
-    // Attach handler directly
     this.searchButtonEl.onclick = handleClick;
-    this.addListener(this.searchButtonEl, 'click', handleClick);
-    
-    // Also add mousedown as backup
-    this.addListener(this.searchButtonEl, 'mousedown', (e) => {
-      if ((e as MouseEvent).button === 0) {
-        e.preventDefault();
-        router.navigate('/search');
-      }
-    });
-
-    this.searchHandlersAttached = true;
   }
 
   /**
@@ -331,14 +267,6 @@ export class Layout extends Component {
         if (this.topbarTitleEl) this.topbarTitleEl.style.display = '';
       }
       this.render();
-      // Re-attach search handlers after re-render - only if not on search page
-      if (!isSearch) {
-        this.searchHandlersAttached = false;
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-          this.attachSearchHandlers();
-        }, 10);
-      }
     }
 
     if (!this.contentContainer) return;
