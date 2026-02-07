@@ -51,7 +51,7 @@ cortex/
 │   └── server/           # API server (Elysia + Bun)
 ├── packages/
 │   ├── api/              # Shared tRPC routers and business logic
-│   ├── cli/              # Command-line interface (@cortex/cli)
+│   ├── sdk/              # TypeScript SDK (@cortex/sdk)
 │   ├── auth/             # Authentication (Better-Auth)
 │   └── db/               # Database schema and migrations (Drizzle ORM)
 ├── turbo.json           # Turborepo configuration
@@ -768,15 +768,15 @@ See **`apps/desktop/electron-performance-guide.md`** for comprehensive performan
 
 The CLI is the recommended way for AI agents to interact with Cortex data. All commands support `--json` for machine-readable output.
 
-### Installation
+### SDK Usage
 
-```bash
-# Global install
-bun install -g @cortex/cli
+```ts
+import { Cortex } from "@cortex/sdk";
 
-# Or run from monorepo
-cd packages/cli
-bun run src/index.ts <command>
+const cortex = new Cortex();
+await cortex.status();
+await cortex.timeline({ limit: 10 });
+await cortex.search("query");
 ```
 
 ### Available Commands

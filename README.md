@@ -123,23 +123,21 @@ cortex search "meeting notes about project X"
 
 Press `⌘K` (or click the search icon) to open the search modal. Use the "Sync" button to update the search index with new data.
 
-### CLI
+### SDK
 
-```bash
-# Install CLI globally
-bun install -g @cortex/cli
+```ts
+import { Cortex } from "@cortex/sdk";
 
-# Get help
-cortex --help
+const cortex = new Cortex(); // auto-finds DB, or pass { dbPath: "..." }
 
-# Search
-cortex search "your query" --json
-
-# Get items by source
-cortex items --source farcaster --json
+await cortex.timeline({ source: "farcaster", limit: 25 });
+await cortex.items({ source: "teller", type: "transaction", limit: 100, all: true });
+await cortex.search("rent payment", { limit: 10, dbOnly: true });
+await cortex.get("item-id-here");
+await cortex.sync("farcaster");
+await cortex.status();
+await cortex.connections();
 ```
-
-See [`packages/cli/README.md`](packages/cli/README.md) for full CLI documentation.
 
 ## Project Structure
 
@@ -150,7 +148,7 @@ cortex/
 │   └── server/      # Backend API (Elysia + tRPC + Bun)
 ├── packages/
 │   ├── api/         # API layer / business logic (tRPC routers)
-│   ├── cli/         # Command-line interface (@cortex/cli)
+│   ├── sdk/         # TypeScript SDK (@cortex/sdk)
 │   ├── auth/        # Authentication configuration & logic
 │   └── db/          # Database schema & queries (Drizzle ORM)
 ```
