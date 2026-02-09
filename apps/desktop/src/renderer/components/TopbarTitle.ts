@@ -4,6 +4,7 @@
  */
 
 import { Component } from './Component';
+import { store } from '../store';
 import { createElement } from '../utils/dom';
 
 type RouteView = 'timeline' | 'apps' | 'app-detail' | 'onboarding' | 'search';

@@ -709,7 +709,6 @@ export class AppDetail extends Component {
         if (entry?.dataset.entryId) {
           e.preventDefault();
           e.stopPropagation();
-          console.log('[AppDetail] Toggling expanded item:', entry.dataset.entryId);
           actions.toggleExpandedItem(entry.dataset.entryId);
         }
       }
@@ -1217,8 +1216,6 @@ export class AppDetail extends Component {
             },
           });
           
-          console.log('[AppDetail] Connection saved:', result);
-          
           // Clear cache and force refresh apps to get updated connection status
           appsCache.clear();
           const refreshedApps = await fetchApps();
@@ -1235,16 +1232,11 @@ export class AppDetail extends Component {
             throw new Error('Failed to refresh app data');
           }
           
-          console.log('[AppDetail] Connection status after refresh:', this.app.connection?.status);
-          console.log('[AppDetail] App connection:', this.app.connection);
-          
           // Set backfill status to running
           this.setBackfillStatus('running', 'Running in background');
           
           // Re-render to show updated status
           this.render();
-          
-          console.log('[AppDetail] Connection complete, backfill running in background');
           
           // Check for backfill completion after a delay
           // We'll check if new items appear in the timeline
@@ -1322,7 +1314,7 @@ export class AppDetail extends Component {
           }
         }
       } else {
-        console.log('Unknown connection type:', this.app.connectionType);
+        console.warn('[AppDetail] Unknown connection type:', this.app.connectionType);
         if (connectButton) {
           connectButton.textContent = originalButtonText;
           connectButton.removeAttribute('disabled');
@@ -1564,7 +1556,6 @@ export class AppDetail extends Component {
         if (this.currentTab === 'settings') {
           this.renderTabContent();
         }
-        console.log('[AppDetail] Backfill stopped');
       } else {
         console.warn('[AppDetail] Failed to stop backfill:', result.message);
       }

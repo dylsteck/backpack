@@ -29,7 +29,6 @@ export class DetailModal extends Component {
   private async fetchFullNoteContent(): Promise<void> {
     try {
       const note = this.item.data as { path: string; body: string };
-      console.log('[DetailModal] Fetching full note content for:', note.path);
       const result = await window.obsidianVault.readNote(note.path);
       if (result.success && result.note) {
         this.item.data = {

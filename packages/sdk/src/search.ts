@@ -126,12 +126,7 @@ export async function hybridSearch(
 	const seenIds = new Set<string>();
 
 	if (!dbOnly) {
-		const qmdPromise = Promise.race([
-			execQmd(["query", query, "--json", "-n", String(limit * 2)], 3000),
-			new Promise<QMDSearchResponse>((resolve) => {
-				setTimeout(() => resolve({ results: [] }), 3000);
-			}),
-		]);
+		const qmdPromise = execQmd(["query", query, "--json", "-n", String(limit * 2)], 3000);
 
 		const dbPromise = searchDatabase(query, limit).catch(() => []);
 
