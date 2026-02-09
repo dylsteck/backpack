@@ -276,19 +276,12 @@ export class Timeline extends Component {
   
   private renderTimeline(items: TimelineItem[]): void {
     const grouped = groupByDate(items);
-    const container = createElement('div', { className: 'space-y-8 relative' });
+    const container = createElement('div', { className: 'timeline-stack space-y-8' });
     
     // Vertical connecting line - runs down the left side
-    // Aligned with briefing text start: icon (24px) + gap (12px) = 36px from container edge
     const connectingLine = createElement('div', {
-      className: 'absolute top-0 bottom-0',
+      className: 'timeline-rail',
     });
-    (connectingLine as HTMLElement).style.cssText = `
-      left: 28px;
-      width: 1px;
-      background: hsl(var(--border) / 0.8);
-      z-index: 0;
-    `;
     container.appendChild(connectingLine);
     
     for (const [dateKey, dayItems] of grouped) {
@@ -300,49 +293,23 @@ export class Timeline extends Component {
       if (dateKeyDate !== today) {
         // Container for line and badge
         const dateSection = createElement('div', {
-          className: 'relative mb-8',
+          className: 'timeline-date-section mb-8',
         });
-        (dateSection as HTMLElement).style.cssText = `
-          position: relative;
-          display: flex;
-          align-items: center;
-          width: 100%;
-        `;
         
         // Horizontal line - extends across
-        const line = createElement('div');
-        (line as HTMLElement).style.cssText = `
-          position: absolute;
-          left: 0;
-          right: 0;
-          height: 1px;
-          background: hsl(var(--destructive) / 0.25);
-          z-index: 1;
-        `;
+        const line = createElement('div', {
+          className: 'timeline-date-line',
+        });
         dateSection.appendChild(line);
         
         // Badge container - right-aligned, overlaps line
         const dateBadge = createElement('div', {
-          className: 'flex justify-end relative z-10',
+          className: 'timeline-date-badge',
         });
-        (dateBadge as HTMLElement).style.cssText = `
-          position: relative;
-          z-index: 10;
-        `;
         
-        const badge = createElement('div');
-        (badge as HTMLElement).style.cssText = `
-          background: hsl(var(--destructive));
-          color: white;
-          padding: 0.4rem 0.85rem;
-          border-radius: 9999px;
-          font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.75rem;
-          font-weight: 600;
-          letter-spacing: 0.01em;
-          box-shadow: 0 2px 10px hsl(var(--destructive) / 0.28);
-          white-space: nowrap;
-        `;
+        const badge = createElement('div', {
+          className: 'timeline-date-pill',
+        });
         badge.textContent = formatFullDate(new Date(dateKey));
         dateBadge.appendChild(badge);
         dateSection.appendChild(dateBadge);
@@ -357,68 +324,34 @@ export class Timeline extends Component {
         // Message wrapper with left padding for timeline
         // Padding accounts for node position (36px) + spacing (12px) = 48px
         const messageWrapper = createElement('div', {
-          className: 'relative group',
+          className: 'timeline-entry group',
+          dataset: { entryId: item.id },
         });
-        (messageWrapper as HTMLElement).style.cssText = `
-          padding-left: 40px;
-          position: relative;
-        `;
 
         // Timeline node - circular, positioned on the connecting line
         // Aligned with briefing text start: icon (24px) + gap (12px) = 36px
         const node = createElement('div', {
-          className: 'absolute',
+          className: 'timeline-node',
         });
-        (node as HTMLElement).style.cssText = `
-          left: 28px;
-          width: 8px;
-          height: 8px;
-          border-radius: 9999px;
-          background: hsl(var(--foreground) / 0.28);
-          border: 1.5px solid hsl(var(--background));
-          transform: translateX(-50%);
-          z-index: 10;
-          top: 0.65rem;
-        `;
         messageWrapper.appendChild(node);
 
         // Connecting line segment from node to next node (if not last)
         if (!isLast) {
           const lineSegment = createElement('div', {
-            className: 'absolute',
+            className: 'timeline-node-line',
           });
-          (lineSegment as HTMLElement).style.cssText = `
-            left: 28px;
-            width: 1px;
-            height: calc(100% + 1rem);
-            background: hsl(var(--border) / 0.7);
-            top: 1.25rem;
-            transform: translateX(-50%);
-            z-index: 1;
-          `;
           messageWrapper.appendChild(lineSegment);
         }
 
         // Sender info (avatar + name) - positioned above bubble
         const senderInfo = createElement('div', {
-          className: 'flex items-center gap-2 mb-1.5',
+          className: 'timeline-sender',
         });
         
         // Avatar/icon
         const avatar = createElement('div', {
-          className: 'flex-shrink-0',
+          className: 'avatar-pill',
         });
-        (avatar as HTMLElement).style.cssText = `
-          width: 20px;
-          height: 20px;
-          border-radius: 9999px;
-          background: hsl(var(--secondary) / 0.9);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          border: 1px solid hsl(var(--border) / 0.6);
-        `;
         const iconUrl = this.iconUrls[item.source];
         if (iconUrl) {
           avatar.innerHTML = `<img src="${iconUrl}" style="width: 100%; height: 100%; object-fit: cover;" />`;
@@ -432,25 +365,16 @@ export class Timeline extends Component {
         if (item.type === 'cast' && (item.data as FarcasterCast).author) {
           displayName = (item.data as FarcasterCast).author.display_name || displayName;
         }
-        const senderName = createElement('span');
-        (senderName as HTMLElement).style.cssText = `
-          font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: hsl(var(--foreground) / 0.6);
-        `;
+        const senderName = createElement('span', {
+          className: 'timeline-sender-name',
+        });
         senderName.textContent = displayName;
         senderInfo.appendChild(senderName);
         
         // Time indicator below name
-        const timeIndicator = createElement('span');
-        (timeIndicator as HTMLElement).style.cssText = `
-          font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.6875rem;
-          color: hsl(var(--muted-foreground));
-          opacity: 0.6;
-          margin-left: 0.5rem;
-        `;
+        const timeIndicator = createElement('span', {
+          className: 'timeline-relative-time',
+        });
         timeIndicator.textContent = this.getRelativeTime(item.timestamp);
         senderInfo.appendChild(timeIndicator);
         
@@ -461,44 +385,13 @@ export class Timeline extends Component {
         
         // Message bubble - chat-like appearance (or card-like for Obsidian)
         const bubble = createElement('div', {
-          className: 'cursor-pointer',
+          className: `cursor-pointer timeline-bubble${isObsidianNote ? ' timeline-bubble-note' : ''}`,
+          dataset: { clickable: 'true' },
           attributes: {
             role: 'button',
             tabindex: '0',
             'aria-label': 'Open item details',
           },
-        });
-        (bubble as HTMLElement).style.cssText = `
-          background: hsl(var(--card));
-          border: 1px solid hsl(var(--border) / 0.7);
-          border-radius: ${isObsidianNote ? '0.75rem' : '0.65rem'};
-          padding: ${isObsidianNote ? '1rem 1.2rem' : '0.85rem 1rem'};
-          transition: all 0.2s ease;
-          box-shadow: ${isObsidianNote ? '0 6px 18px rgba(18, 16, 13, 0.08)' : '0 1px 2px rgba(18, 16, 13, 0.04)'};
-          max-width: 78%;
-        `;
-        bubble.addEventListener('mouseenter', () => {
-          (bubble as HTMLElement).style.background = 'hsl(var(--card) / 0.98)';
-          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.9)';
-          (bubble as HTMLElement).style.transform = isObsidianNote ? 'translateY(-1px)' : 'none';
-          (bubble as HTMLElement).style.boxShadow = isObsidianNote 
-            ? '0 10px 22px rgba(18, 16, 13, 0.12)' 
-            : '0 4px 12px rgba(18, 16, 13, 0.08)';
-        });
-        bubble.addEventListener('mouseleave', () => {
-          (bubble as HTMLElement).style.background = 'hsl(var(--card))';
-          (bubble as HTMLElement).style.borderColor = 'hsl(var(--border) / 0.7)';
-          (bubble as HTMLElement).style.transform = 'none';
-          (bubble as HTMLElement).style.boxShadow = isObsidianNote 
-            ? '0 6px 18px rgba(18, 16, 13, 0.08)' 
-            : '0 1px 2px rgba(18, 16, 13, 0.04)';
-        });
-        this.addListener(bubble, 'click', () => this.openItemDetail(item));
-        this.addListener(bubble, 'keydown', (event: KeyboardEvent) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            this.openItemDetail(item);
-          }
         });
 
         // Content - special renderer for Obsidian notes
@@ -506,29 +399,13 @@ export class Timeline extends Component {
           ? this.renderObsidianNoteContent(item)
           : this.renderItemContent(item);
         
-        if (!isObsidianNote) {
-          (content as HTMLElement).style.cssText = `
-            font-family: var(--font-sans, 'Manrope', sans-serif);
-            font-size: 0.8125rem;
-            line-height: 1.55;
-            color: var(--foreground);
-            margin-bottom: 0.5rem;
-          `;
-        }
         bubble.appendChild(content);
         messageWrapper.appendChild(bubble);
 
         // Right-side timestamp
         const absoluteTime = createElement('div', {
-          className: 'absolute right-0 top-0',
+          className: 'timeline-absolute-time',
         });
-        (absoluteTime as HTMLElement).style.cssText = `
-          font-family: var(--font-sans, 'Manrope', sans-serif);
-          font-size: 0.6875rem;
-          color: hsl(var(--muted-foreground));
-          opacity: 0.55;
-          white-space: nowrap;
-        `;
         const timeStr = formatTime(item.timestamp);
         const dateStr = new Date(item.timestamp).toDateString();
         const todayStr = new Date().toDateString();
@@ -706,27 +583,16 @@ export class Timeline extends Component {
     const wrapper = createElement('div', { className: 'obsidian-note-content' });
     
     // Title - prominent
-    const title = createElement('h3');
-    (title as HTMLElement).style.cssText = `
-      font-family: var(--font-sans);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--foreground);
-      margin: 0 0 0.4rem 0;
-      line-height: 1.4;
-    `;
+    const title = createElement('h3', {
+      className: 'obsidian-note-title',
+    });
     title.textContent = note.title || 'Untitled';
     wrapper.appendChild(title);
     
     // Date - formatted nicely
-    const date = createElement('div');
-    (date as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 0.75rem;
-      color: var(--muted-foreground);
-      margin-bottom: 0.5rem;
-      opacity: 0.75;
-    `;
+    const date = createElement('div', {
+      className: 'obsidian-note-date',
+    });
     const dateObj = new Date(note.mtime);
     date.textContent = dateObj.toLocaleDateString('en-US', { 
       month: 'long', 
@@ -746,15 +612,9 @@ export class Timeline extends Component {
     const linkMatch = preview.match(/\[([^\]]+)\]\(([^)]+)\)/);
     const hasLink = linkMatch !== null;
     
-    const previewDiv = createElement('div');
-    (previewDiv as HTMLElement).style.cssText = `
-      font-family: var(--font-sans, 'Manrope', sans-serif);
-      font-size: 0.8125rem;
-      line-height: 1.55;
-      color: var(--foreground);
-      margin-bottom: ${hasLink ? '0.4rem' : '0.6rem'};
-      opacity: 0.9;
-    `;
+    const previewDiv = createElement('div', {
+      className: `obsidian-note-preview${hasLink ? ' has-link' : ''}`,
+    });
     
     // If markdown, parse it; otherwise just show text
     if (isMarkdown(preview)) {
@@ -770,25 +630,10 @@ export class Timeline extends Component {
       const linkText = linkMatch[1];
       const linkUrl = linkMatch[2];
       const linkEl = createElement('a', {
+        className: 'obsidian-note-link',
         attributes: { href: linkUrl, target: '_blank' },
       });
-      (linkEl as HTMLElement).style.cssText = `
-        font-family: var(--font-sans, 'Manrope', sans-serif);
-        font-size: 0.8125rem;
-        color: hsl(var(--primary));
-        text-decoration: underline;
-        text-underline-offset: 2px;
-        margin-bottom: 0.5rem;
-        display: inline-block;
-        transition: opacity 0.2s;
-      `;
       linkEl.textContent = linkText;
-      linkEl.addEventListener('mouseenter', () => {
-        (linkEl as HTMLElement).style.opacity = '0.8';
-      });
-      linkEl.addEventListener('mouseleave', () => {
-        (linkEl as HTMLElement).style.opacity = '1';
-      });
       wrapper.appendChild(linkEl);
     }
     
@@ -799,7 +644,7 @@ export class Timeline extends Component {
     const text = this.extractPreviewText(item) || 'No preview available';
 
     // Regular text content
-    const wrapper = createElement('div', { className: 'text-[13px] leading-relaxed' });
+    const wrapper = createElement('div', { className: 'timeline-bubble-text' });
     wrapper.textContent = text;
     return wrapper;
   }
@@ -875,6 +720,22 @@ export class Timeline extends Component {
       const target = e.target as HTMLElement;
       const clickable = target.closest('[data-clickable]');
       if (clickable) {
+        const entry = clickable.closest('[data-entry-id]') as HTMLElement;
+        if (entry?.dataset.entryId) {
+          const item = this.getAllItems().find(i => i.id === entry.dataset.entryId);
+          if (item) this.openItemDetail(item);
+        }
+      }
+    }, { capture: true });
+
+    this.addListener(this.container, 'keydown', (e) => {
+      const event = e as KeyboardEvent;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+
+      const target = event.target as HTMLElement;
+      const clickable = target.closest('[data-clickable]');
+      if (clickable) {
+        event.preventDefault();
         const entry = clickable.closest('[data-entry-id]') as HTMLElement;
         if (entry?.dataset.entryId) {
           const item = this.getAllItems().find(i => i.id === entry.dataset.entryId);

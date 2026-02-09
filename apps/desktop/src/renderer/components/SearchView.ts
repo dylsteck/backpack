@@ -105,7 +105,16 @@ export class SearchView extends Component {
 		// Search icon
 		const searchIcon = createElement('svg', {
 			className: 'w-4 h-4 text-muted-foreground shrink-0',
-			innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+			attributes: {
+				viewBox: '0 0 24 24',
+				fill: 'none',
+				stroke: 'currentColor',
+				'stroke-width': '2',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round',
+				'aria-hidden': 'true',
+			},
+			innerHTML: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
 		});
 		inputContainer.appendChild(searchIcon);
 
@@ -275,7 +284,6 @@ export class SearchView extends Component {
 					const existingIds = new Set(this.results.map(r => r.id));
 					const newResults = response.results.filter(r => !existingIds.has(r.id));
 					this.results = [...this.results, ...newResults];
-					console.log(`[Search] Loaded ${newResults.length} more results, total: ${this.results.length}`);
 				} else {
 					this.results = response.results;
 					this.currentLimit = 50; // Reset limit for new search
@@ -398,25 +406,11 @@ export class SearchView extends Component {
 			const messageWrapper = createElement('div', {
 				className: 'relative flex items-start gap-3',
 			});
-			(messageWrapper as HTMLElement).style.cssText = `
-				position: relative;
-			`;
 
 			// Avatar/icon matching Timeline style
 			const avatar = createElement('div', {
-				className: 'flex-shrink-0',
+				className: 'avatar-pill flex-shrink-0',
 			});
-			(avatar as HTMLElement).style.cssText = `
-				width: 20px;
-				height: 20px;
-				border-radius: 9999px;
-				background: hsl(var(--secondary) / 0.9);
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				overflow: hidden;
-				border: 1px solid hsl(var(--border) / 0.6);
-			`;
 			// Use source color for avatar
 			const sourceColors: Record<string, string> = {
 				farcaster: 'hsl(270 40% 60%)',
@@ -445,43 +439,30 @@ export class SearchView extends Component {
 
 			// Source badge - matching Timeline style
 			const sourceLabel = createElement('div', {
-				className: 'flex items-center gap-2 mb-1.5',
+				className: 'search-result-meta',
 			});
-			const sourceName = createElement('span');
-			(sourceName as HTMLElement).style.cssText = `
-				font-family: var(--font-sans, 'Manrope', sans-serif);
-				font-size: 0.75rem;
-				font-weight: 600;
-				color: hsl(var(--foreground) / 0.6);
-				text-transform: capitalize;
-			`;
+			const sourceName = createElement('span', {
+				className: 'search-result-source',
+			});
 			sourceName.textContent = result.source;
 			sourceLabel.appendChild(sourceName);
 			bubble.appendChild(sourceLabel);
 
 			// Title - matching Timeline content style
-			const title = createElement('div');
-			(title as HTMLElement).style.cssText = `
-				font-family: var(--font-sans, 'Manrope', sans-serif);
-				font-size: 0.8125rem;
-				line-height: 1.55;
-				color: var(--foreground);
-				margin-bottom: ${result.snippet ? '0.5rem' : '0'};
-				font-weight: 500;
-			`;
+			const title = createElement('div', {
+				className: 'search-result-title',
+			});
 			title.textContent = result.title || result.id;
+			if (!result.snippet) {
+				title.classList.add('no-snippet');
+			}
 			bubble.appendChild(title);
 
 			// Snippet - matching Timeline style
 			if (result.snippet) {
-				const snippet = createElement('div');
-				(snippet as HTMLElement).style.cssText = `
-					font-family: var(--font-sans, 'Manrope', sans-serif);
-					font-size: 0.8125rem;
-					line-height: 1.55;
-					color: hsl(var(--muted-foreground));
-					margin-bottom: 0.5rem;
-				`;
+				const snippet = createElement('div', {
+					className: 'search-result-snippet',
+				});
 				snippet.textContent = result.snippet;
 				bubble.appendChild(snippet);
 			}
@@ -489,16 +470,8 @@ export class SearchView extends Component {
 			// Timestamp - matching Timeline style (right-aligned)
 			if (result.timestamp) {
 				const absoluteTime = createElement('div', {
-					className: 'absolute right-0 top-0',
+					className: 'search-result-time',
 				});
-				(absoluteTime as HTMLElement).style.cssText = `
-					font-family: var(--font-sans, 'Manrope', sans-serif);
-					font-size: 0.6875rem;
-					color: hsl(var(--muted-foreground));
-					opacity: 0.55;
-					white-space: nowrap;
-					padding: 0.85rem 1rem;
-				`;
 				const date = new Date(result.timestamp);
 				const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 				const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -551,7 +524,6 @@ export class SearchView extends Component {
 			if (entries[0]?.isIntersecting && !this.isLoadingMore && !this.isSearching && this.lastQuery && this.results.length > 0) {
 				this.isLoadingMore = true;
 				this.currentLimit += 50; // Load 50 more results
-				console.log(`[Search] Loading more results, limit: ${this.currentLimit}`);
 				this.search(this.lastQuery, true).finally(() => {
 					this.isLoadingMore = false;
 				});
@@ -688,13 +660,7 @@ export class SearchView extends Component {
 		this.syncTimer = setInterval(() => {
 			const elapsed = Math.floor((Date.now() - this.syncStartTime) / 1000);
 			if (!this.syncStatus) return;
-			if (elapsed < 15) {
-				this.syncStatus.textContent = `Syncing… ${elapsed}s`;
-			} else if (elapsed < 45) {
-				this.syncStatus.textContent = `Syncing… ${elapsed}s`;
-			} else {
-				this.syncStatus.textContent = `Syncing… ${elapsed}s`;
-			}
+			this.syncStatus.textContent = `Syncing… ${elapsed}s`;
 		}, 1000);
 	}
 
