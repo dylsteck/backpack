@@ -2,17 +2,17 @@
 
 ## Current Position
 
-**Status:** Wave 1 Complete - Core Foundation Ready
-**Phase:** 01-core-foundation COMPLETE
-**Last Activity:** 2026-02-19 - Completed Wave 1 (Database, Config, Keychain)
+**Status:** Wave 2 Complete - Sync Engine Ready  
+**Phase:** 02-sync-engine COMPLETE  
+**Last Activity:** 2026-02-19 - Completed Wave 2 (Sync Framework + Obsidian Sync)  
 
 ## Progress
 
-Wave 1 of 8 complete (12.5%)
+Wave 2 of 8 complete (25%)
 
 ```
 Wave 1: ████████░░░░░░░░░░░░ 100% ✅
-Wave 2: ░░░░░░░░░░░░░░░░░░░░ 0%
+Wave 2: ████████░░░░░░░░░░░░ 100% ✅
 Wave 3: ░░░░░░░░░░░░░░░░░░░░ 0%
 Wave 4: ░░░░░░░░░░░░░░░░░░░░ 0%
 Wave 5: ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -26,7 +26,7 @@ Wave 8: ░░░░░░░░░░░░░░░░░░░░ 0%
 | Wave | Phase | Plans | Status |
 |------|-------|-------|--------|
 | 1 | 01-core-foundation | 01-01, 01-02 | ✅ Complete |
-| 2 | 02-sync-engine | 02-03, 02-04 | 🔵 Pending |
+| 2 | 02-sync-engine | 02-03, 02-04 | ✅ Complete |
 | 3 | 03-other-sources | 03-05, 03-06, 03-07 | 🔵 Pending |
 | 4 | 04-embeddings-search | 04-08, 04-09 | 🔵 Pending |
 | 5 | 05-cli-commands | 05-10, 05-11, 05-12, 05-13 | 🔵 Pending |
@@ -51,6 +51,29 @@ Wave 8: ░░░░░░░░░░░░░░░░░░░░ 0%
 - **Secrets:** OpenRouter, Teller, Farcaster credential storage
 - **Test:** Config read/write, keychain store/retrieve/delete
 
+## Wave 2 Deliverables
+
+### Plan 02-03: Sync Engine Framework ✅
+- **Files:** `packages/core/src/sync/` module created
+- **Types:** SyncStatus, SyncProgress, SyncOptions, SyncResult
+- **BaseSyncer:** Abstract class with common functionality
+- **SyncManager:** Orchestrates multiple syncers with concurrency control
+- **Features:** 
+  - Max 3 concurrent syncs (configurable)
+  - Progress callbacks
+  - Error handling per source
+  - Database sync status tracking
+- **Integration:** Auto-registers syncers based on config
+
+### Plan 02-04: Obsidian Sync ✅
+- **Syncer:** `ObsidianSyncer` extends BaseSyncer
+- **Vault Walking:** Recursive directory traversal
+- **Frontmatter:** YAML parsing (title, tags, created, etc.)
+- **Wikilinks:** Extract [[Note Name]] and [[Note|Alias]]
+- **Tags:** Extract #tag from content and frontmatter
+- **Incremental:** Uses file mtime, 6x faster on subsequent syncs
+- **Test:** `packages/core/test-obsidian-sync.ts` - 100% pass
+
 ## Accumulated Decisions
 
 1. **Architecture:** CLI-first with optional TUI and server
@@ -63,6 +86,47 @@ Wave 8: ░░░░░░░░░░░░░░░░░░░░ 0%
 8. **Server:** tRPC API for external access
 9. **OAuth:** Temporary callback server on localhost
 10. **Release:** v2.0.0 after cleanup
+11. **Sync Framework:** Abstract BaseSyncer pattern for all sources
+12. **Incremental Sync:** File mtime comparison (fast, simple)
+13. **Concurrency:** Limit to 3 concurrent syncs to avoid rate limits
+
+## Recent Commits
+
+| Commit | Plan | Description |
+|--------|------|-------------|
+| 5cf2ebe | 02-03 | Sync engine framework with BaseSyncer, SyncManager |
+| 4c46db3 | 02-04 | Obsidian vault syncer with incremental sync |
+
+## Key Files Added
+
+```
+packages/core/src/sync/
+├── types.ts          # Sync type definitions
+├── base.ts           # BaseSyncer abstract class
+├── manager.ts        # SyncManager orchestration
+├── index.ts          # Module exports
+└── sources/
+    ├── index.ts      # Source exports
+    └── obsidian.ts   # ObsidianSyncer implementation
+
+packages/core/test-obsidian-sync.ts  # Comprehensive test suite
+
+.planning/phases/02-sync-engine/
+├── 02-03-SUMMARY.md  # Sync framework documentation
+└── 02-04-SUMMARY.md  # Obsidian sync documentation
+```
+
+## Next Phase
+
+**Wave 3: Other Data Sources**
+
+→ Plan 03-05: Farcaster sync (Neynar API)
+→ Plan 03-06: Teller banking sync
+→ Plan 03-07: Chrome history sync
+
+## Blockers/Concerns
+
+None - Wave 2 complete and ready for Wave 3.
 
 ## Execution Mode
 
