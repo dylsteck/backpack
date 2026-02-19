@@ -55,3 +55,7 @@ export * from "./auth/index.js";
 
 // Sync exports
 export * from "./sync/index.js";
+
+// Re-export sync sources specifically
+export { ObsidianSyncer } from "./sync/sources/obsidian.js";
+export { initSyncers, createSyncersForSources } from "./sync/index.js";
