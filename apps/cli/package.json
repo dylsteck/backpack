@@ -1,0 +1,37 @@
+{
+  "name": "@cortex/cli",
+  "version": "2.0.0",
+  "description": "Cortex CLI - Personal Operating System",
+  "type": "module",
+  "bin": {
+    "cortex": "./dist/bin/run.js"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "bun run build",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@cortex/core": "workspace:*",
+    "@oclif/core": "^3.26.0",
+    "@oclif/plugin-help": "^6.0.0",
+    "drizzle-orm": "^0.45.1",
+    "ink": "^4.4.1",
+    "ink-text-input": "^5.0.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "tsdown": "^0.15.5",
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "oclif": {
+    "commands": "./dist/commands",
+    "topicSeparator": " ",
+    "flexibleTaxonomy": true
+  },
+  "preferGlobal": true
+}
