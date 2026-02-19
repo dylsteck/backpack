@@ -1,6 +1,8 @@
 import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 /**
  * Source types for timeline items
  */
@@ -86,7 +88,7 @@ export const embeddings = sqliteTable("embeddings", {
 /**
  * Relations
  */
-export const timelineItemsRelations = relations(timelineItems, ({ one, many }) => ({
+export const timelineItemsRelations = relations(timelineItems, ({ many }) => ({
   embeddings: many(embeddings),
 }));
 

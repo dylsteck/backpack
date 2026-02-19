@@ -27,8 +27,8 @@ export const ITEM_TYPES = [
 
 export type ItemType = (typeof ITEM_TYPES)[number];
 
-// Sync statuses
-export const SYNC_STATUSES = [
+// Item sync statuses (for timeline_items.sync_status)
+export const ITEM_SYNC_STATUSES = [
   "pending",
   "syncing",
   "synced",
@@ -36,7 +36,7 @@ export const SYNC_STATUSES = [
   "skipped",
 ] as const;
 
-export type SyncStatus = (typeof SYNC_STATUSES)[number];
+export type ItemSyncStatus = (typeof ITEM_SYNC_STATUSES)[number];
 
 /**
  * Timeline item interface
@@ -53,7 +53,7 @@ export interface TimelineItem {
   timestamp: Date;
   createdAt: Date;
   updatedAt: Date;
-  syncStatus: SyncStatus;
+  syncStatus: ItemSyncStatus;
   errorMessage?: string;
 }
 
@@ -137,9 +137,10 @@ export interface TimelineResult {
 }
 
 /**
- * Sync operation result
+ * Legacy sync operation result (per-source)
+ * @deprecated Use sync/SyncProgress instead
  */
-export interface SyncResult {
+export interface LegacySyncResult {
   source: SourceType;
   added: number;
   updated: number;

@@ -55,7 +55,7 @@ export const sourceConfigSchema = z.union([
   farcasterConfigSchema,
   tellerConfigSchema,
   chromeConfigSchema,
-  z.record(z.unknown()), // Fallback for any other config
+  z.record(z.string(), z.unknown()), // Fallback for any other config
 ]);
 
 export type SourceConfig = z.infer<typeof sourceConfigSchema>;

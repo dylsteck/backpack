@@ -4,6 +4,7 @@ import os from "os";
 import type {
   CoreConfig,
   PartialConfig,
+  SourceType,
 } from "./schema.js";
 import {
   getDefaultConfig,
@@ -228,7 +229,7 @@ export function getSourceConfig<T = unknown>(sourceType: string): T | undefined 
 /**
  * Set source configuration
  */
-export function setSourceConfig(sourceType: string, sourceConfig: { type: string; enabled: boolean; config: unknown }): CoreConfig {
+export function setSourceConfig(sourceType: string, sourceConfig: { type: SourceType; enabled: boolean; config: Record<string, unknown> }): CoreConfig {
   const config = getConfig();
   
   const updatedConfig: PartialConfig = {
