@@ -16,8 +16,10 @@ export * from "./sources/index.js";
 
 import { SyncManager } from "./manager.js";
 import { ObsidianSyncer } from "./sources/obsidian.js";
+import { FarcasterSyncer } from "./sources/farcaster.js";
+import { TellerSyncer } from "./sources/teller.js";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import type { CoreConfig, ObsidianConfig } from "../config/schema.js";
+import type { CoreConfig, ObsidianConfig, FarcasterConfig, TellerConfig } from "../config/schema.js";
 import * as schema from "../db/schema.js";
 
 /**
@@ -36,9 +38,21 @@ export function initSyncers(
     manager.register(obsidianSyncer);
   }
 
+  // Register Farcaster syncer if configured
+  const farcasterEntry = config.sources.farcaster;
+  if (farcasterEntry?.config && farcasterEntry.enabled !== false && 'fid' in farcasterEntry.config) {
+    const farcasterSyncer = new FarcasterSyncer(db, farcasterEntry.config as FarcasterConfig);
+    manager.register(farcasterSyncer);
+  }
+
+  // Register Teller syncer if configured
+  const tellerEntry = config.sources.teller;
+  if (tellerEntry?.config && tellerEntry.enabled !== false && 'environment' in tellerEntry.config) {
+    const tellerSyncer = new TellerSyncer(db, tellerEntry.config as TellerConfig);
+    manager.register(tellerSyncer);
+  }
+
   // Future: Register other syncers here
-  // - Farcaster
-  // - Teller
   // - Chrome
 
   return manager;
@@ -50,7 +64,7 @@ export function initSyncers(
 export function createSyncersForSources(
   db: BunSQLiteDatabase<typeof schema>,
   config: CoreConfig,
-  sourceTypes: Array<"obsidian">
+  sourceTypes: Array<"obsidian" | "teller">
 ): SyncManager {
   const manager = new SyncManager(db);
 
@@ -60,6 +74,14 @@ export function createSyncersForSources(
         const obsidianEntry = config.sources.obsidian;
         if (obsidianEntry?.config && 'vaultPath' in obsidianEntry.config) {
           const syncer = new ObsidianSyncer(db, obsidianEntry.config as ObsidianConfig);
+          manager.register(syncer);
+        }
+        break;
+      }
+      case "teller": {
+        const tellerEntry = config.sources.teller;
+        if (tellerEntry?.config && 'environment' in tellerEntry.config) {
+          const syncer = new TellerSyncer(db, tellerEntry.config as TellerConfig);
           manager.register(syncer);
         }
         break;

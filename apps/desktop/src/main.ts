@@ -16,6 +16,10 @@ import safeConsole from "./helpers/safe-console";
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
+// Suppress EIO / broken pipe errors during shutdown
+process.stdout?.on?.("error", () => {});
+process.stderr?.on?.("error", () => {});
+
 // Store reference to main window for deep link handling
 let mainWindow: BrowserWindow | null = null;
 
@@ -158,12 +162,14 @@ async function startServer(): Promise<number> {
       serverProcess.stdout.on("data", (data) => {
         safeConsole.log(`[Server] ${data.toString().trim()}`);
       });
+      serverProcess.stdout.on("error", () => {});
     }
-    
+
     if (serverProcess.stderr) {
       serverProcess.stderr.on("data", (data) => {
         safeConsole.error(`[Server Error] ${data.toString().trim()}`);
       });
+      serverProcess.stderr.on("error", () => {});
     }
     
     serverProcess.on("error", (error) => {
@@ -196,18 +202,25 @@ async function startServer(): Promise<number> {
 function stopServer(): void {
   if (serverProcess) {
     safeConsole.log("Stopping server...");
-    
+
+    // Detach stdio to prevent EIO errors during shutdown
+    serverProcess.stdout?.removeAllListeners();
+    serverProcess.stderr?.removeAllListeners();
+    serverProcess.stdout?.destroy();
+    serverProcess.stderr?.destroy();
+
     // Try graceful shutdown first
     serverProcess.kill("SIGTERM");
-    
+
     // Force kill after 5 seconds if still running
+    const proc = serverProcess;
     setTimeout(() => {
-      if (serverProcess && !serverProcess.killed) {
+      if (proc && !proc.killed) {
         safeConsole.log("Force killing server...");
-        serverProcess.kill("SIGKILL");
+        proc.kill("SIGKILL");
       }
     }, 5000);
-    
+
     serverProcess = null;
   }
 }

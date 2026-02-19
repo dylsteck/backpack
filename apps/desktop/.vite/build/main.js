@@ -11957,6 +11957,10 @@ function requireDist() {
 }
 var distExports = requireDist();
 const inDevelopment = process.env.NODE_ENV === "development";
+process.stdout?.on?.("error", () => {
+});
+process.stderr?.on?.("error", () => {
+});
 let mainWindow = null;
 let serverProcess = null;
 let serverPort = 3e3;
@@ -12059,10 +12063,14 @@ async function startServer() {
       serverProcess.stdout.on("data", (data) => {
         safeConsole.log(`[Server] ${data.toString().trim()}`);
       });
+      serverProcess.stdout.on("error", () => {
+      });
     }
     if (serverProcess.stderr) {
       serverProcess.stderr.on("data", (data) => {
         safeConsole.error(`[Server Error] ${data.toString().trim()}`);
+      });
+      serverProcess.stderr.on("error", () => {
       });
     }
     serverProcess.on("error", (error) => {
@@ -12086,11 +12094,16 @@ async function startServer() {
 function stopServer() {
   if (serverProcess) {
     safeConsole.log("Stopping server...");
+    serverProcess.stdout?.removeAllListeners();
+    serverProcess.stderr?.removeAllListeners();
+    serverProcess.stdout?.destroy();
+    serverProcess.stderr?.destroy();
     serverProcess.kill("SIGTERM");
+    const proc = serverProcess;
     setTimeout(() => {
-      if (serverProcess && !serverProcess.killed) {
+      if (proc && !proc.killed) {
         safeConsole.log("Force killing server...");
-        serverProcess.kill("SIGKILL");
+        proc.kill("SIGKILL");
       }
     }, 5e3);
     serverProcess = null;

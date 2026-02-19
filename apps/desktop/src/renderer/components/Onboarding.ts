@@ -140,7 +140,7 @@ export class Onboarding extends Component {
     // Skip button (visible on step 3 - apps selection)
     if (this.currentStep === 3) {
       const skipButton = createElement('button', {
-        className: 'absolute top-12 right-6 px-4 py-2 hover:text-primary transition-colors font-mono uppercase tracking-wider text-xs text-muted-foreground',
+        className: 'absolute top-6 right-6 px-4 py-1.5 hover:text-black transition-colors font-sans text-sm text-muted-foreground',
         textContent: 'Skip',
       });
       this.addListener(skipButton, 'click', () => this.completeOnboarding());
@@ -154,9 +154,11 @@ export class Onboarding extends Component {
     this.renderStep();
     wrapper.appendChild(this.contentContainer);
     
-    // Step indicators
-    const indicators = this.createStepIndicators();
-    wrapper.appendChild(indicators);
+    // Step indicators (hidden on welcome step)
+    if (this.currentStep !== 1) {
+      const indicators = this.createStepIndicators();
+      wrapper.appendChild(indicators);
+    }
     
     this.container.appendChild(wrapper);
   }
@@ -182,42 +184,34 @@ export class Onboarding extends Component {
     if (!this.contentContainer) return;
     
     const stack = createElement('div', {
-      className: 'flex flex-col items-center space-y-10 w-full animate-in fade-in zoom-in-95 duration-500',
+      className: 'flex flex-col items-center w-full h-full animate-in fade-in zoom-in-95 duration-500',
     });
-    
+
+    // Top section: icon + name centered in available space
+    const topSection = createElement('div', {
+      className: 'flex-1 flex flex-col items-center justify-center space-y-6',
+    });
+
     // Icon
     const logo = createElement('img', {
-      className: 'h-24 w-24 object-contain shadow-2xl rounded-2xl',
+      className: 'h-32 w-32 object-contain',
       attributes: {
         src: iconImage,
         alt: 'Cortex',
       },
     });
-    stack.appendChild(logo);
-    
-    // Text
-    const textWrapper = createElement('div', {
-      className: 'text-center space-y-3',
-    });
-    textWrapper.innerHTML = `
-      <h1 class="text-4xl font-mono uppercase tracking-widest text-primary">
-        Welcome to Cortex
-      </h1>
-      <p class="text-lg text-muted-foreground font-mono leading-relaxed">
-        Your life in one app
-      </p>
-    `;
-    stack.appendChild(textWrapper);
-    
-    // Button
+    topSection.appendChild(logo);
+
+    stack.appendChild(topSection);
+    this.contentContainer.appendChild(stack);
+
+    // Button fixed near bottom — outside animated stack to prevent layout shift
     const continueButton = createElement('button', {
-      className: 'px-8 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm hover:opacity-90 transition-all hover:scale-105 active:scale-95',
-      textContent: 'Continue',
+      className: 'px-10 py-2.5 bg-black text-white font-sans font-medium text-sm rounded-full shadow-lg hover:shadow-xl hover:bg-black/90 transition-all active:scale-95 fixed bottom-10 left-1/2 -translate-x-1/2',
+      textContent: 'Get Started',
     });
     this.addListener(continueButton, 'click', () => this.nextStep());
-    stack.appendChild(continueButton);
-    
-    this.contentContainer.appendChild(stack);
+    this.contentContainer.appendChild(continueButton);
   }
 
   private renderCreateVaultStep(): void {
@@ -244,18 +238,18 @@ export class Onboarding extends Component {
       className: 'text-center space-y-3',
     });
     textWrapper.innerHTML = `
-      <h1 class="text-4xl font-mono uppercase tracking-widest text-primary">
+      <h1 class="text-4xl font-sans font-semibold text-primary">
         Create Vault
       </h1>
-      <p class="text-lg text-muted-foreground font-mono leading-relaxed">
+      <p class="text-lg text-muted-foreground font-sans leading-relaxed">
         Choose where to store your data
       </p>
     `;
     stack.appendChild(textWrapper);
-    
+
     // Button
     const createButton = createElement('button', {
-      className: `px-10 py-4 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-sm hover:opacity-90 transition-all hover:scale-105 active:scale-95 flex items-center gap-3 ${this.isInitializing ? 'opacity-50 cursor-not-allowed' : ''}`,
+      className: `px-10 py-2.5 bg-black text-white font-sans font-medium text-sm rounded-lg hover:opacity-90 transition-all hover:scale-105 active:scale-95 flex items-center gap-3 ${this.isInitializing ? 'opacity-50 cursor-not-allowed' : ''}`,
       innerHTML: this.isInitializing ? `
         <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
@@ -327,87 +321,54 @@ export class Onboarding extends Component {
       className: 'flex flex-col items-center w-full h-full min-h-0 animate-in fade-in slide-in-from-right-4 duration-500',
     });
     
-    // Scrollable content area
-    const scrollableContent = createElement('div', {
-      className: 'flex flex-col items-center space-y-6 w-full flex-1 min-h-0 overflow-y-auto px-2',
-    });
-    
-    // Icon - Apps icon for Step 3
-    const iconWrapper = createElement('div', {
-      className: 'h-20 w-20 flex items-center justify-center bg-card border-2 border-primary/20 rounded-2xl text-primary shadow-xl flex-shrink-0',
-      innerHTML: `
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect width="7" height="7" x="3" y="3" rx="1"/>
-          <rect width="7" height="7" x="14" y="3" rx="1"/>
-          <rect width="7" height="7" x="14" y="14" rx="1"/>
-          <rect width="7" height="7" x="3" y="14" rx="1"/>
-        </svg>
-      `,
-    });
-    scrollableContent.appendChild(iconWrapper);
-    
-    // Text
+    // Title
     const titleWrapper = createElement('div', {
-      className: 'text-center space-y-2 flex-shrink-0',
+      className: 'text-center space-y-1 flex-shrink-0 pt-2',
     });
     titleWrapper.innerHTML = `
-      <h2 class="text-3xl font-mono uppercase tracking-widest text-primary">Connect Apps</h2>
-      <p class="text-base text-muted-foreground font-mono">
-        Link your favorite apps
+      <h2 class="text-2xl font-sans font-semibold text-black">Connect your apps</h2>
+      <p class="text-sm text-muted-foreground font-sans">
+        Choose the services you'd like to link
       </p>
     `;
-    scrollableContent.appendChild(titleWrapper);
-    
-    // Apps grid
+    wrapper.appendChild(titleWrapper);
+
+    // Apps grid — scrollable
     const appsContainer = createElement('div', {
-      className: 'w-full max-w-md max-h-48 overflow-y-auto pr-2 custom-scrollbar flex-shrink-0',
+      className: 'w-full flex-1 min-h-0 overflow-y-auto px-1 py-4',
     });
-    
+
     const apps = store.apps.get();
-    
+
     if (apps.length === 0) {
       appsContainer.innerHTML = `
-        <div class="grid grid-cols-3 gap-3">
-          ${[1, 2, 3, 4, 5, 6].map(() => '<div class="h-16 border border-primary/5 bg-muted/20 animate-pulse rounded-lg"></div>').join('')}
+        <div class="grid grid-cols-3 gap-2.5">
+          ${[1, 2, 3, 4, 5, 6].map(() => '<div class="h-20 bg-muted/30 animate-pulse rounded-xl"></div>').join('')}
         </div>
       `;
     } else {
       const grid = createElement('div', {
-        className: 'grid grid-cols-3 gap-3',
+        className: 'grid grid-cols-3 gap-2.5',
       });
-      
+
       for (const app of apps) {
         const card = this.createAppCard(app);
         grid.appendChild(card);
       }
-      
+
       appsContainer.appendChild(grid);
     }
-    scrollableContent.appendChild(appsContainer);
-    
-    wrapper.appendChild(scrollableContent);
-    
-    // Navigation buttons - fixed at bottom, always visible
-    const navWrapper = createElement('div', {
-      className: 'flex justify-center items-center gap-3 pt-4 pb-2 flex-shrink-0 w-full',
-    });
-    
-    const backButton = createElement('button', {
-      className: 'px-5 py-2.5 border border-primary/20 hover:bg-accent transition-all font-mono uppercase tracking-wider text-xs whitespace-nowrap',
-      textContent: 'Back',
-    });
-    this.addListener(backButton, 'click', () => this.prevStep());
-    navWrapper.appendChild(backButton);
-    
-    const continueButton = createElement('button', {
-      className: 'px-8 py-2.5 bg-primary text-primary-foreground font-mono uppercase tracking-wider text-xs transition-all hover:opacity-90 whitespace-nowrap',
+    wrapper.appendChild(appsContainer);
+
+    // Finish button fixed near stepper
+    const finishButton = createElement('button', {
+      className: 'px-10 py-2.5 bg-black text-white rounded-full shadow-lg hover:shadow-xl hover:bg-black/90 font-sans font-medium text-sm transition-all active:scale-95 fixed bottom-12 left-1/2 -translate-x-1/2',
       textContent: 'Finish',
     });
-    this.addListener(continueButton, 'click', () => this.completeOnboarding());
-    navWrapper.appendChild(continueButton);
-    
-    wrapper.appendChild(navWrapper);
+    this.addListener(finishButton, 'click', () => this.completeOnboarding());
+
     this.contentContainer.appendChild(wrapper);
+    this.contentContainer.appendChild(finishButton);
   }
   
   private createAppCard(app: AppServer): HTMLElement {
@@ -415,12 +376,12 @@ export class Onboarding extends Component {
     const isConnecting = this.connectingApps.has(app.id);
     
     const card = createElement('button', {
-      className: `group relative flex flex-col items-center justify-center p-4 border transition-all duration-200 cursor-pointer rounded-xl ${
+      className: `group relative flex flex-col items-center justify-center p-3 border transition-all duration-200 cursor-pointer rounded-xl ${
         isConnected
-          ? 'border-status-connected/50 bg-status-connected/5'
+          ? 'border-green-500/40 bg-green-50'
           : isConnecting
-            ? 'border-primary/30 bg-primary/5 opacity-70'
-            : 'border-primary/10 bg-card hover:border-primary/30 hover:bg-accent/50'
+            ? 'border-black/10 bg-muted/30 opacity-70'
+            : 'border-black/[0.06] bg-white hover:border-black/15 hover:shadow-sm'
       }`,
     });
     
@@ -447,7 +408,7 @@ export class Onboarding extends Component {
     
     // Name
     const name = createElement('p', {
-      className: 'text-[10px] font-mono uppercase tracking-tighter text-center opacity-70',
+      className: 'text-[11px] font-sans text-center text-muted-foreground',
       textContent: app.name,
     });
     card.appendChild(name);
@@ -649,16 +610,21 @@ export class Onboarding extends Component {
   
   private createStepIndicators(): HTMLElement {
     const wrapper = createElement('div', {
-      className: 'flex justify-center gap-2 absolute bottom-8 left-0 right-0 w-full',
+      className: 'flex justify-center gap-2 fixed bottom-6 left-0 right-0 w-full',
     });
     
     for (let i = 1; i <= 3; i++) {
       const dot = createElement('div', {
-        className: `h-2 transition-all duration-300 ${
+        className: `h-2 rounded-full transition-all duration-300 cursor-pointer ${
           this.currentStep === i
             ? 'bg-primary w-8'
-            : 'bg-muted-foreground/30 w-2'
+            : 'bg-muted-foreground/30 w-2 hover:bg-muted-foreground/50'
         }`,
+      });
+      const step = i as OnboardingStep;
+      this.addListener(dot, 'click', () => {
+        this.currentStep = step;
+        this.render();
       });
       wrapper.appendChild(dot);
     }

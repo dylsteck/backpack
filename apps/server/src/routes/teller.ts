@@ -71,7 +71,7 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 	<script src="https://cdn.teller.io/connect/connect.js"></script>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 	<style>
 		* {
 			margin: 0;
@@ -79,74 +79,67 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 			box-sizing: border-box;
 		}
 		body {
-			font-family: 'JetBrains Mono', monospace;
-			background: #0a0a0a;
+			font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+			background: #fafafa;
 			min-height: 100vh;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			padding: 20px;
-			color: #fafafa;
+			color: #111;
 		}
 		.container {
-			background: #141414;
-			border: 1px solid rgba(212, 165, 116, 0.2);
-			border-radius: 16px;
-			max-width: 460px;
+			background: #fff;
+			border: 1px solid rgba(0, 0, 0, 0.08);
+			border-radius: 20px;
+			max-width: 420px;
 			width: 100%;
 			padding: 48px 40px;
 			text-align: center;
+			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 		}
-		.logo {
-			width: 72px;
-			height: 72px;
-			background: #1a1a1a;
-			border: 2px solid rgba(212, 165, 116, 0.3);
-			border-radius: 16px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			margin: 0 auto 24px;
-		}
-		.logo svg {
-			width: 36px;
-			height: 36px;
-			color: #d4a574;
+		.icon {
+			width: 48px;
+			height: 48px;
+			margin: 0 auto 28px;
+			color: #111;
 		}
 		h1 {
-			color: #d4a574;
-			margin-bottom: 12px;
-			font-size: 20px;
-			font-weight: 500;
-			text-transform: uppercase;
-			letter-spacing: 0.15em;
+			color: #111;
+			margin-bottom: 8px;
+			font-size: 22px;
+			font-weight: 600;
 		}
 		p {
-			color: #737373;
+			color: #888;
 			margin-bottom: 32px;
-			line-height: 1.7;
-			font-size: 13px;
+			line-height: 1.6;
+			font-size: 14px;
 		}
 		#teller-container {
-			margin: 32px 0;
-			min-height: 100px;
+			margin: 24px 0;
+			min-height: 60px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
 		}
 		.error {
-			background: rgba(239, 68, 68, 0.1);
-			border: 1px solid rgba(239, 68, 68, 0.3);
-			color: #f87171;
-			padding: 16px;
-			border-radius: 8px;
-			margin: 20px 0;
+			background: #fef2f2;
+			border: 1px solid #fecaca;
+			color: #dc2626;
+			padding: 14px 16px;
+			border-radius: 12px;
+			margin: 16px 0;
 			font-size: 13px;
 		}
 		.success {
-			background: rgba(34, 197, 94, 0.1);
-			border: 1px solid rgba(34, 197, 94, 0.3);
-			color: #4ade80;
-			padding: 16px;
-			border-radius: 8px;
-			margin: 20px 0;
+			background: #f0fdf4;
+			border: 1px solid #bbf7d0;
+			color: #16a34a;
+			padding: 14px 16px;
+			border-radius: 12px;
+			margin: 16px 0;
 			font-size: 13px;
 		}
 		#error-container, #success-container {
@@ -154,65 +147,60 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 		}
 		#fallback {
 			display: none;
-			margin-top: 24px;
-			padding-top: 24px;
-			border-top: 1px solid rgba(212, 165, 116, 0.1);
+			margin-top: 20px;
+			padding-top: 20px;
+			border-top: 1px solid rgba(0, 0, 0, 0.06);
 		}
 		#fallback p {
 			margin-bottom: 0;
+			font-size: 13px;
+			color: #999;
 		}
 		#fallback a {
-			color: #d4a574;
+			color: #111;
 			text-decoration: none;
 			font-weight: 500;
-			transition: opacity 0.2s;
 		}
 		#fallback a:hover {
-			opacity: 0.8;
+			text-decoration: underline;
 		}
 		.spinner {
 			display: inline-block;
 			width: 20px;
 			height: 20px;
-			border: 2px solid rgba(212, 165, 116, 0.2);
-			border-top-color: #d4a574;
+			border: 2px solid rgba(0, 0, 0, 0.08);
+			border-top-color: #111;
 			border-radius: 50%;
-			animation: spin 0.8s linear infinite;
-			margin-bottom: 16px;
+			animation: spin 0.7s linear infinite;
+			margin-bottom: 12px;
 		}
 		@keyframes spin {
 			to { transform: rotate(360deg); }
 		}
 		.loading-text {
-			color: #737373;
-			font-size: 12px;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
+			color: #999;
+			font-size: 13px;
 		}
 	</style>
 </head>
 <body>
 	<div class="container">
-		<div class="logo">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-				<rect width="7" height="7" x="3" y="3" rx="1"/>
-				<rect width="7" height="7" x="14" y="3" rx="1"/>
-				<rect width="7" height="7" x="14" y="14" rx="1"/>
-				<rect width="7" height="7" x="3" y="14" rx="1"/>
-			</svg>
-		</div>
-		<h1>Connect Bank Account</h1>
-		<p>Securely connect your bank account through Teller. You'll be guided through selecting your bank and authenticating.</p>
-		
+		<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+			<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+			<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+		</svg>
+		<h1>Connect bank account</h1>
+		<p>Securely link your bank through Teller to sync your transactions.</p>
+
 		<div id="teller-container">
 			<div class="spinner"></div>
-			<div class="loading-text">Initializing...</div>
+			<div class="loading-text">Connecting...</div>
 		</div>
 		<div id="error-container"></div>
 		<div id="success-container"></div>
-		
+
 		<div id="fallback">
-			<p>If you're not redirected automatically, <a id="deep-link-fallback" href="#">click here</a> to return to the app.</p>
+			<p>Not redirected? <a id="deep-link-fallback" href="#">Return to app</a></p>
 		</div>
 	</div>
 
@@ -324,7 +312,7 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 
 		function showSuccess() {
 			document.getElementById('teller-container').innerHTML = '';
-			document.getElementById('success-container').innerHTML = '<div class="success">Successfully connected! Redirecting to app...</div>';
+			document.getElementById('success-container').innerHTML = '<div class="success">Connected! Redirecting to Cortex...</div>';
 			document.getElementById('success-container').style.display = 'block';
 		}
 
