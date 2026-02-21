@@ -10,6 +10,7 @@ A personal operating system that aggregates data from multiple sources (Farcaste
 - **Search** - Semantic (QMD) + full-text hybrid search
 - **SQLite** - Local-first database
 - **API Server** - Optional tRPC HTTP API
+- **MCP Server** - Model Context Protocol for AI agents
 
 ## Quick Start
 
@@ -37,6 +38,66 @@ cd apps/cli && bun run dist/bin/run.js --help
 | `cortex embed` | Generate embeddings (QMD) |
 | `cortex tui` | Launch interactive TUI |
 | `cortex daemon` | Manage sync daemon |
+
+## MCP Server (Code Mode)
+
+Cortex exposes an MCP server with **Code Mode** - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `search` | Write JS to search the SDK spec |
+| `execute` | Write JS to call SDK methods |
+
+### How It Works
+
+Instead of 7+ tool definitions, agents write code:
+
+```javascript
+// Search for timeline methods
+async () => {
+  const results = [];
+  for (const [name, method] of Object.entries(cortexSpec)) {
+    if (name.includes('timeline')) {
+      results.push({ name, description: method.description });
+    }
+  }
+  return results;
+}
+
+// Execute timeline
+async () => {
+  const result = await cortex.timeline({ limit: 10 });
+  return result.items;
+}
+```
+
+### Start Server
+
+```bash
+bun run dev:server
+# or
+cd apps/server && bun run src/index.ts
+```
+
+### Connect AI Agent
+
+```json
+// Claude Desktop
+{
+  "mcpServers": {
+    "cortex": {
+      "url": "http://localhost:3000/mcp/sse"
+    }
+  }
+}
+```
+
+### API Endpoints
+
+- `POST /mcp/sse` - MCP JSON-RPC
+- `GET /mcp/health` - Health check
 
 ## Configuration
 

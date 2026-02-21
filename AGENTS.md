@@ -10,13 +10,13 @@
 1. [Project Overview](#project-overview)
 2. [Monorepo Structure](#monorepo-structure)
 3. [Tech Stack](#tech-stack)
-4. [Desktop App Architecture](#desktop-app-architecture)
+4. [MCP Server (Code Mode)](#mcp-server)
 5. [Development Workflow](#development-workflow)
 6. [Build System](#build-system)
 7. [Database & API](#database--api)
 8. [Common Tasks](#common-tasks)
 9. [Best Practices](#best-practices)
-10. [Performance Considerations](#performance-considerations)
+10. [Cortex CLI](#cortex-cli)
 11. [Troubleshooting](#troubleshooting)
 
 ---
@@ -26,18 +26,19 @@
 **Cortex** is a personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Chrome, Teller banking, etc.) into a unified timeline and interface. The goal is to provide a cohesive view of your digital life with AI-powered interactions.
 
 **Key Features:**
+- CLI-first with optional TUI
 - Timeline view aggregating data from multiple sources
 - Obsidian vault integration with markdown rendering
 - Chat interface with AI (OpenRouter)
 - Banking transactions via Teller API
 - Browser history tracking (Chrome/Brave)
 - Local-first SQLite database
-- Dark/light theme support
+- MCP Server with Code Mode for AI agents
 
 **Architecture Philosophy:**
-- **Performance First**: No React in desktop app - vanilla TypeScript for maximum speed
+- **Performance First**: CLI-first, optional TUI
 - **Type Safety**: End-to-end TypeScript with tRPC for API calls
-- **Local-First**: SQLite database with optional server sync
+- **Local-First**: SQLite database
 - **Monorepo**: Shared types and business logic across apps
 
 ---
@@ -47,76 +48,33 @@
 ```
 cortex/
 ├── apps/
-│   ├── desktop/          # Electron desktop application (main focus)
-│   └── server/           # API server (Elysia + Bun)
+│   ├── cli/           # CLI + TUI (Ink/React)
+│   └── server/        # API server (Elysia + Bun)
 ├── packages/
-│   ├── api/              # Shared tRPC routers and business logic
-│   ├── sdk/              # TypeScript SDK (@cortex/sdk)
-│   ├── auth/             # Authentication (Better-Auth)
-│   └── db/               # Database schema and migrations (Drizzle ORM)
-├── turbo.json           # Turborepo configuration
-├── package.json         # Root workspace configuration
-└── README.md           # Project documentation
+│   ├── api/           # tRPC routers
+│   ├── core/          # Database, sync, search, config
+│   ├── sdk/           # TypeScript SDK (@cortex/sdk)
+│   └── db/            # Drizzle ORM schema
+├── turbo.json         # Turborepo configuration
+├── package.json       # Root workspace configuration
+└── README.md          # Project documentation
 ```
 
 ### Apps
 
-#### `apps/desktop/` - Electron Desktop App
-
-The primary application where users interact with Cortex. Built with **vanilla TypeScript** (no React) for maximum performance.
-
-**Key Directories:**
-```
-apps/desktop/
-├── src/
-│   ├── main/                    # Electron main process (Node.js)
-│   │   ├── index.ts             # Main entry, window management
-│   │   └── ipc/                 # IPC handlers for renderer communication
-│   ├── renderer/                # Electron renderer process (Browser)
-│   │   ├── components/          # UI components (vanilla TS)
-│   │   │   ├── Component.ts     # Base component class with lifecycle
-│   │   │   ├── Layout.ts        # Main app layout with sidebar
-│   │   │   ├── Timeline.ts      # Timeline/overview views (CRITICAL)
-│   │   │   ├── DetailModal.ts   # Full-screen item detail modal
-│   │   │   ├── Chat.ts          # AI chat interface
-│   │   │   ├── Sidebar.ts       # Left navigation sidebar
-│   │   │   ├── AppsGrid.ts      # App connections grid
-│   │   │   └── AppDetail.ts     # Individual app settings
-│   │   ├── store.ts             # Global state with Observable pattern
-│   │   ├── api.ts               # API client (tRPC + IPC)
-│   │   ├── types.ts             # TypeScript type definitions
-│   │   └── utils/               # Utility functions
-│   │       ├── dom.ts           # DOM manipulation helpers
-│   │       └── markdown.ts      # Markdown parsing (marked.js + Obsidian support)
-│   ├── styles/
-│   │   └── global.css           # Tailwind CSS with custom design system
-│   ├── helpers/                 # Electron helper modules
-│   │   └── ipc/                 # IPC channel definitions and context bridges
-│   └── index.html               # Main HTML file
-├── esbuild.config.mjs          # Build configuration (esbuild)
-├── electron-performance-guide.md  # Performance best practices
-├── package.json
-└── forge.config.ts             # Electron Forge configuration
-```
-
-**Why Vanilla TypeScript?**
-- 3-4x faster startup (100-250ms vs 350-900ms with React)
-- 2-3x less memory usage (150-300MB vs 400-700MB)
-- Full control over rendering and performance
-- See `apps/desktop/electron-performance-guide.md` for detailed rationale
-
 #### `apps/server/` - API Server
 
-Backend server built with **Elysia** (Bun framework) providing tRPC endpoints.
+Backend server built with **Elysia** (Bun framework) providing tRPC endpoints and MCP Code Mode.
 
 **Key Files:**
 ```
 apps/server/
 ├── src/
 │   ├── index.ts          # Server entry point
-│   ├── routes/           # API routes (tRPC integration)
-│   ├── tools/            # MCP tools (Obsidian, etc.)
-│   └── lib/              # Server utilities
+│   ├── mcp/              # MCP Code Mode
+│   │   ├── codemode.ts  # search() and execute() tools
+│   │   └── sandbox.ts   # V8 sandbox for code execution
+│   └── routes/          # API routes (tRPC integration)
 ├── package.json
 └── compile script        # Bun standalone binary compilation
 ```
@@ -195,8 +153,9 @@ Authentication logic using **Better-Auth**.
 | **Runtime** | Bun | Fast, built-in TypeScript, standalone compilation |
 | **Framework** | Elysia | Type-safe, high-performance, Bun-native |
 | **API** | tRPC | End-to-end type safety, no code generation |
-| **ORM** | Drizzle | Type-safe SQL, lightweight, PostgreSQL |
-| **Auth** | Better-Auth | Modern, flexible, TypeScript-first |
+| **MCP** | Code Mode | Reduced token usage (~1-2KB vs ~10KB+) |
+| **Sandbox** | Node.js vm | V8 isolate for safe code execution |
+| **Database** | SQLite | Local-first, embedded |
 
 ### Monorepo
 
@@ -209,207 +168,151 @@ Authentication logic using **Better-Auth**.
 
 ---
 
-## Desktop App Architecture {#desktop-app-architecture}
+## MCP Server (Code Mode) {#mcp-server}
 
-### Component Pattern
+Cortex exposes an MCP server using Cloudflare's "Code Mode" pattern - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
 
-**Base Component Class** (`src/renderer/components/Component.ts`):
+### Why Code Mode?
+
+- **Token savings**: ~1-2KB instead of ~10KB+ for tool schemas
+- **Flexibility**: Agents write code to query data, not rigid tool calls
+- **Type safety**: Full SDK available in sandbox
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `search` | Write JavaScript to search the SDK spec |
+| `execute` | Write JavaScript to call SDK methods |
+
+### How It Works
+
+The MCP server uses Node.js `vm` module (V8 isolate) to sandbox code execution:
 
 ```typescript
-export abstract class Component {
-  protected container: HTMLElement;
-  private listeners: Array<() => void> = [];
-  private subscriptions: Array<() => void> = [];
+// apps/server/src/mcp/sandbox.ts
+import vm from "node:vm";
+import { Cortex, cortexSpec } from "@cortex/sdk";
 
-  constructor(container: HTMLElement) {
-    this.container = container;
+const context = vm.createContext({
+  cortex: new Cortex(),
+  cortexSpec,  // Typed spec for discovery
+  console: { log: (...args) => logs.push(args.join(' ')) }
+});
+
+const script = new vm.Script(wrappedCode);
+const result = script.runInContext(context, { timeout: 30000 });
+```
+
+### Usage Examples
+
+**Discover available methods:**
+```javascript
+// search tool
+async () => {
+  const results = [];
+  for (const [name, method] of Object.entries(cortexSpec)) {
+    if (name.includes('timeline')) {
+      results.push({ name, description: method.description });
+    }
   }
+  return results;
+}
+```
 
-  abstract init(): Promise<void> | void;
-  abstract render(): void;
+**Get timeline items:**
+```javascript
+// execute tool
+async () => {
+  const timeline = await cortex.timeline({ limit: 10 });
+  return timeline.items.map(i => ({ id: i.id, source: i.source }));
+}
+```
 
-  // Automatic cleanup management
-  protected addListener(
-    element: HTMLElement,
-    event: string,
-    handler: EventListener
-  ): void {
-    element.addEventListener(event, handler);
-    this.listeners.push(() => element.removeEventListener(event, handler));
+**Chain operations:**
+```javascript
+// execute tool - search then get details
+async () => {
+  const search = await cortex.search("farcaster posts");
+  if (search.results.length > 0) {
+    const item = await cortex.get(search.results[0].id);
+    return item;
   }
+  return null;
+}
+```
 
-  protected subscribe<T>(
-    observable: Observable<T>,
-    handler: (value: T) => void
-  ): void {
-    const unsubscribe = observable.subscribe(handler);
-    this.subscriptions.push(unsubscribe);
-  }
+### SDK Methods
 
-  // Called when component is destroyed
-  destroy(): void {
-    this.listeners.forEach(cleanup => cleanup());
-    this.subscriptions.forEach(unsub => unsub());
-    this.listeners = [];
-    this.subscriptions = [];
+```typescript
+const cortex = new Cortex();
+
+// Timeline & Items
+await cortex.timeline({ limit: 10, source: 'farcaster', cursor: '...' })
+await cortex.items({ source: 'teller', type: 'transaction', limit: 100, all: true })
+await cortex.get(itemId)
+
+// Search
+await cortex.search("query", { limit: 10, dbOnly: false })
+
+// Connections & Sync
+await cortex.connections()
+await cortex.status()
+await cortex.sync()           // Sync all
+await cortex.sync('obsidian') // Sync specific app
+
+// Obsidian
+await cortex.obsidian.listNotes({ limit: 10, folder: 'Notes' })
+await cortex.obsidian.readNote('note-title')
+await cortex.obsidian.createNote('Title', '# Content', { tags: ['tag'], folder: 'Notes' })
+await cortex.obsidian.updateNote('Title', 'new content', 'append')
+await cortex.obsidian.addBacklink('Note', 'TargetNote')
+await cortex.obsidian.search('query', { searchIn: 'content', limit: 10 })
+
+// Browser (if available)
+await cortex.browser.navigate('https://example.com')
+await cortex.browser.click('1_11')
+await cortex.browser.fill('2_5', 'text')
+await cortex.browser.snapshot()
+await cortex.browser.screenshot()
+```
+
+### Connecting AI Agents
+
+```json
+// Claude Desktop, Cursor, etc.
+{
+  "mcpServers": {
+    "cortex": {
+      "url": "http://localhost:3000/mcp/sse"
+    }
   }
 }
 ```
 
-**Usage:**
-```typescript
-export class Timeline extends Component {
-  async init(): Promise<void> {
-    this.render();
-    this.setupEventDelegation();
-    await this.loadData();
+### Testing
 
-    // Auto-cleanup subscriptions
-    this.subscribe(store.timelineItems, () => this.renderItems());
-  }
+```bash
+# Start server
+bun run dev:server
 
-  render(): void {
-    // Create DOM elements
-    this.container.innerHTML = '';
-    // ...
-  }
+# Test health
+curl http://localhost:3000/mcp/health
 
-  private setupEventDelegation(): void {
-    const container = document.getElementById('items');
-    // Single listener for all items (event delegation)
-    this.addListener(container, 'click', (e) => {
-      const item = e.target.closest('[data-item-id]');
-      if (item) this.handleItemClick(item);
-    });
-  }
-}
-```
+# List tools (should show 2)
+curl -X POST http://localhost:3000/mcp/sse \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 
-### State Management
+# Test search
+curl -X POST http://localhost:3000/mcp/sse \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search","arguments":{"code":"async () => { const results = []; for (const [name, method] of Object.entries(cortexSpec)) { if (name.includes('\''timeline'\'')) results.push({ name }); } return results; }"}}}'
 
-**Observable Pattern** (`src/renderer/store.ts`):
-
-```typescript
-class Observable<T> {
-  private value: T;
-  private listeners = new Set<(value: T) => void>();
-
-  constructor(initialValue: T) {
-    this.value = initialValue;
-  }
-
-  get(): T {
-    return this.value;
-  }
-
-  set(newValue: T): void {
-    if (this.value === newValue) return;
-    this.value = newValue;
-    this.listeners.forEach(fn => fn(newValue));
-  }
-
-  subscribe(fn: (value: T) => void): () => void {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  }
-}
-
-// Global store
-export const store = {
-  timelineItems: new Observable<TimelineItem[]>([]),
-  selectedSources: new Observable<SourceType[]>(['all']),
-  darkMode: new Observable(false),
-  // ...
-};
-
-export const actions = {
-  appendTimelineItems(items: TimelineItem[]) {
-    const current = store.timelineItems.get();
-    store.timelineItems.set([...current, ...items]);
-  },
-  // ...
-};
-```
-
-### IPC Communication
-
-**Main → Renderer:**
-
-```typescript
-// Main process (src/main/index.ts)
-ipcMain.handle('api:fetchTimeline', async (event, limit) => {
-  const result = await fetchFromServer(limit);
-  return result;
-});
-
-// Preload script (contextBridge)
-contextBridge.exposeInMainWorld('api', {
-  fetchTimeline: (limit: number) => ipcRenderer.invoke('api:fetchTimeline', limit)
-});
-
-// Renderer (src/renderer/api.ts)
-export async function fetchTimeline(limit: number) {
-  return window.api.fetchTimeline(limit);
-}
-```
-
-### Event Delegation
-
-**Don't do this:**
-```typescript
-// BAD: N listeners for N items
-items.forEach(item => {
-  const el = document.createElement('div');
-  el.addEventListener('click', () => handleClick(item)); // Memory leak!
-  container.appendChild(el);
-});
-```
-
-**Do this:**
-```typescript
-// GOOD: Single listener on parent
-container.addEventListener('click', (e) => {
-  const itemEl = e.target.closest('[data-item-id]');
-  if (!itemEl) return;
-
-  const itemId = itemEl.dataset.itemId;
-  const item = itemsMap.get(itemId);
-  handleClick(item);
-});
-
-// Batch DOM updates
-const fragment = document.createDocumentFragment();
-items.forEach(item => {
-  const el = document.createElement('div');
-  el.dataset.itemId = item.id;
-  el.textContent = item.name;
-  fragment.appendChild(el);
-});
-container.appendChild(fragment); // Single reflow
-```
-
-### Markdown Rendering
-
-**Obsidian Integration:**
-
-The app supports Obsidian markdown with:
-- `[[wikilinks]]` - Clickable internal links
-- `#tags` - Clickable tag filters
-- `> [!note]` - Callouts (note, tip, warning, danger, info)
-- Syntax highlighting for code blocks
-- Tables, lists, headings, etc.
-
-**Usage:**
-```typescript
-import { parseMarkdown, isMarkdown, setupMarkdownInteractivity } from '../utils/markdown';
-
-// Check if content is markdown
-if (item.type === 'obsidian-note' && isMarkdown(text)) {
-  const wrapper = createElement('div', { className: 'markdown-content' });
-  wrapper.innerHTML = parseMarkdown(text);
-  setupMarkdownInteractivity(wrapper); // Enable wikilinks/tags
-  return wrapper;
-}
+# Test execute
+curl -X POST http://localhost:3000/mcp/sse \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute","arguments":{"code":"async () => { const r = await cortex.timeline({ limit: 3 }); return { count: r.count }; }"}}}'
 ```
 
 ---
@@ -424,45 +327,33 @@ git clone <repo-url>
 cd cortex
 
 # Install dependencies
-bun install  # or pnpm install
+bun install
 
-# Setup database
-cd packages/db
-bun run db:push  # Sync schema to PostgreSQL
+# Build
+bun run build
 
-# Create .env files
+# Create .env files (if needed)
 # apps/server/.env
-DATABASE_URL=postgresql://user:password@localhost:5432/cortex
 TELLER_APPLICATION_ID=app_xxxx
 TELLER_ENVIRONMENT=sandbox
-
-# apps/desktop/.env
-VITE_API_URL=http://localhost:3000
 ```
 
 ### Running in Development
 
 ```bash
 # From root - runs everything in parallel
-pnpm dev
+bun run dev
 
 # Or run individually
-pnpm dev:desktop  # Electron app (hot reload)
-pnpm dev:server   # API server (hot reload with Bun)
-
-# Database studio
-pnpm db:studio  # Drizzle Studio at http://localhost:4983
+bun run dev:server   # API server (hot reload with Bun)
+bun run dev:cli     # CLI (hot reload)
 ```
 
 ### Building
 
 ```bash
 # Build all apps
-pnpm build
-
-# Build desktop app (esbuild)
-cd apps/desktop
-pnpm build:vanilla
+bun run build
 
 # Build and compile server to binary
 cd apps/server
@@ -612,123 +503,29 @@ const timeline = await api.timeline.getTimeline.query({ limit: 25 });
 
 ## Common Tasks {#common-tasks}
 
-### Adding a New Component
-
-1. Create component file in `apps/desktop/src/renderer/components/`
-2. Extend `Component` base class
-3. Implement `init()` and `render()` methods
-4. Use event delegation and cleanup
-
-```typescript
-import { Component } from './Component';
-import { createElement } from '../utils/dom';
-
-export class MyComponent extends Component {
-  async init(): Promise<void> {
-    this.render();
-    this.setupListeners();
-  }
-
-  render(): void {
-    this.container.innerHTML = '';
-    const content = createElement('div', { className: 'p-4' });
-    content.textContent = 'Hello World';
-    this.container.appendChild(content);
-  }
-
-  private setupListeners(): void {
-    this.addListener(this.container, 'click', () => {
-      console.log('Clicked!');
-    });
-  }
-}
-```
-
-### Adding a Data Source
-
-1. Create IPC handlers in `apps/desktop/src/helpers/ipc/<source>/`
-2. Add context bridge in preload
-3. Create types in `src/renderer/types.ts`
-4. Add to store in `src/renderer/store.ts`
-5. Integrate into Timeline component
-
 ### Running Database Migrations
 
 ```bash
 # Generate migration from schema changes
 cd packages/db
-pnpm db:generate
+bun run db:generate
 
 # Apply migrations
-pnpm db:migrate
+bun run db:migrate
 
 # Or push directly (development)
-pnpm db:push
+bun run db:push
 ```
 
 ### Adding a tRPC Route
 
 1. Define procedure in `packages/api/src/router/<feature>.ts`
 2. Add to root router in `packages/api/src/index.ts`
-3. Use in desktop app via `api.<router>.<procedure>.query/mutate()`
+3. Use via `api.<router>.<procedure>.query/mutate()`
 
 ---
 
 ## Best Practices {#best-practices}
-
-### Component Lifecycle
-
-**Always cleanup:**
-```typescript
-// Good
-class MyComponent extends Component {
-  private intervalId?: number;
-
-  init() {
-    this.intervalId = setInterval(() => this.refresh(), 1000);
-    this.registerCleanup(() => clearInterval(this.intervalId));
-  }
-}
-
-// Bad - memory leak
-class BadComponent {
-  init() {
-    setInterval(() => this.refresh(), 1000); // Never cleaned up!
-  }
-}
-```
-
-### DOM Manipulation
-
-**Batch updates:**
-```typescript
-// Good
-const fragment = document.createDocumentFragment();
-items.forEach(item => {
-  const el = createElement('div', { textContent: item.name });
-  fragment.appendChild(el);
-});
-container.appendChild(fragment); // One reflow
-
-// Bad
-items.forEach(item => {
-  const el = createElement('div', { textContent: item.name });
-  container.appendChild(el); // N reflows!
-});
-```
-
-### State Updates
-
-**Immutable updates:**
-```typescript
-// Good
-const newItems = [...store.items.get(), newItem];
-store.items.set(newItems);
-
-// Bad
-const items = store.items.get();
-items.push(newItem); // Mutates array, no update triggered
-```
 
 ### Error Handling
 
@@ -742,25 +539,6 @@ try {
   // Show user-friendly error message
 }
 ```
-
----
-
-## Performance Considerations {#performance-considerations}
-
-See **`apps/desktop/electron-performance-guide.md`** for comprehensive performance documentation.
-
-**Key Points:**
-- Use event delegation (1 listener vs N listeners)
-- Virtual scrolling for lists >100 items
-- Debounce expensive operations
-- Avoid layout thrashing (batch reads, then writes)
-- Profile with Chrome DevTools
-
-**Performance Targets:**
-- Cold start: <200ms
-- First paint: <100ms
-- Frame rate: 60fps (16ms per frame)
-- Memory base: <250MB
 
 ---
 
@@ -832,9 +610,20 @@ cortex search "quarterly planning discussions" --json
 
 ### MCP Integration
 
-The MCP server at `apps/server` uses the CLI for data operations. Agents can use either:
-- **MCP tools**: Via the MCP protocol (JSON-RPC)
-- **CLI directly**: For more control and flexibility
+The MCP server uses **Code Mode** - just 2 tools (`search` and `execute`) that let agents write JavaScript code.
+
+```json
+// Claude Desktop, Cursor, etc.
+{
+  "mcpServers": {
+    "cortex": {
+      "url": "http://localhost:3000/mcp/sse"
+    }
+  }
+}
+```
+
+Agents write code to discover and call SDK methods. See [MCP Server (Code Mode)](#mcp-server) section for details.
 
 ---
 
@@ -855,52 +644,45 @@ bun install
 # VS Code: Cmd+Shift+P → "TypeScript: Restart TS Server"
 
 # Check types manually
-pnpm check-types
+bun run check-types
 ```
 
 **Database connection failed:**
 ```bash
-# Check PostgreSQL is running
-pg_isready
+# Check database file exists
+ls ~/Library/Application\ Support/Cortex/
 
-# Verify DATABASE_URL in apps/server/.env
-echo $DATABASE_URL
-
-# Push schema
-cd packages/db
-pnpm db:push
+# Server auto-creates database on first run
+# Just start the server and it will initialize
 ```
 
-**Electron won't start:**
+**Server won't start:**
 ```bash
-# Rebuild native modules
-cd apps/desktop
-pnpm rebuild
-
 # Check for port conflicts
-lsof -i :3000  # API server port
+lsof -i :3000
+
+# Rebuild native modules if needed
+cd apps/server
+bun install
 ```
 
 **Hot reload not working:**
 ```bash
 # Restart dev server
-pnpm dev:desktop
-
-# Check esbuild watch mode is active
-ps aux | grep esbuild
+bun run dev:server
 ```
 
 ---
 
 ## Additional Resources
 
-- **Performance Guide**: `apps/desktop/electron-performance-guide.md`
-- **Electron Docs**: https://www.electronjs.org/docs/latest/
+- **MCP Server**: `apps/server/src/mcp/`
+- **Code Mode Spec**: `packages/sdk/src/spec.ts`
+- **Elysia Docs**: https://elysiajs.com/
 - **tRPC Docs**: https://trpc.io/docs
-- **Drizzle Docs**: https://orm.drizzle.team/docs/overview
 - **Bun Docs**: https://bun.sh/docs
 
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** February 2026
 **Cortex Version:** 1.0.0
