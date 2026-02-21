@@ -5,6 +5,7 @@ import { farcasterRouter } from "./farcaster";
 import { tellerRouter } from "./teller";
 import { syncRouter } from "./sync";
 import { chatRouter } from "./chat";
+import { obsidianRouter } from "./obsidian";
 
 export const appRouter = router({
 	healthCheck: publicProcedure.query(() => {
@@ -16,5 +17,6 @@ export const appRouter = router({
 	teller: tellerRouter,
 	sync: syncRouter,
 	chat: chatRouter,
+	obsidian: obsidianRouter,
 });
 export type AppRouter = typeof appRouter;

@@ -103,6 +103,33 @@ export const timelineRouter = router({
 						}
 					}
 
+					// Handle Obsidian notes
+					if (connection.serverId === "obsidian" && connection.status === "connected") {
+						try {
+							const dbItems = await itemsService.getItems({
+								source: "obsidian",
+								type: "note",
+								limit: input.limit,
+								cursor: input.cursor,
+							});
+
+							for (const item of dbItems.items) {
+								timelineItems.push({
+									id: item.id,
+									timestamp: item.timestamp,
+									source: item.source,
+									type: item.type,
+									data: item.data,
+								});
+							}
+							if (dbItems.nextCursor) {
+								nextCursor = dbItems.nextCursor;
+							}
+						} catch (error) {
+							console.error(`Error fetching Obsidian timeline for connection ${connection.id}:`, error);
+						}
+					}
+
 					// Handle Teller transactions
 					if (connection.serverId === "teller" && connection.status === "connected") {
 						try {
@@ -180,7 +207,7 @@ export const timelineRouter = router({
 
 				timelineItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-				console.log(`[Timeline] Returning ${timelineItems.length} total items (${timelineItems.filter(i => i.source === 'farcaster').length} Farcaster, ${timelineItems.filter(i => i.source === 'user').length} Notes)`);
+				console.log(`[Timeline] Returning ${timelineItems.length} total items (${timelineItems.filter(i => i.source === 'farcaster').length} Farcaster, ${timelineItems.filter(i => i.source === 'teller').length} Teller, ${timelineItems.filter(i => i.source === 'obsidian').length} Obsidian, ${timelineItems.filter(i => i.source === 'user').length} Notes)`);
 
 				return {
 					items: timelineItems,
