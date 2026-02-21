@@ -3,6 +3,8 @@ import { eq, and, desc, lt, sql } from "drizzle-orm";
 import { SyncService } from "@cortex/api/services/sync/service";
 import { ensureDatabase, getDatabasePath } from "./db";
 import { hybridSearch } from "./search";
+import { ObsidianService } from "./obsidian";
+import { BrowserService } from "./browser";
 import type {
 	Item,
 	TimelineResult,
@@ -247,5 +249,13 @@ export class Cortex {
 				connectionType: app.connectionType,
 			})),
 		};
+	}
+
+	get obsidian() {
+		return new ObsidianService();
+	}
+
+	get browser() {
+		return new BrowserService();
 	}
 }

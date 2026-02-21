@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsdown",
     "prepack": "bun run build",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run dist/bin/run.js",
+    "cortex": "bun run dist/bin/run.js"
   },
   "dependencies": {
     "@cortex/core": "workspace:*",

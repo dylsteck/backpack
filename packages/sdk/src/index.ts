@@ -1,4 +1,7 @@
 export { Cortex } from "./cortex";
+export { ObsidianService } from "./obsidian";
+export { BrowserService } from "./browser";
+export { cortexSpec } from "./spec";
 export type {
 	Item,
 	TimelineResult,
@@ -15,3 +18,27 @@ export type {
 	StatusItemCount,
 	StatusApp,
 } from "./types";
+export type {
+	ObsidianNote,
+	ListNotesOptions,
+	ListNotesResult,
+	ReadNoteResult,
+	CreateNoteOptions,
+	CreateNoteResult,
+	UpdateNoteResult,
+	AddBacklinkResult,
+	SearchOptions,
+	SearchResult as ObsidianSearchResult,
+} from "./obsidian";
+export type {
+	NavigateResult,
+	ClickResult,
+	FillResult,
+	ScreenshotResult,
+	SnapshotResult,
+	NetworkResult,
+	EvaluateResult,
+	WaitResult,
+	ListPagesResult,
+	SelectPageResult,
+} from "./browser";

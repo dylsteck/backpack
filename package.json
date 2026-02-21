@@ -26,7 +26,7 @@
     "check-types": "turbo check-types",
     "dev:cli": "turbo -F @cortex/cli dev",
     "dev:server": "turbo -F server dev",
-    "cli": "bun run --filter @cortex/cli -- dist/bin/run.js",
+    "cli": "bun run apps/cli/dist/bin/run.js",
     "db:push": "turbo -F @cortex/db db:push",
     "db:studio": "turbo -F @cortex/db db:studio",
     "db:generate": "turbo -F @cortex/db db:generate",
