@@ -147,13 +147,10 @@ export class SyncManager {
       // Trigger auto-embed if enabled
       if (this.options.autoEmbed && (overall === "completed" || overall === "partial")) {
         try {
-          // TODO: Trigger embeddings generation for new items
-          // await generateEmbeddingsForNewItems(this._db);
-          console.log("Auto-embed triggered (implement in embedding module)");
-          // Mark _db as used for embedding generation
-          void this._db;
+          const { generateForNewItems } = await import("../embeddings/index.js");
+          await generateForNewItems(this._db);
         } catch (error) {
-          console.error("Failed to trigger auto-embed:", error);
+          console.warn("Failed to generate embeddings:", error);
         }
       }
 

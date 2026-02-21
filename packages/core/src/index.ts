@@ -59,3 +59,16 @@ export * from "./sync/index.js";
 // Re-export sync sources specifically
 export { ObsidianSyncer } from "./sync/sources/obsidian.js";
 export { initSyncers, createSyncersForSources } from "./sync/index.js";
+
+// Embeddings exports
+export {
+  extractEmbeddingText,
+  generateEmbeddings,
+  generateForNewItems,
+  searchVectors,
+  isQmdAvailable,
+} from "./embeddings/index.js";
+
+// Search exports
+export { search } from "./search/index.js";
+export type { SearchOptions, SearchResponse, SearchResult, SearchFilters } from "./search/types.js";

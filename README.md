@@ -1,142 +1,71 @@
-# cortex
+# Cortex
 
-A modern TypeScript stack for building high-performance desktop applications with an embedded API server.
+A personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Teller banking, Chrome, etc.) into a unified timeline. **CLI-first** with optional TUI and API server.
 
 ## Features
 
-### Core Stack
-- **TypeScript** - For type safety and improved developer experience
-- **Bun** - Runtime environment and package manager
-- **tRPC** - End-to-end type-safe APIs
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Turborepo** - Optimized monorepo build system
+- **CLI** - Full-featured command-line interface
+- **TUI** - Interactive terminal UI (Ink/React)
+- **Sync** - Obsidian, Farcaster, Teller, Chrome/Brave
+- **Search** - Semantic (QMD) + full-text hybrid search
+- **SQLite** - Local-first database
+- **API Server** - Optional tRPC HTTP API
 
-### Desktop Application (Electron)
-- **Vanilla TypeScript** - No framework overhead, maximum performance (no React)
-- **esbuild** - Ultra-fast bundler for main, renderer, and server processes
-- **Electron** - Cross-platform desktop app framework
-- **TailwindCSS** - Utility-first CSS framework
-- **Custom Observable State** - Lightweight, reactive state management (~100 lines)
-- **Direct DOM Manipulation** - Event delegation and virtual scrolling for performance
-- **tRPC Client** - Type-safe API communication via IPC
-
-> 📖 **Performance Guide**: See [`apps/desktop/electron-performance-guide.md`](apps/desktop/electron-performance-guide.md) for a detailed guide on building high-performance Electron apps with vanilla TypeScript, inspired by Obsidian, VS Code, and Figma. This guide explains why we chose vanilla TypeScript over React and covers techniques like event delegation, virtual scrolling, and memory management.
-
-### Backend API
-- **Elysia** - Type-safe, high-performance framework
-- **Bun** - Runtime for API server, compiled to standalone binary
-- **tRPC** - End-to-end type-safe APIs
-- **Authentication** - Better-Auth
-
-## Getting Started
-
-First, install the dependencies:
+## Quick Start
 
 ```bash
-pnpm install
-```
-## Database Setup
+# Install dependencies
+bun install
 
-This project uses PostgreSQL with Drizzle ORM.
+# Build
+bun run build
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
-```bash
-pnpm db:push
+# Run CLI (from apps/cli or use pnpm cli)
+cd apps/cli && bun run dist/bin/run.js --help
 ```
 
-## Environment Configuration
+## CLI Commands
 
-### Server Environment Variables (`apps/server/.env`)
+| Command | Description |
+|---------|-------------|
+| `cortex config` | View/set configuration |
+| `cortex timeline` | View timeline of items |
+| `cortex items <source>` | List items by source |
+| `cortex sync` | Sync from all sources |
+| `cortex search "query"` | Search items |
+| `cortex view <id>` | View item details |
+| `cortex embed` | Generate embeddings (QMD) |
+| `cortex tui` | Launch interactive TUI |
+| `cortex daemon` | Manage sync daemon |
 
-Create a `.env` file in `apps/server/` with the following variables:
+## Configuration
 
-```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/cortex
-
-# Teller API (for bank account integration)
-TELLER_APPLICATION_ID=app_xxxxxxxxxxxxxx
-TELLER_ENVIRONMENT=sandbox  # or "production"
-TELLER_SIGNING_SECRET=your_signing_secret  # Optional, for webhooks
-```
-
-### Desktop App Environment Variables (`apps/desktop/.env`)
-
-Create a `.env` file in `apps/desktop/` with:
+Config is stored in:
+- **macOS**: `~/Library/Application Support/cortex/config.json`
+- **Linux**: `~/.config/cortex/config.json`
+- **Windows**: `~/AppData/Roaming/cortex/config.json`
 
 ```bash
-VITE_API_URL=http://localhost:3000
-VITE_TELLER_APPLICATION_ID=app_xxxxxxxxxxxxxx
+# Set Obsidian vault path
+cortex config --set sources.obsidian.config.vaultPath=/path/to/vault
+
+# Set source config (full structure)
+cortex config --set sources.obsidian='{"type":"obsidian","enabled":true,"config":{"vaultPath":"/path"}}'
 ```
 
-### Teller Setup
+## Database
 
-To enable bank account connections via Teller:
+SQLite database location:
+- **macOS**: `~/Library/Application Support/cortex/cortex.db`
+- **Linux**: `~/.local/share/cortex/cortex.db`
 
-1. Sign up at [https://teller.io](https://teller.io)
-2. Create an application in the Teller Dashboard
-3. Get your Application ID (starts with `app_`)
-4. Add the Application ID to both server and desktop `.env` files
-5. Use `sandbox` environment for testing (no real bank connections required)
-6. Apply for production access when ready to use real bank data
-
-**Note**: The Teller Application ID is public and safe to use in frontend code.
-
-
-Then, run the development server:
+## Development
 
 ```bash
-pnpm dev
-```
-
-- **Desktop**: The Electron app will launch automatically
-- **API**: Running at [http://localhost:3000](http://localhost:3000)
-
-
-
-
-
-
-
-## Search
-
-Cortex uses [QMD](https://github.com/tobi/qmd) for hybrid search across all your data (Farcaster posts, bank transactions, Obsidian notes, etc.).
-
-### Quick Start
-
-```bash
-# Install QMD
-bun install -g https://github.com/tobi/qmd
-
-# Setup search index
-cortex embed --setup
-
-# Search everything
-cortex search "meeting notes about project X"
-```
-
-### Desktop App
-
-Press `⌘K` (or click the search icon) to open the search modal. Use the "Sync" button to update the search index with new data.
-
-### SDK
-
-```ts
-import { Cortex } from "@cortex/sdk";
-
-const cortex = new Cortex(); // auto-finds DB, or pass { dbPath: "..." }
-
-await cortex.timeline({ source: "farcaster", limit: 25 });
-await cortex.items({ source: "teller", type: "transaction", limit: 100, all: true });
-await cortex.search("rent payment", { limit: 10, dbOnly: true });
-await cortex.get("item-id-here");
-await cortex.sync("farcaster");
-await cortex.status();
-await cortex.connections();
+bun run build          # Build all packages
+bun run dev:cli        # Watch CLI
+bun run dev:server     # Watch server
+bun run check-types    # Type check
 ```
 
 ## Project Structure
@@ -144,44 +73,50 @@ await cortex.connections();
 ```
 cortex/
 ├── apps/
-│   ├── desktop/     # Desktop application (Electron + Vanilla TypeScript)
-│   └── server/      # Backend API (Elysia + tRPC + Bun)
+│   ├── cli/       # CLI + TUI
+│   └── server/   # API server
 ├── packages/
-│   ├── api/         # API layer / business logic (tRPC routers)
-│   ├── sdk/         # TypeScript SDK (@cortex/sdk)
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries (Drizzle ORM)
+│   ├── core/     # Database, sync, search, config
+│   ├── api/      # tRPC routers
+│   ├── db/       # Legacy DB (server)
+│   └── sdk/      # TypeScript SDK
 ```
 
-### Desktop App Architecture
+## Embeddings (QMD)
 
-The desktop app follows a performance-first architecture inspired by Obsidian, VS Code, and Figma:
+For semantic search, install QMD:
 
-- **Vanilla TypeScript** - No React overhead, direct DOM manipulation
-- **esbuild** - Fast bundling for all processes (main, renderer, server)
-- **Custom Components** - Lightweight component pattern with automatic cleanup
-- **Observable State** - Reactive state management without framework dependencies
-- **Event Delegation** - Efficient event handling at container level
-- **Virtual Scrolling** - Render only visible items for large lists
-- **IPC Communication** - Type-safe API calls via Electron IPC
-- **Embedded Server** - API server bundled as standalone binary
+```bash
+bun install -g qmd   # or: npm install -g qmd
+cortex embed --setup  # Verify installation
+cortex sync          # Sync triggers auto-embed
+cortex search "query" # Semantic + full-text search
+```
 
-## Available Scripts
+## How to Test
 
-### Development
-- `pnpm dev`: Start desktop app and API server in development mode
-- `pnpm dev:server`: Start only the API server
-- `pnpm dev:desktop`: Start the Electron desktop app (uses esbuild + Electron Forge)
+```bash
+# From workspace root
+cd apps/cli
 
-### Building
-- `pnpm build`: Build all applications
-- `pnpm build:desktop`: Build desktop app with esbuild
-- `pnpm build:server`: Compile API server to standalone binary
+# Test all commands
+bun run dist/bin/run.js --help
+bun run dist/bin/run.js config
+bun run dist/bin/run.js config --json
+bun run dist/bin/run.js timeline
+bun run dist/bin/run.js timeline --json
+bun run dist/bin/run.js items obsidian
+bun run dist/bin/run.js search "test"
+bun run dist/bin/run.js sync
+bun run dist/bin/run.js embed --setup
+bun run dist/bin/run.js tui   # Interactive - press q to quit
+```
 
-### Database
-- `pnpm db:push`: Push schema changes to database
-- `pnpm db:studio`: Open database studio UI
+**Note**: Run with `bun` (not `node`) - the core package uses `bun:sqlite`.
 
-### Quality
-- `pnpm check-types`: Check TypeScript types across all apps
-- `pnpm lint`: Run ESLint across all apps
+## Migration from Desktop App
+
+The Electron desktop app has been removed in favor of CLI-first architecture. Use:
+- `cortex tui` for interactive browsing
+- `cortex timeline` for quick view
+- API server for programmatic access
