@@ -14,7 +14,8 @@ import { initDatabase, databaseExists, seedDatabase } from "@cortex/db";
 import path from "path";
 import os from "os";
 
-const port = process.env.PORT ?? 3000;
+const port = Number(process.env.PORT ?? 3000);
+const host = process.env.HOST ?? "127.0.0.1";
 
 // Get database path from environment or use default
 const databasePath = process.env.DATABASE_PATH || 
@@ -102,8 +103,9 @@ const app = new Elysia()
 		return res;
 	})
 	.get("/", () => "OK")
-	.listen(port, () => {
-		console.log(`Server is running on http://localhost:${port}`);
+	.listen({ port, hostname: host }, () => {
+		const bindAddr = host === "0.0.0.0" ? `http://0.0.0.0:${port}` : `http://localhost:${port}`;
+		console.log(`Server is running on ${bindAddr}`);
 		console.log(`[MCP Server] Available at http://localhost:${port}/mcp (SSE: /mcp/sse)`);
 		
 		// Only start sync if database is ready

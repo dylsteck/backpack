@@ -129,6 +129,33 @@ bun run dev:server     # Watch server
 bun run check-types    # Type check
 ```
 
+## Deploy to VM (Self-Host)
+
+To run Cortex on a VM or remote server (inspired by [opencode](https://opencode.ai)):
+
+```bash
+# 1. Clone and build
+git clone <repo> && cd cortex
+bun install && bun run build
+
+# 2. Compile server binary (optional – for no-Bun runtime)
+cd apps/server && bun run compile
+
+# 3. Run server (bind all interfaces for external access)
+HOST=0.0.0.0 PORT=3000 ./server
+# Or with Bun: HOST=0.0.0.0 bun run dev:server
+```
+
+**Environment variables for VM deployment:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `127.0.0.1` | Bind address. Use `0.0.0.0` to accept external connections. |
+| `PORT` | `3000` | Server port. |
+| `CORS_ORIGIN` | `http://localhost:5173,...` | Comma-separated origins for web app (e.g. `https://your-app.vercel.app`). |
+
+**Web app:** Deploy the web app (Vercel, Netlify) with `VITE_API_URL=https://your-vm-ip:3000` so it connects to your server.
+
 ## Project Structure
 
 ```
@@ -174,10 +201,3 @@ bun run dist/bin/run.js tui   # Interactive - press q to quit
 ```
 
 **Note**: Run with `bun` (not `node`) - the core package uses `bun:sqlite`.
-
-## Migration from Desktop App
-
-The Electron desktop app has been removed in favor of CLI-first architecture. Use:
-- `cortex tui` for interactive browsing
-- `cortex timeline` for quick view
-- API server for programmatic access

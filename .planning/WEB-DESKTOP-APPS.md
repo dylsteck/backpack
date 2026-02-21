@@ -23,6 +23,7 @@
 11. [Implementation Order & Tasks](#11-implementation-order--tasks)
 12. [Migration & Compatibility Notes](#12-migration--compatibility-notes)
 13. [Open Questions & Follow-ups](#13-open-questions--follow-ups)
+14. [VM Deployment and Install](#14-vm-deployment-and-install)
 
 ---
 
@@ -495,6 +496,54 @@ export default defineConfig({
 3. **Web deployment:** Vercel/Netlify static; user configures server URL. How to discover local server?
 4. **Obsidian createNote:** Include in v1 or defer?
 5. **Deep-link vs localhost callback:** For Teller on desktop, which is better?
+
+---
+
+## 14. VM Deployment and Install
+
+Inspired by [opencode](https://opencode.ai)'s VM hosting flow: one-command install, single serve command, and clear deployment docs.
+
+### What Opencode Does
+
+1. **Curl install**: `curl -fsSL https://opencode.ai/install | bash` – detects OS/arch, downloads binary, installs to `~/bin`
+2. **Serve command**: `opencode serve` – headless HTTP server with `--hostname 0.0.0.0`, `--cors`, `--mdns`
+3. **Auth**: `OPENCODE_SERVER_PASSWORD` for exposed servers
+4. **Package managers**: npm, Homebrew, Scoop, Chocolatey, Docker
+
+**Typical VM flow**: `curl ... | bash` → `opencode serve --hostname 0.0.0.0` → done.
+
+### Cortex Implementation
+
+| Capability | Cortex |
+|------------|--------|
+| **HOST env** | `HOST=0.0.0.0` binds all interfaces ([apps/server/src/index.ts](apps/server/src/index.ts)) |
+| **PORT env** | `PORT=3000` (default) |
+| **CORS_ORIGIN** | Comma-separated origins for web app |
+| **Deploy docs** | [README.md](../README.md#deploy-to-vm-self-host) |
+
+### Deploy to VM (Self-Host)
+
+```bash
+# 1. Clone and build
+git clone <repo> && cd cortex
+bun install && bun run build
+
+# 2. Compile server binary (optional – for no-Bun runtime)
+cd apps/server && bun run compile
+
+# 3. Run server (bind all interfaces for external access)
+HOST=0.0.0.0 PORT=3000 ./server
+# Or with Bun: HOST=0.0.0.0 bun run dev:server
+
+# 4. Deploy web app (Vercel/Netlify) with VITE_API_URL=https://your-vm-ip:3000
+```
+
+Set `CORS_ORIGIN=https://your-web-domain.com` when serving web from a different origin.
+
+### Future Work
+
+- **Install script**: Once we have GitHub releases, host `install` script to download server binary
+- **Auth**: Optional `CORTEX_SERVER_PASSWORD` for HTTP basic auth when exposing publicly
 
 ---
 

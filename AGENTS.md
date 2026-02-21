@@ -2,6 +2,8 @@
 
 > **A comprehensive guide for AI agents working with the Cortex monorepo**
 > This document explains the codebase structure, architecture decisions, development workflows, and best practices for working effectively with Cortex.
+>
+> **Planning docs:** See `.planning/` for detailed plans ([WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)).
 
 ---
 
@@ -17,7 +19,8 @@
 8. [Common Tasks](#common-tasks)
 9. [Best Practices](#best-practices)
 10. [Cortex CLI](#cortex-cli)
-11. [Troubleshooting](#troubleshooting)
+11. [Deploy to VM](#deploy-to-vm)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -49,11 +52,14 @@
 cortex/
 ├── apps/
 │   ├── cli/           # CLI + TUI (Ink/React)
-│   └── server/        # API server (Elysia + Bun)
+│   ├── server/        # API server (Elysia + Bun)
+│   ├── web/           # SolidJS + Vite SPA
+│   └── desktop/       # Tauri v2 wrapping shared web UI
 ├── packages/
-│   ├── api/           # tRPC routers
+│   ├── api/           # tRPC routers + @cortex/api/client
 │   ├── core/          # Database, sync, search, config
 │   ├── sdk/           # TypeScript SDK (@cortex/sdk)
+│   ├── ui/            # Shared SolidJS components (web + desktop)
 │   └── db/            # Drizzle ORM schema
 ├── turbo.json         # Turborepo configuration
 ├── package.json       # Root workspace configuration
@@ -61,6 +67,10 @@ cortex/
 ```
 
 ### Apps
+
+#### `apps/cli/` - CLI + TUI
+
+Command-line interface with optional Ink/React TUI. Primary way for AI agents to interact with Cortex data.
 
 #### `apps/server/` - API Server
 
@@ -80,71 +90,58 @@ apps/server/
 ```
 
 **Compilation:**
-- Server compiles to standalone binary: `bun run --compile src/index.ts`
-- Binary is embedded in desktop app for offline functionality
-- No external dependencies needed at runtime
+- Server compiles to standalone binary: `bun run compile`
+- Binary is embedded in desktop app as sidecar (opencode pattern)
+- Use `HOST=0.0.0.0` for VM deployment (see [Deploy to VM](#deploy-to-vm))
+
+#### `apps/web/` - Web App
+
+SolidJS + Vite SPA. Routes: `/` (timeline), `/connections`, `/settings`. Shares 100% UI with desktop via `packages/ui`. Uses `@cortex/api/client` with `VITE_API_URL` (default `http://localhost:3000`).
+
+#### `apps/desktop/` - Desktop App
+
+Tauri v2 wrapping the same SolidJS UI as web. Optional server sidecar (opencode pattern). On startup, invokes `ensure_server_ready` (health check + spawn sidecar if needed) before rendering. Native folder picker for Obsidian vault via `pickFolder()`. OAuth (Teller) opens system browser via `openExternalUrl()`. **Prerequisites:** Rust (`rustup default stable`), Bun. **Build order:** `bun run build:web` → `cd apps/server && bun run compile` → `bun run build:desktop`.
 
 ### Packages
 
 #### `packages/api/` - Shared API Layer
 
-Contains tRPC routers and shared business logic used by both desktop and server.
-
-**Structure:**
-```
-packages/api/
-├── src/
-│   ├── index.ts          # Main export
-│   ├── router/           # tRPC router definitions
-│   └── procedures/       # Shared procedures/logic
-└── package.json
-```
+Contains tRPC routers and `@cortex/api/client` (browser-safe tRPC client).
 
 **Purpose:**
 - Define API contracts with full TypeScript types
-- Share logic between desktop and server
+- Share logic between web, desktop, and server
 - tRPC provides end-to-end type safety
+
+#### `packages/ui/` - Shared UI Components
+
+SolidJS + Tailwind components used by both web and desktop. Layout, ServerGate, ConnectionCard, Timeline, Settings. **Platform utils:** `isTauri()`, `openExternalUrl(url)` (OAuth – system browser on desktop, navigate on web), `pickFolder()` (desktop-only native folder picker). ServerGate waits for server health before rendering; on desktop, calls Tauri `ensure_server_ready` first.
 
 #### `packages/db/` - Database Layer
 
-Database schema and migrations using **Drizzle ORM** with **PostgreSQL**.
+Database schema and migrations using **Drizzle ORM**. Server uses SQLite locally.
 
-**Structure:**
+**Commands:**
+```bash
+bun run db:push        # Sync schema to database
+bun run db:generate    # Generate migrations
+bun run db:migrate     # Run migrations
+bun run db:studio      # Open Drizzle Studio
 ```
-packages/db/
-├── src/
-│   ├── index.ts          # Database client export
-│   ├── schema/           # Drizzle schema definitions
-│   └── migrations/       # Database migrations
-├── drizzle.config.ts     # Drizzle configuration
-└── package.json
-```
-
-**Database:**
-- **Development**: PostgreSQL (local or cloud)
-- **Desktop Local**: SQLite (`better-sqlite3`)
-- Schema synced via Drizzle migrations
-- Run `pnpm db:push` to sync schema changes
-
-#### `packages/auth/` - Authentication
-
-Authentication logic using **Better-Auth**.
 
 ---
 
 ## Tech Stack {#tech-stack}
 
-### Desktop App
+### Web + Desktop (Shared UI)
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| **UI Framework** | Vanilla TypeScript | Maximum performance, no framework overhead |
-| **Styling** | Tailwind CSS v4.1 | Utility-first, custom design system |
-| **Desktop** | Electron 38.3 | Cross-platform, Node.js + Chromium |
-| **Bundler** | esbuild | 100x faster than Webpack, simple config |
-| **State** | Custom Observable | Lightweight (~100 lines), reactive |
-| **Markdown** | marked.js + highlight.js + DOMPurify | Fast, secure, Obsidian-compatible |
-| **Database** | better-sqlite3 | Embedded, serverless, fast |
+| **UI Framework** | SolidJS | Fine-grained reactivity, 7kb, no VDOM |
+| **Bundler** | Vite | Fast HMR, Tauri-native |
+| **Styling** | Tailwind CSS v4 | Utility-first |
+| **Desktop** | Tauri v2 | Lightweight (~3–5MB vs Electron 200MB+) |
+| **API Client** | @cortex/api/client | tRPC proxy, type-safe |
 
 ### Backend
 
@@ -347,6 +344,8 @@ bun run dev
 # Or run individually
 bun run dev:server   # API server (hot reload with Bun)
 bun run dev:cli     # CLI (hot reload)
+bun run dev:web     # Web app (Vite, http://localhost:5173)
+bun run dev:desktop # Tauri desktop (wraps web UI)
 ```
 
 ### Building
@@ -355,7 +354,11 @@ bun run dev:cli     # CLI (hot reload)
 # Build all apps
 bun run build
 
-# Build and compile server to binary
+# Build web or desktop
+bun run build:web
+bun run build:desktop
+
+# Compile server to standalone binary
 cd apps/server
 bun run compile  # Creates standalone `server` binary
 ```
@@ -364,10 +367,7 @@ bun run compile  # Creates standalone `server` binary
 
 ```bash
 # Check types across all packages
-pnpm check-types
-
-# Watch mode
-pnpm check-types --watch
+bun run check-types
 ```
 
 ---
@@ -400,77 +400,36 @@ pnpm check-types --watch
 - Respects dependency order (`^build` means "build dependencies first")
 - `persistent: true` keeps dev servers running
 
-### esbuild Configuration
-
-**`apps/desktop/esbuild.config.mjs`:**
-
-```javascript
-import * as esbuild from 'esbuild';
-
-// Renderer process
-await esbuild.build({
-  entryPoints: ['src/renderer/index.ts'],
-  bundle: true,
-  platform: 'browser',
-  target: ['chrome120'],
-  outfile: 'dist/renderer.js',
-  sourcemap: true,
-  minify: process.env.NODE_ENV === 'production',
-});
-
-// Main process
-await esbuild.build({
-  entryPoints: ['src/main/index.ts'],
-  bundle: true,
-  platform: 'node',
-  target: 'node18',
-  outfile: 'dist/main.js',
-  external: ['electron'],
-  sourcemap: true,
-});
-```
-
-**Why esbuild:**
-- 100x faster than Webpack (0.37s vs 42s for large bundles)
-- No configuration needed for most use cases
-- Built-in TypeScript support
-- Tree-shaking by default
-
 ---
 
 ## Database & API {#database--api}
 
 ### Database Schema
 
-**Drizzle ORM** with **PostgreSQL** (production) and **SQLite** (desktop local).
-
-**Example schema** (`packages/db/src/schema/timeline.ts`):
-
-```typescript
-import { pgTable, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
-
-export const timelineItems = pgTable('timeline_items', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
-  source: text('source').notNull(),
-  type: text('type').notNull(),
-  data: jsonb('data'),
-  timestamp: timestamp('timestamp').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-});
-```
+**Drizzle ORM** with **SQLite** (local-first). Schema in `packages/db/src/schema/`.
 
 **Commands:**
 ```bash
-pnpm db:push        # Sync schema to database
-pnpm db:generate    # Generate migrations
-pnpm db:migrate     # Run migrations
-pnpm db:studio      # Open Drizzle Studio
+bun run db:push        # Sync schema to database
+bun run db:generate    # Generate migrations
+bun run db:migrate     # Run migrations
+bun run db:studio      # Open Drizzle Studio
 ```
+
+### Server HTTP Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /`, `GET /mcp/health` | Health check |
+| `POST /api/init-database` | Initialize DB after onboarding |
+| `GET /api/database-status` | DB readiness |
+| `ALL /trpc/*` | tRPC (timeline, apps, sync, teller, farcaster, chat, obsidian) |
+| `GET /teller/connect` | Teller OAuth initiation |
+| `POST /mcp/sse` | MCP Code Mode (JSON-RPC) |
 
 ### tRPC API
 
-**Defining routers** (`packages/api/src/router/timeline.ts`):
+**Defining routers** (`packages/api/src/routers/timeline.ts`):
 
 ```typescript
 import { router, publicProcedure } from '../trpc';
@@ -489,15 +448,17 @@ export const timelineRouter = router({
 });
 ```
 
-**Using in desktop app:**
+**Using in web/desktop:**
 
 ```typescript
-import { api } from './api';
+import { createCortexClient } from "@cortex/api/client";
 
-// Type-safe API call
-const timeline = await api.timeline.getTimeline.query({ limit: 25 });
+const client = createCortexClient("http://localhost:3000");
+const timeline = await client.timeline.getTimeline.query({ limit: 25 });
 // timeline is fully typed!
 ```
+
+**Key procedures for web/desktop:** `apps.getAvailableServers`, `apps.connectObsidian`, `apps.removeConnection`, `timeline.getTimeline`, `sync.triggerSyncAll`.
 
 ---
 
@@ -519,8 +480,8 @@ bun run db:push
 
 ### Adding a tRPC Route
 
-1. Define procedure in `packages/api/src/router/<feature>.ts`
-2. Add to root router in `packages/api/src/index.ts`
+1. Define procedure in `packages/api/src/routers/<feature>.ts`
+2. Add to root router in `packages/api/src/routers/index.ts`
 3. Use via `api.<router>.<procedure>.query/mutate()`
 
 ---
@@ -627,6 +588,27 @@ Agents write code to discover and call SDK methods. See [MCP Server (Code Mode)]
 
 ---
 
+## Deploy to VM {#deploy-to-vm}
+
+To run Cortex on a VM or remote server (inspired by [opencode](https://opencode.ai)):
+
+```bash
+# 1. Clone and build
+git clone <repo> && cd cortex
+bun install && bun run build
+
+# 2. Compile server binary (optional – for no-Bun runtime)
+cd apps/server && bun run compile
+
+# 3. Run server (bind all interfaces for external access)
+HOST=0.0.0.0 PORT=3000 ./server
+# Or with Bun: HOST=0.0.0.0 bun run dev:server
+```
+
+**Environment variables:** `HOST` (default `127.0.0.1`), `PORT` (default `3000`), `CORS_ORIGIN` for web app origins. See [README.md](README.md#deploy-to-vm-self-host) for full details.
+
+---
+
 ## Troubleshooting {#troubleshooting}
 
 ### Common Issues
@@ -678,6 +660,9 @@ bun run dev:server
 
 - **MCP Server**: `apps/server/src/mcp/`
 - **Code Mode Spec**: `packages/sdk/src/spec.ts`
+- **API Client**: `packages/api/src/client.ts` (`@cortex/api/client`)
+- **Shared UI**: `packages/ui/`
+- **Planning docs**: `.planning/` – [WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)
 - **Elysia Docs**: https://elysiajs.com/
 - **tRPC Docs**: https://trpc.io/docs
 - **Bun Docs**: https://bun.sh/docs
