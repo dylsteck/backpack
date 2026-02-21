@@ -1,1 +1,8 @@
 @import "tailwindcss";
+@source "../../../packages/ui/src";
+
+@layer base {
+	html, body {
+		@apply bg-zinc-950 text-zinc-100 antialiased;
+	}
+}

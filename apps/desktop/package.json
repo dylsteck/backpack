@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "tauri dev",
+		"dev": "bash scripts/dev.sh",
 		"build": "CI=true bash scripts/build.sh",
 		"check-types": "tsc --noEmit"
 	},

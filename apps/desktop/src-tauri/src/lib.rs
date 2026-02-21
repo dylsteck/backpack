@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 
 pub fn run() {
@@ -11,6 +12,14 @@ pub fn run() {
 		.plugin(tauri_plugin_shell::init())
 		.plugin(tauri_plugin_dialog::init())
 		.invoke_handler(tauri::generate_handler![get_server_url, ensure_server_ready])
+		.setup(|app| {
+			// Focus and show main window on startup (helps on macOS where it can open behind other windows)
+			if let Some(window) = app.get_webview_window("main") {
+				let _ = window.set_focus();
+				let _ = window.show();
+			}
+			Ok(())
+		})
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
 }
