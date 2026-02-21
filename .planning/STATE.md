@@ -124,6 +124,22 @@ packages/core/test-obsidian-sync.ts  # Comprehensive test suite
 → Plan 03-06: Teller banking sync
 → Plan 03-07: Chrome history sync
 
+## Additional Planning Documents
+
+| Document | Description |
+|----------|-------------|
+| [WEB-DESKTOP-APPS.md](WEB-DESKTOP-APPS.md) | Web + Desktop apps (SolidJS, Tauri, shared UI, server sidecar, OAuth, vault). References [Cursor Plan](/Users/dylansteck/.cursor/plans/web_desktop_solidjs_tauri_82a62d90.plan.md) |
+| [code-mode-mcp.md](code-mode-mcp.md) | Code Mode MCP implementation |
+
+## Web + Desktop Apps (In Progress)
+
+Per [Cursor Plan](/Users/dylansteck/.cursor/plans/web_desktop_solidjs_tauri_82a62d90.plan.md) and [WEB-DESKTOP-APPS.md](WEB-DESKTOP-APPS.md):
+
+- **Web app** (`apps/web`): SolidJS + Vite, builds successfully
+- **Desktop app** (`apps/desktop`): Tauri v2 scaffold with shared frontend (`../web/dist`), sidecar config for `server` binary
+- **Server spawn**: Rust `ensure_server_ready` health check + sidecar spawn in `lib.rs`
+- **API client**: Consolidated at `@cortex/api/client` (no separate api-client package)
+
 ## Blockers/Concerns
 
 None - Wave 2 complete and ready for Wave 3.

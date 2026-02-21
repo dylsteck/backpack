@@ -832,6 +832,68 @@ export const appsRouter = router({
 			}
 		}),
 
+	// Connect Obsidian vault
+	connectObsidian: publicProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				vaultPath: z.string(),
+			})
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const db = getDatabase();
+				const app = await db.select().from(apps).where(eq(apps.id, input.appId)).limit(1);
+				const appName = app[0]?.name || input.appId;
+
+				const existingConnection = await db
+					.select()
+					.from(connections)
+					.where(eq(connections.serverId, input.appId))
+					.limit(1);
+
+				const now = new Date();
+				const connectionData = {
+					serverId: input.appId,
+					serverName: appName,
+					transportType: "http" as const,
+					transportConfig: {} as any,
+					status: "connected" as const,
+					secretUri: null,
+					credentialStorage: "database" as const,
+					encryptedCredentials: null as string | null,
+					connectionMetadata: { localPath: input.vaultPath } as any,
+					updatedAt: now,
+				};
+
+				if (existingConnection.length > 0) {
+					const [updated] = await db
+						.update(connections)
+						.set({
+							...connectionData,
+							updatedAt: now,
+						})
+						.where(eq(connections.serverId, input.appId))
+						.returning();
+					return { success: true, connection: serializeConnection(updated) };
+				} else {
+					const id = crypto.randomUUID();
+					const [created] = await db
+						.insert(connections)
+						.values({
+							id,
+							...connectionData,
+							createdAt: now,
+						})
+						.returning();
+					return { success: true, connection: serializeConnection(created) };
+				}
+			} catch (error: any) {
+				console.error("Error in connectObsidian mutation:", error);
+				throw new Error(error?.message || "Failed to connect Obsidian vault");
+			}
+		}),
+
 	// Stop a running backfill
 	stopBackfill: publicProcedure
 		.input(
