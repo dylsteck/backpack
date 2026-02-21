@@ -123,11 +123,29 @@ SQLite database location:
 ## Development
 
 ```bash
-bun run build          # Build all packages
+bun run build          # Build all packages (excludes desktop)
 bun run dev:cli        # Watch CLI
 bun run dev:server     # Watch server
+bun run dev:web        # Watch web app (requires server on :3000)
+bun run dev:desktop    # Watch desktop app (spawns server automatically)
 bun run check-types    # Type check
 ```
+
+### Running Web and Desktop
+
+**Web app** (`bun run dev:web`): SolidJS SPA at http://localhost:5173. Connects to the API at http://localhost:3000. Start the server first: `bun run dev:server` (in another terminal).
+
+**Desktop app** (`bun run dev:desktop`): Tauri window with the same UI. Spawns the server sidecar automatically if not already running. Use for Obsidian vault picker (folder selection) and OAuth flows that open the system browser.
+
+### Build commands
+
+| Command | Description |
+|---------|-------------|
+| `bun run build` | Build web, server, CLI, and packages (excludes desktop) |
+| `bun run build:desktop` | Build desktop app only (requires Rust 1.85+) |
+| `bun run build:all` | Build everything including desktop |
+
+**Desktop build:** The Tauri desktop app requires Rust 1.85+ for some transitive dependencies. Run `rustup update` (or `rustup default stable`) before `bun run build:desktop`.
 
 ## Deploy to VM (Self-Host)
 

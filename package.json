@@ -22,14 +22,15 @@
   },
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo build --filter='!desktop'",
     "check-types": "turbo check-types",
     "dev:cli": "turbo -F @cortex/cli dev",
     "dev:server": "turbo -F server dev",
-		"dev:web": "turbo -F web dev",
-		"dev:desktop": "turbo -F desktop dev",
-		"build:web": "turbo -F web build",
-		"build:desktop": "turbo -F desktop build",
+    "dev:web": "turbo -F web dev",
+    "dev:desktop": "turbo -F desktop dev",
+    "build:web": "turbo -F web build",
+    "build:all": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo build",
+    "build:desktop": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo -F desktop build",
     "cli": "bun run apps/cli/dist/bin/run.js",
     "db:push": "turbo -F @cortex/db db:push",
     "db:studio": "turbo -F @cortex/db db:studio",
@@ -43,7 +44,7 @@
   "devDependencies": {
     "@types/bun": "^1.2.6",
     "tsdown": "^0.15.5",
-    "turbo": "^2.7.2"
+    "turbo": "^2.8.10"
   },
   "packageManager": "bun@1.3.4"
 }

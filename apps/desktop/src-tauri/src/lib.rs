@@ -4,7 +4,6 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 
 pub fn run() {
@@ -40,28 +39,24 @@ async fn ensure_server_ready(app: tauri::AppHandle) -> Result<String, String> {
 	}
 
 	// 2. Try to spawn sidecar (bundled mode only)
-	if let Some(shell) = app.shell() {
-		if let Ok(sidecar) = shell.sidecar("server") {
-			let port = DEFAULT_PORT.to_string();
-			match sidecar.env("PORT", &port).spawn() {
-				Ok((_rx, _child)) => {
-					// Wait for server to be ready (poll health endpoint)
-					for _ in 0..30 {
-						tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-						if let Ok(res) = reqwest::get(&health_url).await {
-							if res.status().is_success() {
-								return Ok(url);
-							}
-						}
-					}
-					Err("Sidecar started but server did not become ready in time".to_string())
-				}
-				Err(e) => Err(format!("Failed to spawn server sidecar: {}", e)),
+	let sidecar = app
+		.shell()
+		.sidecar("server")
+		.map_err(|_| "Server not reachable. Start with: bun run dev:server".to_string())?;
+	let port = DEFAULT_PORT.to_string();
+	let (_rx, _child) = sidecar
+		.env("PORT", &port)
+		.spawn()
+		.map_err(|e| format!("Failed to spawn server sidecar: {}", e))?;
+
+	// Wait for server to be ready (poll health endpoint)
+	for _ in 0..30 {
+		tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+		if let Ok(res) = reqwest::get(&health_url).await {
+			if res.status().is_success() {
+				return Ok(url);
 			}
-		} else {
-			Err("Server not reachable. Start with: bun run dev:server".to_string())
 		}
-	} else {
-		Err("Server not reachable. Start with: bun run dev:server".to_string())
 	}
+	Err("Sidecar started but server did not become ready in time".to_string())
 }

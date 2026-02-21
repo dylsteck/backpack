@@ -6,8 +6,8 @@
 	"build": {
 		"beforeDevCommand": "cd ../web && bun run dev",
 		"devUrl": "http://localhost:5173",
-		"beforeBuildCommand": "cd ../web && bun run build && cd ../server && bun run compile",
-		"frontendDist": "../web/dist"
+		"beforeBuildCommand": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cd ../web && bun run build && cd ../server && bun run compile && TARGET=$(rustc -vV 2>/dev/null | grep '^host:' | awk '{print $2}') && cp server server-$TARGET",
+		"frontendDist": "../../web/dist"
 	},
 	"app": {
 		"withGlobalTauri": true,

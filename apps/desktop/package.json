@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tauri dev",
-		"build": "tauri build",
+		"build": "CI=true bash scripts/build.sh",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {},
