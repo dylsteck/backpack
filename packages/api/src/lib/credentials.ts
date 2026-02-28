@@ -26,7 +26,7 @@ function getEncryptionKey(): Buffer {
 	// For development, use a default key (NOT SECURE for production!)
 	// In production, CREDENTIAL_ENCRYPTION_KEY must be set
 	console.warn("⚠️  Using default encryption key. Set CREDENTIAL_ENCRYPTION_KEY for production!");
-	return crypto.createHash("sha256").update("cortex-default-key-change-in-production").digest();
+	return crypto.createHash("sha256").update("backpack-default-key-change-in-production").digest();
 }
 
 /**

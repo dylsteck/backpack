@@ -18,7 +18,7 @@ export function Layout(props: LayoutProps) {
 			<header class="border-b border-zinc-800 bg-zinc-900/50 px-4 py-3">
 				<nav class="flex items-center gap-6">
 					<Link href="/" class="text-lg font-semibold text-zinc-100 hover:text-white">
-						Cortex
+						Backpack
 					</Link>
 					{props.nav?.map((item) => (
 						<Link

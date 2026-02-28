@@ -1,4 +1,4 @@
-//! Cortex desktop app - Tauri backend.
+//! Backpack desktop app - Tauri backend.
 //! See [Cursor Plan](/Users/dylansteck/.cursor/plans/web_desktop_solidjs_tauri_82a62d90.plan.md)
 //! and [.planning/WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md).
 

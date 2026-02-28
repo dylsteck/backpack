@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import { getDatabase, timelineItems } from "@cortex/core";
+import { getDatabase, timelineItems } from "@backpack/core";
 
 const SOURCE_ICONS: Record<string, string> = {
   obsidian: "📄",

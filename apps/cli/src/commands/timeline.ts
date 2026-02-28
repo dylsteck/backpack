@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { getDatabase, timelineItems } from "@cortex/core";
+import { getDatabase, timelineItems } from "@backpack/core";
 import { inArray, gte, lte, and } from "drizzle-orm";
 import { formatItem, formatItemJson } from "../utils/formatters.js";
 import { parseDate } from "../utils/date.js";

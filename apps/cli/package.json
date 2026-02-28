@@ -1,20 +1,20 @@
 {
-  "name": "@cortex/cli",
+  "name": "@backpack/cli",
   "version": "2.0.0",
-  "description": "Cortex CLI - Personal Operating System",
+  "description": "Backpack CLI - Personal Operating System",
   "type": "module",
   "bin": {
-    "cortex": "./dist/bin/run.js"
+    "backpack": "./dist/bin/run.js"
   },
   "scripts": {
     "build": "tsdown",
     "prepack": "bun run build",
     "dev": "bun run --watch src/index.ts",
     "start": "bun run dist/bin/run.js",
-    "cortex": "bun run dist/bin/run.js"
+    "backpack": "bun run dist/bin/run.js"
   },
   "dependencies": {
-    "@cortex/core": "workspace:*",
+    "@backpack/core": "workspace:*",
     "@oclif/core": "^3.26.0",
     "@oclif/plugin-help": "^6.0.0",
     "drizzle-orm": "^0.45.1",

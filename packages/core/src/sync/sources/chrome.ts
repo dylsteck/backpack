@@ -333,7 +333,7 @@ export class ChromeSyncer extends BaseSyncer {
    */
   private async copyHistoryToTemp(sourcePath: string): Promise<string> {
     const tempDir = os.tmpdir();
-    const tempFileName = `cortex-chrome-history-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tempFileName = `backpack-chrome-history-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const tempPath = path.join(tempDir, tempFileName);
 
     try {

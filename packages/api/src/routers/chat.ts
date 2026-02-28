@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { getDatabase, chatSessions, chatMessages, uiBlocks } from "@cortex/db";
+import { getDatabase, chatSessions, chatMessages, uiBlocks } from "@backpack/db";
 import { eq, desc, asc } from "drizzle-orm";
 
 export const chatRouter = router({

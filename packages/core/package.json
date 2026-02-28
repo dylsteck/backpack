@@ -1,7 +1,7 @@
 {
-  "name": "@cortex/core",
+  "name": "@backpack/core",
   "version": "0.1.0",
-  "description": "Core database and config layer for Cortex",
+  "description": "Core database and config layer for Backpack",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

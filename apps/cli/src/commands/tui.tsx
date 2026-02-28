@@ -1,7 +1,7 @@
 import { Command } from "@oclif/core";
 import { render } from "ink";
 import React from "react";
-import { getDatabase, getConfig } from "@cortex/core";
+import { getDatabase, getConfig } from "@backpack/core";
 import { App } from "../tui/App.js";
 
 export default class Tui extends Command {

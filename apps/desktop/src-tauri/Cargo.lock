@@ -374,7 +374,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cortex-desktop"
+name = "backpack-desktop"
 version = "0.0.0"
 dependencies = [
  "reqwest 0.12.28",

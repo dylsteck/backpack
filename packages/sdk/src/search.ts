@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import os from "os";
-import { getDatabase, items } from "@cortex/db";
+import { getDatabase, items } from "@backpack/db";
 import { desc, or, sql } from "drizzle-orm";
 import type { SearchResultItem } from "./types";
 

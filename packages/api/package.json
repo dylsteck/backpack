@@ -1,5 +1,5 @@
 {
-	"name": "@cortex/api",
+	"name": "@backpack/api",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -25,7 +25,7 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@cortex/db": "workspace:*",
+		"@backpack/db": "workspace:*",
 		"@trpc/client": "catalog:",
 		"@trpc/server": "catalog:",
 		"dotenv": "catalog:",

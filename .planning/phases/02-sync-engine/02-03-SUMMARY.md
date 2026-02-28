@@ -144,8 +144,8 @@ for (let i = 0; i < sources.length; i += concurrencyLimit) {
 ### Creating a New Syncer
 
 ```typescript
-import { BaseSyncer } from "@cortex/core/sync";
-import type { SyncProgress } from "@cortex/core/sync";
+import { BaseSyncer } from "@backpack/core/sync";
+import type { SyncProgress } from "@backpack/core/sync";
 
 export class MySourceSyncer extends BaseSyncer {
   readonly name = "my-source" as SourceType;
@@ -192,10 +192,10 @@ export class MySourceSyncer extends BaseSyncer {
 ### Registering Syncers
 
 ```typescript
-import { createSyncManager } from "@cortex/core/sync";
-import { ObsidianSyncer } from "@cortex/core/sync/sources";
-import { getDatabase } from "@cortex/core/db";
-import { getConfig } from "@cortex/core/config";
+import { createSyncManager } from "@backpack/core/sync";
+import { ObsidianSyncer } from "@backpack/core/sync/sources";
+import { getDatabase } from "@backpack/core/db";
+import { getConfig } from "@backpack/core/config";
 
 const db = getDatabase();
 const config = getConfig();
@@ -293,8 +293,8 @@ To test the sync framework:
 
 ```typescript
 // Test file: packages/core/test-sync-framework.ts
-import { getDatabase } from "@cortex/core/db";
-import { SyncManager, BaseSyncer } from "@cortex/core/sync";
+import { getDatabase } from "@backpack/core/db";
+import { SyncManager, BaseSyncer } from "@backpack/core/sync";
 
 // Create mock syncer
 class MockSyncer extends BaseSyncer {

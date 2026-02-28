@@ -1,5 +1,5 @@
 {
-  "name": "@cortex/db",
+  "name": "@backpack/db",
   "type": "module",
   "exports": {
     ".": {

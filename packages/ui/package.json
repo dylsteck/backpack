@@ -1,5 +1,5 @@
 {
-	"name": "@cortex/ui",
+	"name": "@backpack/ui",
 	"version": "0.0.0",
 	"type": "module",
 	"exports": {

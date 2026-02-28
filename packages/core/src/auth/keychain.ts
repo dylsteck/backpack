@@ -4,9 +4,9 @@ import keytar from "keytar";
 export { keytar };
 
 /**
- * Service name for all cortex secrets
+ * Service name for all backpack secrets
  */
-const SERVICE_NAME = "cortex";
+const SERVICE_NAME = "backpack";
 
 /**
  * Well-known secret keys
@@ -72,7 +72,7 @@ export async function hasSecret(key: string): Promise<boolean> {
 }
 
 /**
- * Get all secret keys stored for cortex
+ * Get all secret keys stored for backpack
  */
 export async function getAllSecretKeys(): Promise<string[]> {
   try {

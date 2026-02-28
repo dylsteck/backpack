@@ -23,14 +23,14 @@ export function getDefaultDbPath(): string {
   
   switch (platform) {
     case "darwin":
-      return path.join(homeDir, "Library", "Application Support", "cortex", "cortex.db");
+      return path.join(homeDir, "Library", "Application Support", "backpack", "backpack.db");
     case "linux":
-      return path.join(homeDir, ".local", "share", "cortex", "cortex.db");
+      return path.join(homeDir, ".local", "share", "backpack", "backpack.db");
     case "win32":
-      return path.join(homeDir, "AppData", "Roaming", "cortex", "cortex.db");
+      return path.join(homeDir, "AppData", "Roaming", "backpack", "backpack.db");
     default:
       // Fallback to home directory
-      return path.join(homeDir, ".cortex", "cortex.db");
+      return path.join(homeDir, ".backpack", "backpack.db");
   }
 }
 

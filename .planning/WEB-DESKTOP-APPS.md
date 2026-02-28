@@ -29,7 +29,7 @@
 
 ## 1. Executive Summary
 
-Add two new apps to the Cortex monorepo:
+Add two new apps to the Backpack monorepo:
 
 - **Web** (`apps/web`): SolidJS + Vite SPA for timeline, connection management, settings
 - **Desktop** (`apps/desktop`): Tauri v2 wrapping the same UI, with optional server sidecar
@@ -46,7 +46,7 @@ Add two new apps to the Cortex monorepo:
 |----------|-----------|
 | **SolidJS** | Opencode validates it; 1.11x vanilla perf, 7kb; fine-grained reactivity; no VDOM |
 | **Vite** | Tauri native support; faster than Next.js for SPA; no SSR overhead for desktop |
-| **tRPC client** | Cortex already uses tRPC; no OpenAPI generation needed; simpler than opencode's approach |
+| **tRPC client** | Backpack already uses tRPC; no OpenAPI generation needed; simpler than opencode's approach |
 | **Shared UI** | Single codebase; web + desktop identical; PlatformProvider for platform-specific behavior |
 | **Server sidecar** | Opencode pattern; flexibility: standalone or bundled; user can run server separately |
 | **Desktop = vault primary** | Web can't access local files; folder picker only in Tauri; keeps web simple |
@@ -84,11 +84,11 @@ Add two new apps to the Cortex monorepo:
 | **Web-only dev** | [#10160](https://github.com/anomalyco/opencode/issues/10160) | `isTauri` guard needed; `invoke("ensure_server_ready")` must be conditional |
 | **AppImage sidecar** | [#7612](https://github.com/anomalyco/opencode/issues/7612) | Sidecar path resolution; `APPDIR` for bundled binaries |
 
-### 2.4 Cortex Codebase Internal
+### 2.4 Backpack Codebase Internal
 
 | File | Purpose |
 |------|---------|
-| `packages/sdk/src/cortex.ts` | SDK uses `@cortex/db` directly; no HTTP client |
+| `packages/sdk/src/backpack.ts` | SDK uses `@backpack/db` directly; no HTTP client |
 | `packages/sdk/src/obsidian.ts` | `getObsidianVaultPath()` from DB; `connectionMetadata.localPath` |
 | `packages/api/src/routers/mcp.ts` | `connectChrome`, `connectBrave` pattern; no `connectObsidian` |
 | `packages/api/src/routers/timeline.ts` | Farcaster, Teller, user notes; no Obsidian items |
@@ -111,7 +111,7 @@ Add two new apps to the Cortex monorepo:
 
 ## 3. Clarifying Questions & Answers
 
-### Q1: Where does the Cortex server run?
+### Q1: Where does the Backpack server run?
 
 **Answer:** Server should be startable on its own, but also bundled into desktop. Opencode-style flexibility: server is its own entity; SDK can start/manage it; can be bundled into desktop. Local for now; cloud possible later.
 
@@ -127,7 +127,7 @@ Add two new apps to the Cortex monorepo:
 
 **Answer:** Web and desktop call the API directly. Look at opencode for inspiration—they have good primitives.
 
-**Implementation decision:** Consolidate into `@cortex/api/client` instead of a separate `packages/api-client`. The client lives at `packages/api/src/client.ts` and is exported as `@cortex/api/client`. This avoids an extra package; the client only imports the `AppRouter` type (type-only, no runtime server code) and `@trpc/client`.
+**Implementation decision:** Consolidate into `@backpack/api/client` instead of a separate `packages/api-client`. The client lives at `packages/api/src/client.ts` and is exported as `@backpack/api/client`. This avoids an extra package; the client only imports the `AppRouter` type (type-only, no runtime server code) and `@trpc/client`.
 
 ### Q5: Initial UI scope?
 
@@ -150,7 +150,7 @@ flowchart TB
         Sidecar[Server Binary Sidecar]
     end
     
-    subgraph Server [Cortex Server]
+    subgraph Server [Backpack Server]
         tRPC[tRPC API]
         DB[(SQLite)]
     end
@@ -167,11 +167,11 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     participant UI as Web/Desktop UI
-    participant Client as @cortex/api/client
-    participant Server as Cortex Server
+    participant Client as @backpack/api/client
+    participant Server as Backpack Server
     participant DB as SQLite
 
-    UI->>Client: createCortexClient(baseUrl)
+    UI->>Client: createBackpackClient(baseUrl)
     UI->>Client: client.timeline.query()
     Client->>Server: POST /trpc/timeline.getTimeline
     Server->>DB: SELECT from items
@@ -210,7 +210,7 @@ stateDiagram-v2
 
 - **OpenAPI:** Server exposes OpenAPI spec; `@hey-api/openapi-ts` generates client
 - **createOpencodeClient:** Accepts `baseUrl`, optional `fetch`, optional `directory` (for `x-opencode-directory` header)
-- **Cortex difference:** We use tRPC; no OpenAPI. Simpler: `createTRPCProxyClient` + `httpBatchLink`
+- **Backpack difference:** We use tRPC; no OpenAPI. Simpler: `createTRPCProxyClient` + `httpBatchLink`
 
 ### 5.3 Shared UI
 
@@ -220,11 +220,11 @@ stateDiagram-v2
 
 ### 5.4 Lessons Applied
 
-| Opencode | Cortex |
+| Opencode | Backpack |
 |----------|--------|
 | Server as sidecar | Bundle `server` binary; spawn if needed |
 | ServerGate for init | Wait for server before main UI |
-| SDK with baseUrl | @cortex/api/client with baseUrl |
+| SDK with baseUrl | @backpack/api/client with baseUrl |
 | PlatformProvider | `isTauri` checks; Tauri dialog for folder picker |
 
 ---
@@ -259,7 +259,7 @@ The user-provided research report (Opencode + SolidJS + Tauri) yielded:
 
 - **Problem:** Webview blocked by some OAuth providers; phishing risk
 - **Solution:** Open system browser via `@tauri-apps/plugin-shell` → `open(authUrl)`
-- **Callback:** localhost or custom scheme (`cortex://`); `tauri-plugin-deep-link` for redirect
+- **Callback:** localhost or custom scheme (`backpack://`); `tauri-plugin-deep-link` for redirect
 
 ### 6.4 Tailwind + SolidJS
 
@@ -332,7 +332,7 @@ connectObsidian: publicProcedure
 
 - **Initiate:** `window.__TAURI__.shell.open(serverUrl + '/teller/connect')`
 - **Callback:** Server must be reachable; callback URL: `http://localhost:3000/teller/callback` (or server's configured origin)
-- **Alternative:** Use `customProtocol` with `cortex://callback?code=...`; deep-link plugin to capture
+- **Alternative:** Use `customProtocol` with `backpack://callback?code=...`; deep-link plugin to capture
 
 ### 8.4 Design Principles
 
@@ -348,7 +348,7 @@ connectObsidian: publicProcedure
 |----------|------|-------|
 | **Desktop** | Native folder picker → `connectObsidian(appId, path)` | Primary UX |
 | **Web** | Optional: manual path input (server local) | Path = server filesystem; or "Use Desktop for vault" |
-| **CLI** | `cortex config --set sources.obsidian.config.vaultPath=/path` | Existing |
+| **CLI** | `backpack config --set sources.obsidian.config.vaultPath=/path` | Existing |
 
 **Recommendation:** Desktop = primary. Web shows "Connect via Desktop" for Obsidian if no connection.
 
@@ -437,9 +437,9 @@ export default defineConfig({
 
 ### Phase 1: API Client
 
-1. Add `@cortex/api/client` (in packages/api - no separate api-client package)
-2. `createCortexClient(baseUrl)` with tRPC
-3. Export types from `@cortex/api`
+1. Add `@backpack/api/client` (in packages/api - no separate api-client package)
+2. `createBackpackClient(baseUrl)` with tRPC
+3. Export types from `@backpack/api`
 
 ### Phase 2: Backend Gaps
 
@@ -456,7 +456,7 @@ export default defineConfig({
 
 9. Create `apps/web` (Vite + SolidJS)
 10. Routes: `/`, `/connections`, `/settings`
-11. Wire @cortex/api/client
+11. Wire @backpack/api/client
 
 ### Phase 5: Desktop App
 
@@ -512,9 +512,9 @@ Inspired by [opencode](https://opencode.ai)'s VM hosting flow: one-command insta
 
 **Typical VM flow**: `curl ... | bash` → `opencode serve --hostname 0.0.0.0` → done.
 
-### Cortex Implementation
+### Backpack Implementation
 
-| Capability | Cortex |
+| Capability | Backpack |
 |------------|--------|
 | **HOST env** | `HOST=0.0.0.0` binds all interfaces ([apps/server/src/index.ts](apps/server/src/index.ts)) |
 | **PORT env** | `PORT=3000` (default) |
@@ -525,7 +525,7 @@ Inspired by [opencode](https://opencode.ai)'s VM hosting flow: one-command insta
 
 ```bash
 # 1. Clone and build
-git clone <repo> && cd cortex
+git clone <repo> && cd backpack
 bun install && bun run build
 
 # 2. Compile server binary (optional – for no-Bun runtime)
@@ -543,7 +543,7 @@ Set `CORS_ORIGIN=https://your-web-domain.com` when serving web from a different 
 ### Future Work
 
 - **Install script**: Once we have GitHub releases, host `install` script to download server binary
-- **Auth**: Optional `CORTEX_SERVER_PASSWORD` for HTTP basic auth when exposing publicly
+- **Auth**: Optional `BACKPACK_SERVER_PASSWORD` for HTTP basic auth when exposing publicly
 
 ---
 
@@ -551,7 +551,7 @@ Set `CORS_ORIGIN=https://your-web-domain.com` when serving web from a different 
 
 | File | Action |
 |------|--------|
-| `packages/api/src/client.ts` | Create (client at @cortex/api/client) |
+| `packages/api/src/client.ts` | Create (client at @backpack/api/client) |
 | `packages/api/src/routers/mcp.ts` | Modify |
 | `packages/api/src/routers/obsidian.ts` | Create |
 | `packages/api/src/routers/timeline.ts` | Modify |

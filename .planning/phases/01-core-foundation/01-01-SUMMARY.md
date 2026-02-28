@@ -22,7 +22,7 @@ key-files:
 decisions:
   - Use bun:sqlite instead of better-sqlite3 for Bun compatibility
   - WAL mode enabled by default for performance
-  - OS-specific default paths (macOS: ~/Library/Application Support/cortex/)
+  - OS-specific default paths (macOS: ~/Library/Application Support/backpack/)
   - Drizzle ORM for type-safe queries
   - Separate schema file with full index definitions
 metrics:
@@ -34,7 +34,7 @@ metrics:
 
 ## Overview
 
-Created the `@cortex/core` package as the foundation for the entire Cortex system. This package provides a shared SQLite database layer with type-safe schema definitions using Drizzle ORM.
+Created the `@backpack/core` package as the foundation for the entire Backpack system. This package provides a shared SQLite database layer with type-safe schema definitions using Drizzle ORM.
 
 ## What Was Built
 
@@ -83,9 +83,9 @@ packages/core/
 ### Key Features
 
 1. **OS-Specific Default Paths**
-   - macOS: `~/Library/Application Support/cortex/cortex.db`
-   - Linux: `~/.local/share/cortex/cortex.db`
-   - Windows: `~/AppData/Roaming/cortex/cortex.db`
+   - macOS: `~/Library/Application Support/backpack/backpack.db`
+   - Linux: `~/.local/share/backpack/backpack.db`
+   - Windows: `~/AppData/Roaming/backpack/backpack.db`
 
 2. **Configurable Paths** - `getDatabase(customPath?)` allows overriding defaults
 
@@ -134,7 +134,7 @@ Database connection verified:
 ## Usage Example
 
 ```typescript
-import { getDatabase, TimelineItem } from '@cortex/core';
+import { getDatabase, TimelineItem } from '@backpack/core';
 
 // Use default OS path
 const db = getDatabase();

@@ -1,4 +1,4 @@
--- Initial SQLite schema for Cortex
+-- Initial SQLite schema for Backpack
 
 -- Apps table: stores available integrations
 CREATE TABLE IF NOT EXISTS "apps" (

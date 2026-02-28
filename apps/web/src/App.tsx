@@ -1,10 +1,10 @@
 import { A } from "@solidjs/router";
-import { Layout, ServerGate, Timeline, ConnectionCard, Settings, openExternalUrl, pickFolder, isTauri } from "@cortex/ui";
-import { createCortexClient } from "@cortex/api/client";
+import { Layout, ServerGate, Timeline, ConnectionCard, Settings, openExternalUrl, pickFolder, isTauri } from "@backpack/ui";
+import { createBackpackClient } from "@backpack/api/client";
 import { createResource } from "solid-js";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-const client = createCortexClient(API_URL);
+const client = createBackpackClient(API_URL);
 
 export function App(props: { children?: unknown }) {
 	return (

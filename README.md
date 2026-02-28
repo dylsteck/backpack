@@ -1,4 +1,4 @@
-# Cortex
+# Backpack
 
 A personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Teller banking, Chrome, etc.) into a unified timeline. **CLI-first** with optional TUI and API server.
 
@@ -21,27 +21,32 @@ bun install
 # Build
 bun run build
 
-# Run CLI (from apps/cli or use pnpm cli)
-cd apps/cli && bun run dist/bin/run.js --help
+# Start server + initialize database (for web/desktop)
+bun run dev:server
+# In another terminal: curl -X POST http://localhost:3000/api/init-database
+
+# Or run everything: bun run dev
 ```
+
+**Full setup & onboarding:** See [SETUP.md](SETUP.md) for database init, connections, and all ways to run Backpack.
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `cortex config` | View/set configuration |
-| `cortex timeline` | View timeline of items |
-| `cortex items <source>` | List items by source |
-| `cortex sync` | Sync from all sources |
-| `cortex search "query"` | Search items |
-| `cortex view <id>` | View item details |
-| `cortex embed` | Generate embeddings (QMD) |
-| `cortex tui` | Launch interactive TUI |
-| `cortex daemon` | Manage sync daemon |
+| `backpack config` | View/set configuration |
+| `backpack timeline` | View timeline of items |
+| `backpack items <source>` | List items by source |
+| `backpack sync` | Sync from all sources |
+| `backpack search "query"` | Search items |
+| `backpack view <id>` | View item details |
+| `backpack embed` | Generate embeddings (QMD) |
+| `backpack tui` | Launch interactive TUI |
+| `backpack daemon` | Manage sync daemon |
 
 ## MCP Server (Code Mode)
 
-Cortex exposes an MCP server with **Code Mode** - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
+Backpack exposes an MCP server with **Code Mode** - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
 
 ### Available Tools
 
@@ -58,7 +63,7 @@ Instead of 7+ tool definitions, agents write code:
 // Search for timeline methods
 async () => {
   const results = [];
-  for (const [name, method] of Object.entries(cortexSpec)) {
+  for (const [name, method] of Object.entries(backpackSpec)) {
     if (name.includes('timeline')) {
       results.push({ name, description: method.description });
     }
@@ -68,7 +73,7 @@ async () => {
 
 // Execute timeline
 async () => {
-  const result = await cortex.timeline({ limit: 10 });
+  const result = await backpack.timeline({ limit: 10 });
   return result.items;
 }
 ```
@@ -87,7 +92,7 @@ cd apps/server && bun run src/index.ts
 // Claude Desktop
 {
   "mcpServers": {
-    "cortex": {
+    "backpack": {
       "url": "http://localhost:3000/mcp/sse"
     }
   }
@@ -102,23 +107,23 @@ cd apps/server && bun run src/index.ts
 ## Configuration
 
 Config is stored in:
-- **macOS**: `~/Library/Application Support/cortex/config.json`
-- **Linux**: `~/.config/cortex/config.json`
-- **Windows**: `~/AppData/Roaming/cortex/config.json`
+- **macOS**: `~/Library/Application Support/backpack/config.json`
+- **Linux**: `~/.config/backpack/config.json`
+- **Windows**: `~/AppData/Roaming/backpack/config.json`
 
 ```bash
 # Set Obsidian vault path
-cortex config --set sources.obsidian.config.vaultPath=/path/to/vault
+backpack config --set sources.obsidian.config.vaultPath=/path/to/vault
 
 # Set source config (full structure)
-cortex config --set sources.obsidian='{"type":"obsidian","enabled":true,"config":{"vaultPath":"/path"}}'
+backpack config --set sources.obsidian='{"type":"obsidian","enabled":true,"config":{"vaultPath":"/path"}}'
 ```
 
 ## Database
 
 SQLite database location:
-- **macOS**: `~/Library/Application Support/cortex/cortex.db`
-- **Linux**: `~/.local/share/cortex/cortex.db`
+- **macOS**: `~/Library/Application Support/backpack/backpack.db`
+- **Linux**: `~/.local/share/backpack/backpack.db`
 
 ## Development
 
@@ -149,11 +154,11 @@ bun run check-types    # Type check
 
 ## Deploy to VM (Self-Host)
 
-To run Cortex on a VM or remote server (inspired by [opencode](https://opencode.ai)):
+To run Backpack on a VM or remote server (inspired by [opencode](https://opencode.ai)):
 
 ```bash
 # 1. Clone and build
-git clone <repo> && cd cortex
+git clone <repo> && cd backpack
 bun install && bun run build
 
 # 2. Compile server binary (optional – for no-Bun runtime)
@@ -177,7 +182,7 @@ HOST=0.0.0.0 PORT=3000 ./server
 ## Project Structure
 
 ```
-cortex/
+backpack/
 ├── apps/
 │   ├── cli/       # CLI + TUI
 │   └── server/   # API server
@@ -194,9 +199,9 @@ For semantic search, install QMD:
 
 ```bash
 bun install -g qmd   # or: npm install -g qmd
-cortex embed --setup  # Verify installation
-cortex sync          # Sync triggers auto-embed
-cortex search "query" # Semantic + full-text search
+backpack embed --setup  # Verify installation
+backpack sync          # Sync triggers auto-embed
+backpack search "query" # Semantic + full-text search
 ```
 
 ## How to Test

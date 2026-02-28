@@ -1,5 +1,5 @@
 {
-  "name": "cortex",
+  "name": "backpack",
   "private": true,
   "type": "module",
   "workspaces": {
@@ -24,7 +24,7 @@
     "dev": "turbo dev",
     "build": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo build --filter='!desktop'",
     "check-types": "turbo check-types",
-    "dev:cli": "turbo -F @cortex/cli dev",
+    "dev:cli": "turbo -F @backpack/cli dev",
     "dev:server": "turbo -F server dev",
     "dev:web": "turbo -F web dev",
     "dev:desktop": "turbo -F desktop dev",
@@ -32,10 +32,10 @@
     "build:all": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo build",
     "build:desktop": "PATH=\"$HOME/.cargo/bin:$PATH\" turbo -F desktop build",
     "cli": "bun run apps/cli/dist/bin/run.js",
-    "db:push": "turbo -F @cortex/db db:push",
-    "db:studio": "turbo -F @cortex/db db:studio",
-    "db:generate": "turbo -F @cortex/db db:generate",
-    "db:migrate": "turbo -F @cortex/db db:migrate"
+    "db:push": "turbo -F @backpack/db db:push",
+    "db:studio": "turbo -F @backpack/db db:studio",
+    "db:generate": "turbo -F @backpack/db db:generate",
+    "db:migrate": "turbo -F @backpack/db db:migrate"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

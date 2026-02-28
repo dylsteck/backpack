@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { getConfig, setConfig, setSecret } from "@cortex/core";
+import { getConfig, setConfig, setSecret } from "@backpack/core";
 
 function getNested(obj: Record<string, unknown>, path: string): unknown {
   return path.split(".").reduce((o: unknown, key) => {
@@ -37,7 +37,7 @@ function parseValue(value: string): unknown {
 }
 
 export default class Config extends Command {
-  static description = "Manage Cortex configuration";
+  static description = "Manage Backpack configuration";
 
   static flags = {
     get: Flags.string({ description: "Get config value (dot notation)" }),
@@ -54,7 +54,7 @@ export default class Config extends Command {
       const [key, ...valueParts] = flags["set-secret"].split("=");
       const value = valueParts.join("=").trim();
       if (!key || value === undefined) {
-        this.error("Usage: cortex config --set-secret key=value");
+        this.error("Usage: backpack config --set-secret key=value");
       }
       await setSecret(key.trim(), value);
       this.log(`Set secret ${key.trim()} (stored in keychain)`);
@@ -75,7 +75,7 @@ export default class Config extends Command {
     if (flags.set) {
       const eqIndex = flags.set.indexOf("=");
       if (eqIndex === -1) {
-        this.error("Usage: cortex config --set key=value");
+        this.error("Usage: backpack config --set key=value");
       }
       const key = flags.set.slice(0, eqIndex).trim();
       const value = parseValue(flags.set.slice(eqIndex + 1).trim());

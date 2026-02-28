@@ -1,6 +1,6 @@
-import { Cortex } from "../src";
+import { Backpack } from "../src";
 
-const c = new Cortex();
+const c = new Backpack();
 
 // Get first page
 const page1 = await c.timeline({ limit: 3 });

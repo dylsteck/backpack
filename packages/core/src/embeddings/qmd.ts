@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
-const COLLECTION_NAME = "cortex";
+const COLLECTION_NAME = "backpack";
 const MAX_TEXT_LENGTH = 8000;
 
 export interface QmdIndexItem {
@@ -55,7 +55,7 @@ export async function indexItems(
   const model = options?.model ?? "text-embedding-3-small";
 
   const tmpDir = os.tmpdir();
-  const tmpFile = path.join(tmpDir, `cortex-embed-${Date.now()}-${Math.random().toString(36).slice(2)}.jsonl`);
+  const tmpFile = path.join(tmpDir, `backpack-embed-${Date.now()}-${Math.random().toString(36).slice(2)}.jsonl`);
 
   try {
     const lines = items.map((item) =>

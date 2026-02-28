@@ -21,7 +21,7 @@ export function Settings(props: SettingsProps) {
 					readOnly={!props.onServerUrlChange}
 				/>
 				<p class="mt-1 text-xs text-zinc-500">
-					The Cortex API server. Must be running for the app to work.
+					The Backpack API server. Must be running for the app to work.
 				</p>
 			</div>
 			{props.children}

@@ -1,5 +1,5 @@
 import { Command, Flags, Args } from "@oclif/core";
-import { getDatabase, timelineItems } from "@cortex/core";
+import { getDatabase, timelineItems } from "@backpack/core";
 import { eq } from "drizzle-orm";
 import { spawn } from "child_process";
 

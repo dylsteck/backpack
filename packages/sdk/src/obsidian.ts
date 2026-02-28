@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { getDatabase, connections } from "@cortex/db";
+import { getDatabase, connections } from "@backpack/db";
 import { eq } from "drizzle-orm";
 
 export interface ObsidianNote {

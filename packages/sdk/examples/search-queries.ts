@@ -1,6 +1,6 @@
-import { Cortex } from "../src";
+import { Backpack } from "../src";
 
-const c = new Cortex();
+const c = new Backpack();
 
 const queries = ["uber", "payment", "amazon"];
 

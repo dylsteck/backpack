@@ -1,11 +1,11 @@
-import { initDatabase, getDatabase } from "@cortex/db";
+import { initDatabase, getDatabase } from "@backpack/db";
 import path from "path";
 import os from "os";
 import fs from "fs";
 
 function getElectronUserDataPath(): string {
 	const platform = os.platform();
-	const appName = "Cortex";
+	const appName = "Backpack";
 
 	if (platform === "darwin") {
 		return path.join(os.homedir(), "Library", "Application Support", appName);
@@ -18,7 +18,7 @@ function getElectronUserDataPath(): string {
 
 function loadDatabasePathFromConfig(): string | null {
 	try {
-		const configPath = path.join(getElectronUserDataPath(), "cortex-config.json");
+		const configPath = path.join(getElectronUserDataPath(), "backpack-config.json");
 		if (fs.existsSync(configPath)) {
 			const data = fs.readFileSync(configPath, "utf-8");
 			const config = JSON.parse(data) as { databasePath?: string };
@@ -36,11 +36,11 @@ export function getDefaultDbPath(): string {
 	const platform = os.platform();
 
 	if (platform === "darwin") {
-		return path.join(os.homedir(), "Library", "Application Support", "Cortex", "cortex.db");
+		return path.join(os.homedir(), "Library", "Application Support", "Backpack", "backpack.db");
 	} else if (platform === "win32") {
-		return path.join(os.homedir(), "AppData", "Roaming", "Cortex", "cortex.db");
+		return path.join(os.homedir(), "AppData", "Roaming", "Backpack", "backpack.db");
 	} else {
-		return path.join(os.homedir(), ".config", "cortex", "cortex.db");
+		return path.join(os.homedir(), ".config", "backpack", "backpack.db");
 	}
 }
 

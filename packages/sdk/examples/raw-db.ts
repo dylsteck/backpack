@@ -1,8 +1,8 @@
-import { Cortex } from "../src";
-import { items } from "@cortex/db";
+import { Backpack } from "../src";
+import { items } from "@backpack/db";
 import { sql, desc } from "drizzle-orm";
 
-const c = new Cortex();
+const c = new Backpack();
 
 // Use the raw drizzle instance for a custom query
 const db = c.db;

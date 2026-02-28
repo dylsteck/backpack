@@ -1,5 +1,5 @@
 /**
- * Farcaster-specific types for Cortex
+ * Farcaster-specific types for Backpack
  * 
  * These types represent the Farcaster protocol data structures
  * used when syncing casts from the network.

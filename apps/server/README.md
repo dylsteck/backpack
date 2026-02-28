@@ -1,6 +1,6 @@
-# Cortex Server
+# Backpack Server
 
-Backend API server for Cortex. Built with **Elysia** (Bun framework) and compiled to a standalone binary.
+Backend API server for Backpack. Built with **Elysia** (Bun framework) and compiled to a standalone binary.
 
 ## Features
 
@@ -25,7 +25,7 @@ src/
 
 ## MCP Server (Code Mode)
 
-The server exposes Cortex via **Code Mode** - just 2 tools instead of 7+. This reduces token usage from ~10KB to ~1-2KB.
+The server exposes Backpack via **Code Mode** - just 2 tools instead of 7+. This reduces token usage from ~10KB to ~1-2KB.
 
 ### Available Tools
 
@@ -42,7 +42,7 @@ Instead of direct tool calls, AI agents write JavaScript code that runs in a V8 
 // search tool - discover available methods
 async () => {
   const results = [];
-  for (const [name, method] of Object.entries(cortexSpec)) {
+  for (const [name, method] of Object.entries(backpackSpec)) {
     if (name.includes('timeline')) {
       results.push({ name, description: method.description });
     }
@@ -52,7 +52,7 @@ async () => {
 
 // execute tool - call SDK methods
 async () => {
-  const timeline = await cortex.timeline({ limit: 10 });
+  const timeline = await backpack.timeline({ limit: 10 });
   return timeline.items;
 }
 ```
@@ -60,30 +60,30 @@ async () => {
 ### SDK Methods Available
 
 ```typescript
-const cortex = new Cortex();
+const backpack = new Backpack();
 
 // Timeline & Items
-await cortex.timeline({ limit: 10, source: 'farcaster' })
-await cortex.items({ source: 'teller', limit: 100 })
-await cortex.get(itemId)
+await backpack.timeline({ limit: 10, source: 'farcaster' })
+await backpack.items({ source: 'teller', limit: 100 })
+await backpack.get(itemId)
 
 // Search
-await cortex.search("query")
+await backpack.search("query")
 
 // Connections
-await cortex.connections()
-await cortex.status()
-await cortex.sync()
-await cortex.sync('obsidian')
+await backpack.connections()
+await backpack.status()
+await backpack.sync()
+await backpack.sync('obsidian')
 
 // Obsidian (if connected)
-await cortex.obsidian.listNotes({ limit: 10 })
-await cortex.obsidian.readNote('note-title')
-await cortex.obsidian.createNote('Title', '# Content', { tags: ['tag1'] })
+await backpack.obsidian.listNotes({ limit: 10 })
+await backpack.obsidian.readNote('note-title')
+await backpack.obsidian.createNote('Title', '# Content', { tags: ['tag1'] })
 
 // Browser (if available)
-await cortex.browser.navigate('https://example.com')
-await cortex.browser.snapshot()
+await backpack.browser.navigate('https://example.com')
+await backpack.browser.snapshot()
 ```
 
 ### Connect AI Agent
@@ -92,7 +92,7 @@ await cortex.browser.snapshot()
 // Claude Desktop, Cursor, etc.
 {
   "mcpServers": {
-    "cortex": {
+    "backpack": {
       "url": "http://localhost:3000/mcp/sse"
     }
   }

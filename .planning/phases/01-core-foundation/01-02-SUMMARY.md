@@ -34,7 +34,7 @@ metrics:
 
 ## Overview
 
-Implemented configuration management and secure secret storage for Cortex. Config files are stored in OS-appropriate locations, while secrets are stored in the OS keychain (never in plaintext files).
+Implemented configuration management and secure secret storage for Backpack. Config files are stored in OS-appropriate locations, while secrets are stored in the OS keychain (never in plaintext files).
 
 ## What Was Built
 
@@ -54,9 +54,9 @@ packages/core/src/
 ### Configuration System
 
 **Config File Location by OS:**
-- macOS: `~/Library/Application Support/cortex/config.json`
-- Linux: `~/.config/cortex/config.json`
-- Windows: `~/AppData/Roaming/cortex/config.json`
+- macOS: `~/Library/Application Support/backpack/config.json`
+- Linux: `~/.config/backpack/config.json`
+- Windows: `~/AppData/Roaming/backpack/config.json`
 
 **Config Schema (CoreConfig):**
 - `databasePath` - Optional database location override
@@ -93,7 +93,7 @@ ChromeConfig: { profilePath? }
 - Uses `keytar` library (supports macOS Keychain, Windows Credential Manager, Linux libsecret)
 - Convenience functions for each secret type
 - Graceful error handling
-- Service name: "cortex"
+- Service name: "backpack"
 
 ### API Surface
 
@@ -167,7 +167,7 @@ import {
   setConfig, 
   setOpenRouterKey,
   getOpenRouterKey 
-} from '@cortex/core';
+} from '@backpack/core';
 
 // Read config
 const config = getConfig();

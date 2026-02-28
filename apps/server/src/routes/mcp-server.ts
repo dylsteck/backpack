@@ -1,6 +1,6 @@
 /**
  * MCP Server Routes
- * Exposes Cortex tools as an MCP server via Streamable HTTP transport
+ * Exposes Backpack tools as an MCP server via Streamable HTTP transport
  * 
  * Code Mode: Only two tools - search() and execute()
  * The LLM writes JavaScript code that searches the SDK spec or executes SDK methods
@@ -10,19 +10,19 @@ import { Elysia } from "elysia";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { searchTool, executeTool } from "../mcp/codemode";
 
-const SERVER_NAME = "cortex";
+const SERVER_NAME = "backpack";
 const SERVER_VERSION = "1.0.0";
 
 const mcpTools: Tool[] = [
 	{
 		name: "search",
-		description: "Search the Cortex SDK spec for available methods. Write JavaScript code that filters cortexSpec to find relevant methods. Returns matching methods with their descriptions.",
+		description: "Search the Backpack SDK spec for available methods. Write JavaScript code that filters backpackSpec to find relevant methods. Returns matching methods with their descriptions.",
 		inputSchema: {
 			type: "object",
 			properties: {
 				code: {
 					type: "string",
-					description: "JavaScript async arrow function to search the spec. Example: async () => { const results = []; for (const [name, method] of Object.entries(cortexSpec)) { if (name.includes('timeline')) results.push({ name, ...method }); } return results; }"
+					description: "JavaScript async arrow function to search the spec. Example: async () => { const results = []; for (const [name, method] of Object.entries(backpackSpec)) { if (name.includes('timeline')) results.push({ name, ...method }); } return results; }"
 				}
 			},
 			required: ["code"]
@@ -30,13 +30,13 @@ const mcpTools: Tool[] = [
 	},
 	{
 		name: "execute",
-		description: "Execute JavaScript code that calls Cortex SDK methods. Write code to query data, search, sync, manage notes, control browser, etc. Returns the result of the code execution.",
+		description: "Execute JavaScript code that calls Backpack SDK methods. Write code to query data, search, sync, manage notes, control browser, etc. Returns the result of the code execution.",
 		inputSchema: {
 			type: "object",
 			properties: {
 				code: {
 					type: "string",
-					description: "JavaScript async arrow function to execute. Example: async () => { const timeline = await cortex.timeline({ limit: 10 }); return timeline.items; }"
+					description: "JavaScript async arrow function to execute. Example: async () => { const timeline = await backpack.timeline({ limit: 10 }); return timeline.items; }"
 				}
 			},
 			required: ["code"]

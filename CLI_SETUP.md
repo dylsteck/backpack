@@ -2,7 +2,7 @@
 
 If you didn't go through onboarding or need to set up the CLI manually, follow these steps:
 
-## 1. Install Cortex CLI
+## 1. Install Backpack CLI
 
 From the workspace root:
 
@@ -13,14 +13,14 @@ cd packages/cli
 # Build the CLI
 bun run build
 
-# Link it globally (makes `cortex` command available)
+# Link it globally (makes `backpack` command available)
 bun link
 ```
 
 Verify installation:
 
 ```bash
-cortex --version
+backpack --version
 ```
 
 You should see the version number. If you get "command not found", make sure `~/.bun/bin` is in your PATH:
@@ -61,29 +61,29 @@ Once QMD is installed, set up the search index:
 
 ```bash
 # First-time setup: create collections and contexts
-cortex embed --setup
+backpack embed --setup
 
 # Export timeline items and generate embeddings
-cortex embed
+backpack embed
 ```
 
 This will:
-- Create `~/.cache/cortex/qmd-items/` directory
+- Create `~/.cache/backpack/qmd-items/` directory
 - Export all timeline items as markdown files
-- Create QMD collection "cortex-items"
+- Create QMD collection "backpack-items"
 - Generate vector embeddings for semantic search
 
 ## 4. Test Everything
 
 ```bash
 # Check CLI status
-cortex status
+backpack status
 
 # Search your data
-cortex search "your query"
+backpack search "your query"
 
 # Get items by source
-cortex items --source farcaster --json
+backpack items --source farcaster --json
 ```
 
 ## Troubleshooting
@@ -110,12 +110,12 @@ export PATH="$HOME/.bun/bin:$PATH"
 
 ### Search returns no results
 
-1. Make sure you've exported items: `cortex embed`
+1. Make sure you've exported items: `backpack embed`
 2. Check if QMD collection exists: `qmd collection list`
-3. Verify items were exported: `ls ~/.cache/cortex/qmd-items/`
+3. Verify items were exported: `ls ~/.cache/backpack/qmd-items/`
 
 ## Next Steps
 
-- Use `cortex search` in the desktop app (press ⌘K)
+- Use `backpack search` in the desktop app (press ⌘K)
 - Set up QMD for Obsidian vault: `qmd collection add ~/Documents/Obsidian --name obsidian`
 - Read the full CLI docs: `packages/cli/README.md`

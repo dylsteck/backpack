@@ -14,7 +14,7 @@ export interface ServiceSpec {
 	[method: string]: MethodSpec;
 }
 
-export interface CortexSpec {
+export interface BackpackSpec {
 	timeline: {
 		description: string;
 		params: {
@@ -73,7 +73,7 @@ export interface CortexSpec {
 	browser: ServiceSpec;
 }
 
-export const cortexSpec: CortexSpec = {
+export const backpackSpec: BackpackSpec = {
 	timeline: {
 		description: "Get timeline items from all connected sources",
 		params: {

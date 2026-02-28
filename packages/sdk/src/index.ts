@@ -1,7 +1,7 @@
-export { Cortex } from "./cortex";
+export { Backpack } from "./backpack";
 export { ObsidianService } from "./obsidian";
 export { BrowserService } from "./browser";
-export { cortexSpec } from "./spec";
+export { backpackSpec } from "./spec";
 export type {
 	Item,
 	TimelineResult,

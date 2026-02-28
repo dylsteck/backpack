@@ -1,6 +1,6 @@
-import { Cortex } from "../src";
+import { Backpack } from "../src";
 
-const c = new Cortex();
+const c = new Backpack();
 
 // Grab the most recent item id from timeline
 const tl = await c.timeline({ limit: 1 });

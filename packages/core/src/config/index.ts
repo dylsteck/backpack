@@ -24,14 +24,14 @@ export function getDefaultConfigDir(): string {
   
   switch (platform) {
     case "darwin":
-      return path.join(homeDir, "Library", "Application Support", "cortex");
+      return path.join(homeDir, "Library", "Application Support", "backpack");
     case "linux":
-      return path.join(homeDir, ".config", "cortex");
+      return path.join(homeDir, ".config", "backpack");
     case "win32":
-      return path.join(homeDir, "AppData", "Roaming", "cortex");
+      return path.join(homeDir, "AppData", "Roaming", "backpack");
     default:
       // Fallback to home directory
-      return path.join(homeDir, ".cortex");
+      return path.join(homeDir, ".backpack");
   }
 }
 

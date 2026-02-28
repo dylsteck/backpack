@@ -59,7 +59,7 @@ export function ServerGate(props: ServerGateProps) {
 				<div class="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-100">
 					<div class="flex flex-col items-center gap-4">
 						<div class="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
-						<p class="text-sm text-zinc-400">Connecting to Cortex...</p>
+						<p class="text-sm text-zinc-400">Connecting to Backpack...</p>
 					</div>
 				</div>
 			)}
@@ -69,7 +69,7 @@ export function ServerGate(props: ServerGateProps) {
 						<h2 class="text-lg font-semibold text-red-400">Connection Failed</h2>
 						<p class="text-sm text-zinc-400">{error()}</p>
 						<p class="text-xs text-zinc-500">
-							Make sure the Cortex server is running (e.g. <code class="rounded bg-zinc-800 px-1">bun run dev:server</code>)
+							Make sure the Backpack server is running (e.g. <code class="rounded bg-zinc-800 px-1">bun run dev:server</code>)
 						</p>
 					</div>
 				</div>

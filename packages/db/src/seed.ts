@@ -4,7 +4,7 @@ import * as schema from "./schema/mcp";
 
 /**
  * Default apps that should be available to all users
- * These are the integrations that Cortex supports out of the box
+ * These are the integrations that Backpack supports out of the box
  */
 export const DEFAULT_APPS: Array<{
 	id: string;

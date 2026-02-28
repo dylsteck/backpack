@@ -6,7 +6,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 function getPidFile(): string {
-  return join(tmpdir(), "cortex-daemon.pid");
+  return join(tmpdir(), "backpack-daemon.pid");
 }
 
 async function getPid(): Promise<number | null> {
@@ -40,7 +40,7 @@ function isProcessRunning(pid: number): boolean {
 }
 
 export default class Daemon extends Command {
-  static description = "Manage the Cortex sync daemon";
+  static description = "Manage the Backpack sync daemon";
 
   static args = {
     action: Args.string({

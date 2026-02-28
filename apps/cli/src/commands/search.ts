@@ -1,5 +1,5 @@
 import { Command, Flags, Args } from "@oclif/core";
-import { getDatabase, search } from "@cortex/core";
+import { getDatabase, search } from "@backpack/core";
 import { formatItem } from "../utils/formatters.js";
 import { parseDate } from "../utils/date.js";
 

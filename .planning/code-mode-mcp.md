@@ -2,7 +2,7 @@
 
 ## Overview
 
-Refactor the Cortex MCP server to use Cloudflare's "Code Mode" pattern with just **2 tools** instead of 7+ direct tool definitions:
+Refactor the Backpack MCP server to use Cloudflare's "Code Mode" pattern with just **2 tools** instead of 7+ direct tool definitions:
 
 - **`search(code)`** - Write JavaScript to search/discover available SDK methods
 - **`execute(code)`** - Write JavaScript to call SDK methods and chain operations
@@ -37,7 +37,7 @@ MCP Server → 2 tools (search, execute)
 
 Move all tool functionality into the SDK so raw SQL isn't needed:
 
-- `packages/sdk/src/cortex.ts` - Core class (existing)
+- `packages/sdk/src/backpack.ts` - Core class (existing)
 - `packages/sdk/src/obsidian.ts` - NEW: Obsidian operations
 - `packages/sdk/src/browser.ts` - NEW: Browser history operations
 - `packages/sdk/src/spec.ts` - NEW: Typed spec for discovery
@@ -62,7 +62,7 @@ Use Node.js built-in `vm` module (V8 isolate):
 ## SDK Methods Available
 
 ```typescript
-interface Cortex {
+interface Backpack {
   // Timeline
   timeline(opts?: TimelineOptions): Promise<TimelineResult>
   
@@ -93,7 +93,7 @@ interface Cortex {
 // search tool - find methods related to timeline
 async () => {
   const results = [];
-  for (const [name, method] of Object.entries(cortex)) {
+  for (const [name, method] of Object.entries(backpack)) {
     if (name.includes('timeline')) {
       results.push({ name, description: method.description });
     }
@@ -106,7 +106,7 @@ async () => {
 ```javascript
 // execute tool - get recent timeline items
 async () => {
-  const result = await cortex.timeline({ limit: 10 });
+  const result = await backpack.timeline({ limit: 10 });
   return result.items.map(i => ({ id: i.id, source: i.source }));
 }
 ```
@@ -115,9 +115,9 @@ async () => {
 ```javascript
 // execute tool - search and get details
 async () => {
-  const search = await cortex.search("farcaster posts");
+  const search = await backpack.search("farcaster posts");
   if (search.results.length > 0) {
-    const item = await cortex.get(search.results[0].id);
+    const item = await backpack.get(search.results[0].id);
     return item;
   }
   return null;
@@ -136,7 +136,7 @@ async () => {
 ## Files
 
 ### Modified
-- `packages/sdk/src/cortex.ts` - Add methods
+- `packages/sdk/src/backpack.ts` - Add methods
 - `apps/server/src/routes/mcp-server.ts` - Replace tools
 
 ### Created

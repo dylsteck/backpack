@@ -1,4 +1,4 @@
-import { getDatabase, items } from "@cortex/db";
+import { getDatabase, items } from "@backpack/db";
 import { eq, and, desc, lt } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 

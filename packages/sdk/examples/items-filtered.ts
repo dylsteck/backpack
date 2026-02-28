@@ -1,6 +1,6 @@
-import { Cortex } from "../src";
+import { Backpack } from "../src";
 
-const c = new Cortex();
+const c = new Backpack();
 
 // Get teller transactions with a small limit
 const txns = await c.items({ source: "teller", type: "transaction", limit: 5 });

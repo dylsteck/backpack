@@ -15,5 +15,5 @@ if [[ -d "$SERVER_DIR" ]]; then
   fi
 fi
 
-# Start web dev server (Tauri waits for it)
-cd "$DESKTOP_ROOT/../web" && exec bun run dev
+# Start web dev server on 5174 (web#dev uses 5173 when running via turbo dev)
+cd "$DESKTOP_ROOT/../web" && exec bun run dev -- --port 5174

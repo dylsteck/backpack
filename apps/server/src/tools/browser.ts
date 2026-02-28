@@ -48,12 +48,12 @@ async function callBrowserTool(toolName: string, args: any): Promise<any> {
  */
 export const browserNavigateTool = tool({
   description:
-    "Navigate the browser to a URL. CRITICAL: You MUST always provide the 'url' parameter as a string property in an object. Example: browser_navigate({\"url\": \"withcortex.com\"}) or browser_navigate({\"url\": \"https://example.com\"}). Never call this tool without the url parameter.",
+    "Navigate the browser to a URL. CRITICAL: You MUST always provide the 'url' parameter as a string property in an object. Example: browser_navigate({\"url\": \"withbackpack.com\"}) or browser_navigate({\"url\": \"https://example.com\"}). Never call this tool without the url parameter.",
   inputSchema: z.object({
     url: z.string({
       required_error: "URL parameter is REQUIRED - you must provide a url property",
       invalid_type_error: "URL must be a string, not undefined or null",
-    }).min(1, "URL cannot be empty - provide a website address like 'withcortex.com'").describe("REQUIRED: The URL to navigate to. Examples: 'withcortex.com', 'https://example.com', 'google.com'. Protocol will be added automatically if missing."),
+    }).min(1, "URL cannot be empty - provide a website address like 'withbackpack.com'").describe("REQUIRED: The URL to navigate to. Examples: 'withbackpack.com', 'https://example.com', 'google.com'. Protocol will be added automatically if missing."),
     type: z.enum(["url", "back", "forward", "reload"]).optional().default("url").describe("Navigation type - always use 'url' for normal navigation"),
   }).strict(), // Use strict() to reject unknown properties and ensure all required fields are present
   execute: async (input) => {
@@ -63,7 +63,7 @@ export const browserNavigateTool = tool({
       
       // Validate input exists
       if (!input || typeof input !== 'object') {
-        throw new Error('Invalid input: expected an object with "url" property. Example: {"url": "withcortex.com"}');
+        throw new Error('Invalid input: expected an object with "url" property. Example: {"url": "withbackpack.com"}');
       }
       
       // Safely extract and validate input
@@ -71,15 +71,15 @@ export const browserNavigateTool = tool({
       
       // Validate URL is provided
       if (!url) {
-        throw new Error('Missing required parameter: "url". You must provide a URL. Example: {"url": "withcortex.com"}');
+        throw new Error('Missing required parameter: "url". You must provide a URL. Example: {"url": "withbackpack.com"}');
       }
       
       if (typeof url !== 'string') {
-        throw new Error(`Invalid URL type: expected string, got ${typeof url}. Example: {"url": "withcortex.com"}`);
+        throw new Error(`Invalid URL type: expected string, got ${typeof url}. Example: {"url": "withbackpack.com"}`);
       }
       
       if (url.trim().length === 0) {
-        throw new Error('URL cannot be empty. Provide a valid URL like "withcortex.com" or "https://example.com"');
+        throw new Error('URL cannot be empty. Provide a valid URL like "withbackpack.com" or "https://example.com"');
       }
       
       // Normalize URL - add https:// if no protocol

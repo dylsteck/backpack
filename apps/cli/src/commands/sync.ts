@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { getDatabase, getConfig, initSyncers } from "@cortex/core";
+import { getDatabase, getConfig, initSyncers } from "@backpack/core";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { z } from "zod";
-import { getDatabase, connections, apps, items } from "@cortex/db";
+import { getDatabase, connections, apps, items } from "@backpack/db";
 import { eq } from "drizzle-orm";
 import { encryptCredentials, decryptCredentials } from "../lib/credentials";
 import { TellerService } from "../services/teller";

@@ -1,6 +1,6 @@
-import { getDatabase, items, connections, apps } from "@cortex/db";
+import { getDatabase, items, connections, apps } from "@backpack/db";
 import { eq, and, desc, lt, sql } from "drizzle-orm";
-import { SyncService } from "@cortex/api/services/sync/service";
+import { SyncService } from "@backpack/api/services/sync/service";
 import { ensureDatabase, getDatabasePath } from "./db";
 import { hybridSearch } from "./search";
 import { ObsidianService } from "./obsidian";
@@ -18,7 +18,7 @@ import type {
 	SearchOptions,
 } from "./types";
 
-export class Cortex {
+export class Backpack {
 	private _dbPath: string;
 
 	constructor(opts?: { dbPath?: string }) {

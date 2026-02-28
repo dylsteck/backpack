@@ -231,7 +231,7 @@ Second sync:
 ### Automatic Registration
 
 ```typescript
-import { initSyncers } from "@cortex/core/sync";
+import { initSyncers } from "@backpack/core/sync";
 
 const manager = initSyncers(db, config);
 // Automatically registers ObsidianSyncer if configured
@@ -240,7 +240,7 @@ const manager = initSyncers(db, config);
 ### Manual Registration
 
 ```typescript
-import { ObsidianSyncer, createSyncManager } from "@cortex/core/sync";
+import { ObsidianSyncer, createSyncManager } from "@backpack/core/sync";
 
 const manager = createSyncManager(db);
 const syncer = new ObsidianSyncer(db, {
@@ -293,7 +293,7 @@ Speedup: 6x faster
 ### CLI Integration
 
 ```typescript
-// cortex sync obsidian
+// backpack sync obsidian
 const config = getConfig();
 const manager = initSyncers(db, config);
 

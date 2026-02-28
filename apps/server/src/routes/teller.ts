@@ -67,7 +67,7 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Connect Bank Account - Cortex</title>
+	<title>Connect Bank Account - Backpack</title>
 	<script src="https://cdn.teller.io/connect/connect.js"></script>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -260,7 +260,7 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 							showSuccess();
 							
 							// Redirect to deep link
-							const deepLink = \`cortex://callback?success=true&sessionToken=\${sessionToken}&accessToken=\${encodeURIComponent(accessToken)}&enrollmentId=\${enrollmentId || ''}&institutionName=\${encodeURIComponent(institutionName || '')}\`;
+							const deepLink = \`backpack://callback?success=true&sessionToken=\${sessionToken}&accessToken=\${encodeURIComponent(accessToken)}&enrollmentId=\${enrollmentId || ''}&institutionName=\${encodeURIComponent(institutionName || '')}\`;
 							
 							// Try deep link redirect
 							window.location.href = deepLink;
@@ -312,7 +312,7 @@ export const tellerRoutes = new Elysia({ prefix: "/teller" })
 
 		function showSuccess() {
 			document.getElementById('teller-container').innerHTML = '';
-			document.getElementById('success-container').innerHTML = '<div class="success">Connected! Redirecting to Cortex...</div>';
+			document.getElementById('success-container').innerHTML = '<div class="success">Connected! Redirecting to Backpack...</div>';
 			document.getElementById('success-container').style.display = 'block';
 		}
 

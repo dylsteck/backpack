@@ -1,4 +1,4 @@
-# Cortex Project State
+# Backpack Project State
 
 ## Current Position
 
@@ -37,7 +37,7 @@ Wave 8: ░░░░░░░░░░░░░░░░░░░░ 0%
 ## Wave 1 Deliverables
 
 ### Plan 01-01: Database & Schema ✅
-- **Package:** `@cortex/core` created
+- **Package:** `@backpack/core` created
 - **Database:** SQLite with `bun:sqlite` and Drizzle ORM
 - **Schema:** timeline_items, sources, embeddings tables
 - **Features:** OS-specific default paths, WAL mode, full indexes
@@ -45,7 +45,7 @@ Wave 8: ░░░░░░░░░░░░░░░░░░░░ 0%
 
 ### Plan 01-02: Config & Keychain ✅
 - **Config:** JSON config with Zod validation
-- **Paths:** OS-appropriate locations (macOS: ~/Library/Application Support/cortex/)
+- **Paths:** OS-appropriate locations (macOS: ~/Library/Application Support/backpack/)
 - **Security:** Atomic writes, 0600 file permissions
 - **Keychain:** OS keychain via keytar (secrets never in config)
 - **Secrets:** OpenRouter, Teller, Farcaster credential storage
@@ -138,7 +138,7 @@ Per [Cursor Plan](/Users/dylansteck/.cursor/plans/web_desktop_solidjs_tauri_82a6
 - **Web app** (`apps/web`): SolidJS + Vite, builds successfully
 - **Desktop app** (`apps/desktop`): Tauri v2 scaffold with shared frontend (`../web/dist`), sidecar config for `server` binary
 - **Server spawn**: Rust `ensure_server_ready` health check + sidecar spawn in `lib.rs`
-- **API client**: Consolidated at `@cortex/api/client` (no separate api-client package)
+- **API client**: Consolidated at `@backpack/api/client` (no separate api-client package)
 
 ## Blockers/Concerns
 

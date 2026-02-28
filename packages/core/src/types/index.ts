@@ -1,5 +1,5 @@
 /**
- * Core types for Cortex
+ * Core types for Backpack
  */
 
 // Source types

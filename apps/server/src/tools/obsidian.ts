@@ -7,7 +7,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
-import { getDatabase, connections } from "@cortex/db";
+import { getDatabase, connections } from "@backpack/db";
 import { eq } from "drizzle-orm";
 
 // Helper to get the Obsidian vault path from the database

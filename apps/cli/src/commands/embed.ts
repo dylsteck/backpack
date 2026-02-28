@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { getDatabase, generateForNewItems, isQmdAvailable } from "@cortex/core";
+import { getDatabase, generateForNewItems, isQmdAvailable } from "@backpack/core";
 
 export default class Embed extends Command {
   static description = "Generate embeddings for timeline items (requires QMD)";
@@ -21,7 +21,7 @@ export default class Embed extends Command {
 
     if (flags.setup) {
       if (!flags.json) {
-        this.log("QMD is available. Run 'cortex embed' to generate embeddings.");
+        this.log("QMD is available. Run 'backpack embed' to generate embeddings.");
       } else {
         this.log(JSON.stringify({ qmdAvailable: true }));
       }

@@ -1,4 +1,4 @@
-import { getDatabase, connections, items } from "@cortex/db";
+import { getDatabase, connections, items } from "@backpack/db";
 import { eq } from "drizzle-orm";
 import { decryptCredentials } from "../../lib/credentials";
 import { FarcasterService } from "../farcaster/service";

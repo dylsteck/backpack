@@ -1,8 +1,8 @@
 [package]
-name = "cortex-desktop"
+name = "backpack-desktop"
 version = "0.0.0"
-description = "Cortex desktop app"
-authors = ["Cortex"]
+description = "Backpack desktop app"
+authors = ["Backpack"]
 license = ""
 repository = ""
 edition = "2021"

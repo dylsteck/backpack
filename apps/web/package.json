@@ -10,8 +10,8 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@cortex/api": "workspace:*",
-		"@cortex/ui": "workspace:*",
+		"@backpack/api": "workspace:*",
+		"@backpack/ui": "workspace:*",
 		"@solidjs/router": "^0.14.2",
 		"solid-js": "^1.9.2"
 	},

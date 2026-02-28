@@ -1,5 +1,5 @@
 import vm from "node:vm";
-import { Cortex, cortexSpec } from "@cortex/sdk";
+import { Backpack, backpackSpec } from "@backpack/sdk";
 
 export interface SandboxResult {
 	success: boolean;
@@ -19,8 +19,8 @@ export class Sandbox {
 		const logs: string[] = [];
 
 		const context = vm.createContext({
-			cortex: new Cortex(),
-			cortexSpec,
+			backpack: new Backpack(),
+			backpackSpec,
 			console: {
 				log: (...args: unknown[]) =>
 					logs.push(args.map((a) => String(a)).join(" ")),

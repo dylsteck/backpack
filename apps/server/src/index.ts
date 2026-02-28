@@ -1,16 +1,16 @@
 import "dotenv/config";
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
-import { createContext } from "@cortex/api/context";
-import { appRouter } from "@cortex/api/routers/index";
+import { createContext } from "@backpack/api/context";
+import { appRouter } from "@backpack/api/routers/index";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { mcpRoutes } from "./routes/mcp";
 import { chatRoutes } from "./routes/chat";
 import { tellerRoutes } from "./routes/teller";
 import { mcpServerRoutes } from "./routes/mcp-server";
 // Note: OpenRouter and Anthropic routes removed - now handled by OpenCode SDK
-import { SyncService } from "@cortex/api/services/sync/service";
-import { initDatabase, databaseExists, seedDatabase } from "@cortex/db";
+import { SyncService } from "@backpack/api/services/sync/service";
+import { initDatabase, databaseExists, seedDatabase } from "@backpack/db";
 import path from "path";
 import os from "os";
 
@@ -19,7 +19,7 @@ const host = process.env.HOST ?? "127.0.0.1";
 
 // Get database path from environment or use default
 const databasePath = process.env.DATABASE_PATH || 
-	path.join(os.homedir(), "Library", "Application Support", "Cortex", "cortex.db");
+	path.join(os.homedir(), "Library", "Application Support", "Backpack", "backpack.db");
 
 // Only initialize database if it exists (user has completed onboarding)
 let dbReady = false;

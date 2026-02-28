@@ -1,7 +1,7 @@
-# Cortex - AI Agent Development Guide
+# Backpack - AI Agent Development Guide
 
-> **A comprehensive guide for AI agents working with the Cortex monorepo**
-> This document explains the codebase structure, architecture decisions, development workflows, and best practices for working effectively with Cortex.
+> **A comprehensive guide for AI agents working with the Backpack monorepo**
+> This document explains the codebase structure, architecture decisions, development workflows, and best practices for working effectively with Backpack.
 >
 > **Planning docs:** See `.planning/` for detailed plans ([WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)).
 
@@ -18,7 +18,7 @@
 7. [Database & API](#database--api)
 8. [Common Tasks](#common-tasks)
 9. [Best Practices](#best-practices)
-10. [Cortex CLI](#cortex-cli)
+10. [Backpack CLI](#backpack-cli)
 11. [Deploy to VM](#deploy-to-vm)
 12. [Troubleshooting](#troubleshooting)
 
@@ -26,7 +26,7 @@
 
 ## Project Overview {#project-overview}
 
-**Cortex** is a personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Chrome, Teller banking, etc.) into a unified timeline and interface. The goal is to provide a cohesive view of your digital life with AI-powered interactions.
+**Backpack** is a personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Chrome, Teller banking, etc.) into a unified timeline and interface. The goal is to provide a cohesive view of your digital life with AI-powered interactions.
 
 **Key Features:**
 - CLI-first with optional TUI
@@ -49,16 +49,16 @@
 ## Monorepo Structure {#monorepo-structure}
 
 ```
-cortex/
+backpack/
 ├── apps/
 │   ├── cli/           # CLI + TUI (Ink/React)
 │   ├── server/        # API server (Elysia + Bun)
 │   ├── web/           # SolidJS + Vite SPA
 │   └── desktop/       # Tauri v2 wrapping shared web UI
 ├── packages/
-│   ├── api/           # tRPC routers + @cortex/api/client
+│   ├── api/           # tRPC routers + @backpack/api/client
 │   ├── core/          # Database, sync, search, config
-│   ├── sdk/           # TypeScript SDK (@cortex/sdk)
+│   ├── sdk/           # TypeScript SDK (@backpack/sdk)
 │   ├── ui/            # Shared SolidJS components (web + desktop)
 │   └── db/            # Drizzle ORM schema
 ├── turbo.json         # Turborepo configuration
@@ -70,7 +70,7 @@ cortex/
 
 #### `apps/cli/` - CLI + TUI
 
-Command-line interface with optional Ink/React TUI. Primary way for AI agents to interact with Cortex data.
+Command-line interface with optional Ink/React TUI. Primary way for AI agents to interact with Backpack data.
 
 #### `apps/server/` - API Server
 
@@ -96,7 +96,7 @@ apps/server/
 
 #### `apps/web/` - Web App
 
-SolidJS + Vite SPA. Routes: `/` (timeline), `/connections`, `/settings`. Shares 100% UI with desktop via `packages/ui`. Uses `@cortex/api/client` with `VITE_API_URL` (default `http://localhost:3000`).
+SolidJS + Vite SPA. Routes: `/` (timeline), `/connections`, `/settings`. Shares 100% UI with desktop via `packages/ui`. Uses `@backpack/api/client` with `VITE_API_URL` (default `http://localhost:3000`).
 
 #### `apps/desktop/` - Desktop App
 
@@ -106,7 +106,7 @@ Tauri v2 wrapping the same SolidJS UI as web. Optional server sidecar (opencode 
 
 #### `packages/api/` - Shared API Layer
 
-Contains tRPC routers and `@cortex/api/client` (browser-safe tRPC client).
+Contains tRPC routers and `@backpack/api/client` (browser-safe tRPC client).
 
 **Purpose:**
 - Define API contracts with full TypeScript types
@@ -141,7 +141,7 @@ bun run db:studio      # Open Drizzle Studio
 | **Bundler** | Vite | Fast HMR, Tauri-native |
 | **Styling** | Tailwind CSS v4 | Utility-first |
 | **Desktop** | Tauri v2 | Lightweight (~3–5MB vs Electron 200MB+) |
-| **API Client** | @cortex/api/client | tRPC proxy, type-safe |
+| **API Client** | @backpack/api/client | tRPC proxy, type-safe |
 
 ### Backend
 
@@ -167,7 +167,7 @@ bun run db:studio      # Open Drizzle Studio
 
 ## MCP Server (Code Mode) {#mcp-server}
 
-Cortex exposes an MCP server using Cloudflare's "Code Mode" pattern - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
+Backpack exposes an MCP server using Cloudflare's "Code Mode" pattern - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
 
 ### Why Code Mode?
 
@@ -189,11 +189,11 @@ The MCP server uses Node.js `vm` module (V8 isolate) to sandbox code execution:
 ```typescript
 // apps/server/src/mcp/sandbox.ts
 import vm from "node:vm";
-import { Cortex, cortexSpec } from "@cortex/sdk";
+import { Backpack, backpackSpec } from "@backpack/sdk";
 
 const context = vm.createContext({
-  cortex: new Cortex(),
-  cortexSpec,  // Typed spec for discovery
+  backpack: new Backpack(),
+  backpackSpec,  // Typed spec for discovery
   console: { log: (...args) => logs.push(args.join(' ')) }
 });
 
@@ -208,7 +208,7 @@ const result = script.runInContext(context, { timeout: 30000 });
 // search tool
 async () => {
   const results = [];
-  for (const [name, method] of Object.entries(cortexSpec)) {
+  for (const [name, method] of Object.entries(backpackSpec)) {
     if (name.includes('timeline')) {
       results.push({ name, description: method.description });
     }
@@ -221,7 +221,7 @@ async () => {
 ```javascript
 // execute tool
 async () => {
-  const timeline = await cortex.timeline({ limit: 10 });
+  const timeline = await backpack.timeline({ limit: 10 });
   return timeline.items.map(i => ({ id: i.id, source: i.source }));
 }
 ```
@@ -230,9 +230,9 @@ async () => {
 ```javascript
 // execute tool - search then get details
 async () => {
-  const search = await cortex.search("farcaster posts");
+  const search = await backpack.search("farcaster posts");
   if (search.results.length > 0) {
-    const item = await cortex.get(search.results[0].id);
+    const item = await backpack.get(search.results[0].id);
     return item;
   }
   return null;
@@ -242,36 +242,36 @@ async () => {
 ### SDK Methods
 
 ```typescript
-const cortex = new Cortex();
+const backpack = new Backpack();
 
 // Timeline & Items
-await cortex.timeline({ limit: 10, source: 'farcaster', cursor: '...' })
-await cortex.items({ source: 'teller', type: 'transaction', limit: 100, all: true })
-await cortex.get(itemId)
+await backpack.timeline({ limit: 10, source: 'farcaster', cursor: '...' })
+await backpack.items({ source: 'teller', type: 'transaction', limit: 100, all: true })
+await backpack.get(itemId)
 
 // Search
-await cortex.search("query", { limit: 10, dbOnly: false })
+await backpack.search("query", { limit: 10, dbOnly: false })
 
 // Connections & Sync
-await cortex.connections()
-await cortex.status()
-await cortex.sync()           // Sync all
-await cortex.sync('obsidian') // Sync specific app
+await backpack.connections()
+await backpack.status()
+await backpack.sync()           // Sync all
+await backpack.sync('obsidian') // Sync specific app
 
 // Obsidian
-await cortex.obsidian.listNotes({ limit: 10, folder: 'Notes' })
-await cortex.obsidian.readNote('note-title')
-await cortex.obsidian.createNote('Title', '# Content', { tags: ['tag'], folder: 'Notes' })
-await cortex.obsidian.updateNote('Title', 'new content', 'append')
-await cortex.obsidian.addBacklink('Note', 'TargetNote')
-await cortex.obsidian.search('query', { searchIn: 'content', limit: 10 })
+await backpack.obsidian.listNotes({ limit: 10, folder: 'Notes' })
+await backpack.obsidian.readNote('note-title')
+await backpack.obsidian.createNote('Title', '# Content', { tags: ['tag'], folder: 'Notes' })
+await backpack.obsidian.updateNote('Title', 'new content', 'append')
+await backpack.obsidian.addBacklink('Note', 'TargetNote')
+await backpack.obsidian.search('query', { searchIn: 'content', limit: 10 })
 
 // Browser (if available)
-await cortex.browser.navigate('https://example.com')
-await cortex.browser.click('1_11')
-await cortex.browser.fill('2_5', 'text')
-await cortex.browser.snapshot()
-await cortex.browser.screenshot()
+await backpack.browser.navigate('https://example.com')
+await backpack.browser.click('1_11')
+await backpack.browser.fill('2_5', 'text')
+await backpack.browser.snapshot()
+await backpack.browser.screenshot()
 ```
 
 ### Connecting AI Agents
@@ -280,7 +280,7 @@ await cortex.browser.screenshot()
 // Claude Desktop, Cursor, etc.
 {
   "mcpServers": {
-    "cortex": {
+    "backpack": {
       "url": "http://localhost:3000/mcp/sse"
     }
   }
@@ -304,12 +304,12 @@ curl -X POST http://localhost:3000/mcp/sse \
 # Test search
 curl -X POST http://localhost:3000/mcp/sse \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search","arguments":{"code":"async () => { const results = []; for (const [name, method] of Object.entries(cortexSpec)) { if (name.includes('\''timeline'\'')) results.push({ name }); } return results; }"}}}'
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search","arguments":{"code":"async () => { const results = []; for (const [name, method] of Object.entries(backpackSpec)) { if (name.includes('\''timeline'\'')) results.push({ name }); } return results; }"}}}'
 
 # Test execute
 curl -X POST http://localhost:3000/mcp/sse \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute","arguments":{"code":"async () => { const r = await cortex.timeline({ limit: 3 }); return { count: r.count }; }"}}}'
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute","arguments":{"code":"async () => { const r = await backpack.timeline({ limit: 3 }); return { count: r.count }; }"}}}'
 ```
 
 ---
@@ -321,7 +321,7 @@ curl -X POST http://localhost:3000/mcp/sse \
 ```bash
 # Clone repository
 git clone <repo-url>
-cd cortex
+cd backpack
 
 # Install dependencies
 bun install
@@ -451,9 +451,9 @@ export const timelineRouter = router({
 **Using in web/desktop:**
 
 ```typescript
-import { createCortexClient } from "@cortex/api/client";
+import { createBackpackClient } from "@backpack/api/client";
 
-const client = createCortexClient("http://localhost:3000");
+const client = createBackpackClient("http://localhost:3000");
 const timeline = await client.timeline.getTimeline.query({ limit: 25 });
 // timeline is fully typed!
 ```
@@ -503,52 +503,52 @@ try {
 
 ---
 
-## Cortex CLI {#cortex-cli}
+## Backpack CLI {#backpack-cli}
 
-The CLI is the recommended way for AI agents to interact with Cortex data. All commands support `--json` for machine-readable output.
+The CLI is the recommended way for AI agents to interact with Backpack data. All commands support `--json` for machine-readable output.
 
 ### SDK Usage
 
 ```ts
-import { Cortex } from "@cortex/sdk";
+import { Backpack } from "@backpack/sdk";
 
-const cortex = new Cortex();
-await cortex.status();
-await cortex.timeline({ limit: 10 });
-await cortex.search("query");
+const backpack = new Backpack();
+await backpack.status();
+await backpack.timeline({ limit: 10 });
+await backpack.search("query");
 ```
 
 ### Available Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `cortex search` | Hybrid search (QMD) | `cortex search "API docs" --json` |
-| `cortex items` | Get items by source | `cortex items --source farcaster --json` |
-| `cortex timeline` | Get timeline items | `cortex timeline --json --limit 50` |
-| `cortex status` | Connection status | `cortex status --json` |
-| `cortex sync` | Trigger data sync | `cortex sync all --json` |
-| `cortex embed` | Update search index | `cortex embed --json` |
-| `cortex get` | Get specific item | `cortex get <id> --json` |
+| `backpack search` | Hybrid search (QMD) | `backpack search "API docs" --json` |
+| `backpack items` | Get items by source | `backpack items --source farcaster --json` |
+| `backpack timeline` | Get timeline items | `backpack timeline --json --limit 50` |
+| `backpack status` | Connection status | `backpack status --json` |
+| `backpack sync` | Trigger data sync | `backpack sync all --json` |
+| `backpack embed` | Update search index | `backpack embed --json` |
+| `backpack get` | Get specific item | `backpack get <id> --json` |
 
 ### Agent Usage Examples
 
 ```bash
 # Get all Farcaster posts as JSON
-cortex items --source farcaster --json
+backpack items --source farcaster --json
 
 # Get all Teller transactions
-cortex items --source teller --json
+backpack items --source teller --json
 
 # Search with semantic understanding
-cortex search "what did I post about AI last week" --json
+backpack search "what did I post about AI last week" --json
 
 # Get paginated data
-cortex items --source farcaster --limit 100 --json
+backpack items --source farcaster --limit 100 --json
 # Use nextCursor from response for next page
-cortex items --source farcaster --limit 100 --cursor "..." --json
+backpack items --source farcaster --limit 100 --cursor "..." --json
 
 # Export data as CSV
-cortex items --source teller --csv > transactions.csv
+backpack items --source teller --csv > transactions.csv
 ```
 
 ### Search Setup (QMD)
@@ -560,13 +560,13 @@ For semantic search capabilities:
 bun install -g https://github.com/tobi/qmd
 
 # Setup collections and context
-cortex embed --setup
+backpack embed --setup
 
 # Generate embeddings
-cortex embed
+backpack embed
 
 # Now search works with semantic understanding
-cortex search "quarterly planning discussions" --json
+backpack search "quarterly planning discussions" --json
 ```
 
 ### MCP Integration
@@ -577,7 +577,7 @@ The MCP server uses **Code Mode** - just 2 tools (`search` and `execute`) that l
 // Claude Desktop, Cursor, etc.
 {
   "mcpServers": {
-    "cortex": {
+    "backpack": {
       "url": "http://localhost:3000/mcp/sse"
     }
   }
@@ -590,11 +590,11 @@ Agents write code to discover and call SDK methods. See [MCP Server (Code Mode)]
 
 ## Deploy to VM {#deploy-to-vm}
 
-To run Cortex on a VM or remote server (inspired by [opencode](https://opencode.ai)):
+To run Backpack on a VM or remote server (inspired by [opencode](https://opencode.ai)):
 
 ```bash
 # 1. Clone and build
-git clone <repo> && cd cortex
+git clone <repo> && cd backpack
 bun install && bun run build
 
 # 2. Compile server binary (optional – for no-Bun runtime)
@@ -632,7 +632,7 @@ bun run check-types
 **Database connection failed:**
 ```bash
 # Check database file exists
-ls ~/Library/Application\ Support/Cortex/
+ls ~/Library/Application\ Support/Backpack/
 
 # Server auto-creates database on first run
 # Just start the server and it will initialize
@@ -660,7 +660,7 @@ bun run dev:server
 
 - **MCP Server**: `apps/server/src/mcp/`
 - **Code Mode Spec**: `packages/sdk/src/spec.ts`
-- **API Client**: `packages/api/src/client.ts` (`@cortex/api/client`)
+- **API Client**: `packages/api/src/client.ts` (`@backpack/api/client`)
 - **Shared UI**: `packages/ui/`
 - **Planning docs**: `.planning/` – [WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)
 - **Elysia Docs**: https://elysiajs.com/
@@ -670,4 +670,4 @@ bun run dev:server
 ---
 
 **Last Updated:** February 2026
-**Cortex Version:** 1.0.0
+**Backpack Version:** 1.0.0

@@ -1,4 +1,4 @@
-// Main exports for @cortex/core
+// Main exports for @backpack/core
 
 // Database exports (schema re-exports removed to avoid conflicts)
 export {

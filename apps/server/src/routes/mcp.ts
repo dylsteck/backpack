@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { getDatabase } from "@cortex/db";
-import { apps, connections } from "@cortex/db/schema/mcp";
+import { getDatabase } from "@backpack/db";
+import { apps, connections } from "@backpack/db/schema/mcp";
 import { eq, sql } from "drizzle-orm";
 
 // OAuth session store (in-memory, for production use Redis or database)

@@ -1,6 +1,6 @@
-import { Cortex } from "../src";
+import { Backpack } from "../src";
 
-const c = new Cortex();
+const c = new Backpack();
 
 // Connections
 const conns = await c.connections();

@@ -5,8 +5,8 @@
 
 import { tool } from "ai";
 import { z } from "zod";
-import { ItemsService } from "@cortex/api/services/items/service";
-import { executeRawQuery, getDatabaseSchema } from "@cortex/db";
+import { ItemsService } from "@backpack/api/services/items/service";
+import { executeRawQuery, getDatabaseSchema } from "@backpack/db";
 import { obsidianTools } from "./tools/obsidian";
 import { browserTools } from "./tools/browser";
 
