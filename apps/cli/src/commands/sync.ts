@@ -1,9 +1,15 @@
 import { Command, Flags } from "@oclif/core";
 import { getDatabase, getConfig, initSyncers } from "@backpack/core";
+import { formatHeader, formatSyncResult, formatSyncError } from "../utils/formatters.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+const BOLD = "\x1b[1m";
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
+const GREEN = "\x1b[32m";
 
 export default class Sync extends Command {
   static description = "Sync data from all sources";
@@ -28,12 +34,12 @@ export default class Sync extends Command {
     const manager = initSyncers(db, config);
 
     if (flags.daemon) {
-      this.log(`Starting daemon (sync every ${flags.interval}s)...`);
-      this.log("Press Ctrl+C to stop\n");
+      this.log(`${DIM}Starting daemon (sync every ${flags.interval}s)...${RESET}`);
+      this.log(`${DIM}Press Ctrl+C to stop${RESET}\n`);
 
       while (true) {
         await this.runOnce(manager, flags);
-        this.log(`\nNext sync in ${flags.interval}s...\n`);
+        this.log(`\n${DIM}Next sync in ${flags.interval}s...${RESET}\n`);
         await sleep(flags.interval * 1000);
       }
     }
@@ -48,16 +54,20 @@ export default class Sync extends Command {
     const sources = flags.source === "all" ? undefined : ([flags.source] as Parameters<typeof manager.syncAll>[0]["sources"]);
 
     if (!flags.json) {
-      this.log("Starting sync...\n");
+      this.log(formatHeader("Sync"));
+      this.log("");
     }
 
     const startTime = Date.now();
+    const sourceStartTimes: Record<string, number> = {};
 
     const result = await manager.syncAll({
       sources,
       onProgress: (progress) => {
         if (!flags.json) {
-          this.log(`${progress.source}: ${progress.status} (${progress.itemsAdded} added)`);
+          if (!sourceStartTimes[progress.source]) {
+            sourceStartTimes[progress.source] = Date.now();
+          }
         }
       },
     });
@@ -79,13 +89,16 @@ export default class Sync extends Command {
         )
       );
     } else {
-      this.log(`\nSync complete in ${duration}ms`);
-      this.log(`Overall: ${result.overall}`);
       for (const [source, progress] of Object.entries(result.sourceResults)) {
         if (progress) {
-          this.log(`  ${source}: ${progress.itemsAdded} added, ${progress.itemsUpdated} updated`);
+          const sourceDuration = sourceStartTimes[source]
+            ? Date.now() - sourceStartTimes[source]
+            : duration;
+          this.log(formatSyncResult(source, progress.itemsAdded, progress.itemsUpdated, sourceDuration));
         }
       }
+      this.log("");
+      this.log(`  ${GREEN}✓${RESET} ${BOLD}Sync complete${RESET} ${DIM}(${(duration / 1000).toFixed(1)}s)${RESET}`);
     }
   }
 }

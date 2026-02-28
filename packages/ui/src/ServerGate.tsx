@@ -3,9 +3,7 @@ import { createSignal, onMount } from "solid-js";
 import { isTauri } from "./utils/platform";
 
 export interface ServerGateProps {
-	/** Server URL to check (e.g. from Tauri or env). In Tauri, ensureServerReady is invoked first. */
 	serverUrl: string;
-	/** Callback when server is ready (receives resolved URL) */
 	onReady?: (url: string) => void;
 	children: JSX.Element;
 }
@@ -13,18 +11,15 @@ export interface ServerGateProps {
 export function ServerGate(props: ServerGateProps) {
 	const [status, setStatus] = createSignal<"checking" | "ready" | "error">("checking");
 	const [error, setError] = createSignal<string | null>(null);
-	const [resolvedUrl, setResolvedUrl] = createSignal<string | null>(null);
 
 	onMount(async () => {
 		let url = props.serverUrl;
 
-		// In Tauri: invoke ensureServerReady (health check + spawn sidecar if needed)
 		const tauri = (window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } }).__TAURI__;
 		if (isTauri() && tauri?.core?.invoke) {
 			try {
 				const tauriUrl = await tauri.core.invoke("ensure_server_ready");
 				url = tauriUrl;
-				setResolvedUrl(tauriUrl);
 			} catch (err) {
 				setStatus("error");
 				setError(err instanceof Error ? err.message : "Server not ready");
@@ -56,21 +51,36 @@ export function ServerGate(props: ServerGateProps) {
 	return (
 		<>
 			{status() === "checking" && (
-				<div class="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-100">
+				<div class="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
 					<div class="flex flex-col items-center gap-4">
-						<div class="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
-						<p class="text-sm text-zinc-400">Connecting to Backpack...</p>
+						<p class="text-xl font-semibold text-[#e4e4ed] animate-pulse">Backpack</p>
+						<p class="text-sm text-[#8b8ba0]">Connecting...</p>
 					</div>
 				</div>
 			)}
 			{status() === "error" && (
-				<div class="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-100">
-					<div class="flex max-w-md flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-6">
-						<h2 class="text-lg font-semibold text-red-400">Connection Failed</h2>
-						<p class="text-sm text-zinc-400">{error()}</p>
-						<p class="text-xs text-zinc-500">
-							Make sure the Backpack server is running (e.g. <code class="rounded bg-zinc-800 px-1">bun run dev:server</code>)
+				<div class="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
+					<div class="flex max-w-md flex-col gap-4 rounded-lg border border-red-500/20 bg-red-500/5 p-6">
+						<div class="flex items-center gap-3">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+								<path d="M12 9v4"/>
+								<path d="M12 17h.01"/>
+							</svg>
+							<h2 class="text-lg font-semibold text-[#e4e4ed]">Connection Failed</h2>
+						</div>
+						<p class="text-sm text-[#8b8ba0]">{error()}</p>
+						<p class="text-xs text-[#5a5a70]">
+							Make sure the Backpack server is running. Try{" "}
+							<code class="rounded bg-[#1a1a25] px-1.5 py-0.5 text-[#818cf8]">bun run dev:server</code>
 						</p>
+						<button
+							type="button"
+							onClick={() => window.location.reload()}
+							class="mt-2 rounded-md bg-[#4f46e5] px-4 py-2 text-sm font-medium text-white hover:bg-[#4338ca] transition-colors"
+						>
+							Retry
+						</button>
 					</div>
 				</div>
 			)}

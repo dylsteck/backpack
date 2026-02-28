@@ -1,7 +1,13 @@
 import { Command, Flags, Args } from "@oclif/core";
 import { getDatabase, search } from "@backpack/core";
-import { formatItem } from "../utils/formatters.js";
+import { formatItem, formatHeader, colorSource } from "../utils/formatters.js";
 import { parseDate } from "../utils/date.js";
+
+const DIM = "\x1b[2m";
+const BOLD = "\x1b[1m";
+const RESET = "\x1b[0m";
+const CYAN = "\x1b[36m";
+const YELLOW = "\x1b[33m";
 
 export default class Search extends Command {
   static description = "Search timeline items (semantic + full-text)";
@@ -30,7 +36,8 @@ export default class Search extends Command {
     const db = getDatabase();
 
     if (!flags.json) {
-      this.log(`Searching: "${args.query}"\n`);
+      this.log(formatHeader("Search"));
+      this.log(`  ${DIM}Query:${RESET} ${CYAN}"${args.query}"${RESET}\n`);
     }
 
     const results = await search(db, {
@@ -67,19 +74,20 @@ export default class Search extends Command {
     }
 
     if (results.results.length === 0) {
-      this.log("No results found.");
+      this.log("  No results found. Try a different query or broaden your filters.");
       return;
     }
 
-    this.log(`Found ${results.results.length} results (${results.durationMs}ms):\n`);
+    this.log(`  ${DIM}${results.results.length} results (${results.durationMs}ms)${RESET}\n`);
 
     for (let i = 0; i < results.results.length; i++) {
       const r = results.results[i];
       const item = r.item as { source: string; title?: string; content?: string; timestamp: number };
-      this.log(`${i + 1}. ${formatItem(item)}`);
-      this.log(`   Score: ${(r.score * 100).toFixed(1)}% | Match: ${r.matchType}`);
+      const score = `${YELLOW}${(r.score * 100).toFixed(0)}%${RESET}`;
+      this.log(`  ${BOLD}${i + 1}.${RESET} ${formatItem(item)}`);
+      this.log(`     ${score} ${DIM}${r.matchType}${RESET}`);
       if (r.highlights?.length) {
-        this.log(`   Highlights: ${r.highlights.join(" ... ")}`);
+        this.log(`     ${DIM}${r.highlights.join(" ... ")}${RESET}`);
       }
       this.log("");
     }

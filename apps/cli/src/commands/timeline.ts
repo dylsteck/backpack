@@ -1,8 +1,11 @@
 import { Command, Flags } from "@oclif/core";
 import { getDatabase, timelineItems } from "@backpack/core";
 import { inArray, gte, lte, and } from "drizzle-orm";
-import { formatItem, formatItemJson } from "../utils/formatters.js";
+import { formatItem, formatItemJson, formatHeader } from "../utils/formatters.js";
 import { parseDate } from "../utils/date.js";
+
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
 
 export default class Timeline extends Command {
   static description = "View timeline of all items";
@@ -47,15 +50,19 @@ export default class Timeline extends Command {
     }
 
     if (items.length === 0) {
-      this.log("No items found.");
+      this.log(formatHeader("Timeline"));
+      this.log("");
+      this.log("  No items found. Run `backpack sync` to fetch data from your sources.");
       return;
     }
 
-    this.log(`Showing ${items.length} items:\n`);
+    this.log(formatHeader("Timeline"));
+    this.log(`  ${DIM}${items.length} items${flags.source?.length ? ` (filtered: ${flags.source.join(", ")})` : ""}${RESET}`);
+    this.log("");
     for (const item of items) {
       const row = item as { source: string; title?: string; content?: string; timestamp: number };
-      this.log(formatItem(row));
-      this.log("");
+      this.log(`  ${formatItem(row)}`);
     }
+    this.log("");
   }
 }

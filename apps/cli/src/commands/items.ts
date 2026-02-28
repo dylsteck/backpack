@@ -1,7 +1,10 @@
 import { Command, Flags, Args } from "@oclif/core";
 import { getDatabase, timelineItems } from "@backpack/core";
 import { eq, and } from "drizzle-orm";
-import { formatItem, formatItemJson } from "../utils/formatters.js";
+import { formatItem, formatItemJson, formatHeader, colorSource } from "../utils/formatters.js";
+
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
 
 const SOURCES = ["obsidian", "farcaster", "teller", "chrome", "brave", "safari", "manual"] as const;
 
@@ -54,13 +57,19 @@ export default class Items extends Command {
     }
 
     if (items.length === 0) {
-      this.log(`No items found for source: ${args.source}`);
+      this.log(formatHeader(`Items: ${args.source}`));
+      this.log("");
+      this.log(`  No items found for ${colorSource(args.source)}. Run \`backpack sync -s ${args.source}\` to fetch data.`);
       return;
     }
 
+    this.log(formatHeader(`Items: ${args.source}`));
+    this.log(`  ${DIM}${items.length} items${RESET}`);
+    this.log("");
     for (const item of items) {
       const row = item as { source: string; title?: string; content?: string; timestamp: number };
-      this.log(formatItem(row));
+      this.log(`  ${formatItem(row)}`);
     }
+    this.log("");
   }
 }
