@@ -16,7 +16,7 @@ import type { SourceType } from "../../config/schema.js";
 import { BaseSyncer } from "../base.js";
 import type { SyncProgress } from "../types.js";
 import type { TimelineItem } from "../../types/index.js";
-import * as schema from "../../db/schema.js";
+import * as schema from "@backpack/db/schema/core";
 import {
   chromeTimestampToUnix,
   getCutoffTimestamp,

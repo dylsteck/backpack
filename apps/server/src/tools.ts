@@ -5,7 +5,7 @@
 
 import { tool } from "ai";
 import { z } from "zod";
-import { ItemsService } from "@backpack/api/services/items/service";
+import { ItemsService } from "./services/items/service";
 import { executeRawQuery, getDatabaseSchema } from "@backpack/db";
 import { obsidianTools } from "./tools/obsidian";
 import { browserTools } from "./tools/browser";

@@ -12,7 +12,7 @@ import type {
   SyncStatus,
   SyncManagerOptions,
 } from "./types.js";
-import * as schema from "../db/schema.js";
+import * as schema from "@backpack/db/schema/core";
 
 /**
  * Sync Manager class

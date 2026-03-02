@@ -13,6 +13,8 @@ export default defineConfig({
     "commands/daemon": "src/commands/daemon.ts",
     "commands/tui": "src/commands/tui.tsx",
     "commands/embed": "src/commands/embed.ts",
+    "commands/serve": "src/commands/serve.ts",
+    "commands/mcp": "src/commands/mcp.ts",
     "tui/App": "src/tui/App.tsx",
   },
   outDir: "./dist",

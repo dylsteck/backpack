@@ -72,23 +72,6 @@ export const items = sqliteTable("items", {
 	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-// Chat sessions for persisting chat history
-export const chatSessions = sqliteTable("chat_sessions", {
-	id: text("id").primaryKey(),
-	title: text("title"), // First user message, truncated
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
-
-// Chat messages within a session
-export const chatMessages = sqliteTable("chat_messages", {
-	id: text("id").primaryKey(),
-	sessionId: text("session_id").notNull().references(() => chatSessions.id, { onDelete: "cascade" }),
-	role: text("role").notNull(), // 'user' | 'assistant'
-	content: text("content").notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
 export const appsRelations = relations(apps, ({ many }) => ({
 	items: many(items),
 }));
@@ -97,36 +80,6 @@ export const itemsRelations = relations(items, ({ one }) => ({
 	app: one(apps, {
 		fields: [items.source],
 		references: [apps.id],
-	}),
-}));
-
-export const chatSessionsRelations = relations(chatSessions, ({ many }) => ({
-	messages: many(chatMessages),
-}));
-
-export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
-	session: one(chatSessions, {
-		fields: [chatMessages.sessionId],
-		references: [chatSessions.id],
-	}),
-}));
-
-// UI Blocks for storing AI-generated json-render UIs
-export const uiBlocks = sqliteTable("ui_blocks", {
-	id: text("id").primaryKey(),
-	sessionId: text("session_id").references(() => chatSessions.id, { onDelete: "cascade" }),
-	messageId: text("message_id"),
-	title: text("title"),
-	uiJson: text("ui_json").notNull(), // The json-render tree
-	dataContext: text("data_context", { mode: "json" }).$type<Record<string, unknown>>(), // Data for binding
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
-
-export const uiBlocksRelations = relations(uiBlocks, ({ one }) => ({
-	session: one(chatSessions, {
-		fields: [uiBlocks.sessionId],
-		references: [chatSessions.id],
 	}),
 }));
 

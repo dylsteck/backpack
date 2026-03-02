@@ -20,7 +20,7 @@ import { FarcasterSyncer } from "./sources/farcaster.js";
 import { TellerSyncer } from "./sources/teller.js";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { CoreConfig, ObsidianConfig, FarcasterConfig, TellerConfig } from "../config/schema.js";
-import * as schema from "../db/schema.js";
+import * as schema from "@backpack/db/schema/core";
 
 /**
  * Initialize all syncers and register with sync manager

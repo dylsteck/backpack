@@ -1,13 +1,13 @@
 import { Database } from "bun:sqlite";
 import { drizzle, BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import * as schema from "./schema.js";
-import { indexes } from "./schema.js";
+import * as schema from "@backpack/db/schema/core";
+import { coreIndexes as indexes } from "@backpack/db/schema/core";
 import path from "path";
 import os from "os";
 import fs from "fs";
 
-// Re-export schema
-export * from "./schema.js";
+// Re-export schema from db package
+export * from "@backpack/db/schema/core";
 
 // Global database instance
 let db: BunSQLiteDatabase<typeof schema> | null = null;

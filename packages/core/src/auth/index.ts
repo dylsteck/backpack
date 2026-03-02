@@ -1,2 +1,2 @@
 // Auth module exports
-export * from "./keychain.js";
+export * from "./secrets.js";

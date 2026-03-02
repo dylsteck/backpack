@@ -12,8 +12,8 @@ import type { SourceType } from "../../types/index.js";
 import { BaseSyncer } from "../base.js";
 import type { SyncProgress } from "../types.js";
 import type { TimelineItem } from "../../types/index.js";
-import * as schema from "../../db/schema.js";
-import { getSecret, SECRET_KEYS } from "../../auth/keychain.js";
+import * as schema from "@backpack/db/schema/core";
+import { getSecret, SECRET_KEYS } from "../../auth/secrets.js";
 import type { Cast, NeynarFeedResponse } from "../../types/farcaster.js";
 
 /**
@@ -260,7 +260,7 @@ export class FarcasterSyncer extends BaseSyncer {
    */
   private async getLastCursor(): Promise<string | null> {
     try {
-      const { sources } = await import("../../db/schema.js");
+      const { sources } = await import("@backpack/db/schema/core");
       const { eq } = await import("drizzle-orm");
 
       const source = await this.db.query.sources.findFirst({
@@ -286,7 +286,7 @@ export class FarcasterSyncer extends BaseSyncer {
    */
   private async storeCursor(cursor: string): Promise<void> {
     try {
-      const { sources } = await import("../../db/schema.js");
+      const { sources } = await import("@backpack/db/schema/core");
       const { eq } = await import("drizzle-orm");
 
       const existingSource = await this.db.query.sources.findFirst({
@@ -323,7 +323,7 @@ export class FarcasterSyncer extends BaseSyncer {
    */
   private async clearCursor(): Promise<void> {
     try {
-      const { sources } = await import("../../db/schema.js");
+      const { sources } = await import("@backpack/db/schema/core");
       const { eq } = await import("drizzle-orm");
 
       const existingSource = await this.db.query.sources.findFirst({

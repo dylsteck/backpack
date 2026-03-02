@@ -1,5 +1,6 @@
 import { Command, Flags } from "@oclif/core";
-import { getConfig, setConfig, setSecret } from "@backpack/core";
+import { getConfig, setConfig } from "@backpack/core";
+import { setSecret } from "@backpack/core/auth";
 
 function getNested(obj: Record<string, unknown>, path: string): unknown {
   return path.split(".").reduce((o: unknown, key) => {
@@ -42,7 +43,7 @@ export default class Config extends Command {
   static flags = {
     get: Flags.string({ description: "Get config value (dot notation)" }),
     set: Flags.string({ description: "Set config value (key=value)" }),
-    "set-secret": Flags.string({ description: "Set secret in keychain (key=value)" }),
+    "set-secret": Flags.string({ description: "Set secret (key=value)" }),
     unset: Flags.string({ description: "Remove config value" }),
     json: Flags.boolean({ char: "j", description: "Output as JSON" }),
   };
@@ -57,7 +58,7 @@ export default class Config extends Command {
         this.error("Usage: backpack config --set-secret key=value");
       }
       await setSecret(key.trim(), value);
-      this.log(`Set secret ${key.trim()} (stored in keychain)`);
+      this.log(`Set secret ${key.trim()}`);
       return;
     }
 

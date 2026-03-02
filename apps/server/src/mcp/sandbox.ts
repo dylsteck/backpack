@@ -1,5 +1,5 @@
 import vm from "node:vm";
-import { Backpack, backpackSpec } from "@backpack/sdk";
+import { Backpack, backpackSpec } from "@backpack/core/sdk";
 
 export interface SandboxResult {
 	success: boolean;

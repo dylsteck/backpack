@@ -29,6 +29,14 @@
     "./sync": {
       "import": "./dist/sync/index.js",
       "types": "./dist/sync/index.d.ts"
+    },
+    "./sdk": {
+      "import": "./dist/sdk/index.js",
+      "types": "./dist/sdk/index.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "types": "./dist/plugins/index.d.ts"
     }
   },
   "scripts": {
@@ -36,8 +44,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@backpack/db": "workspace:*",
     "drizzle-orm": "^0.40.0",
-    "keytar": "^7.9.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {

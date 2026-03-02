@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { drizzle, BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema/mcp";
+import * as coreSchema from "./schema/core";
 import path from "path";
 import fs from "fs";
 import { readFileSync } from "fs";
@@ -40,94 +41,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 	// Create drizzle instance with schema
 	db = drizzle(sqliteDb, { schema });
 
-	// Run schema creation if new database
-	if (isNew) {
-		// Create tables manually since we're not using migrations at runtime
-		sqliteDb.exec(`
-			CREATE TABLE IF NOT EXISTS "apps" (
-				"id" text PRIMARY KEY NOT NULL,
-				"name" text NOT NULL,
-				"description" text NOT NULL,
-				"transport" text,
-				"oauth" integer DEFAULT 0 NOT NULL,
-				"icon_url" text NOT NULL,
-				"config" text NOT NULL,
-				"connection_type" text DEFAULT 'mcp' NOT NULL,
-				"created_at" integer NOT NULL,
-				"updated_at" integer NOT NULL
-			);
-			
-			CREATE TABLE IF NOT EXISTS "connections" (
-				"id" text PRIMARY KEY NOT NULL,
-				"server_id" text NOT NULL,
-				"server_name" text NOT NULL,
-				"vendor" text,
-				"transport_type" text NOT NULL,
-				"transport_config" text NOT NULL,
-				"status" text DEFAULT 'disconnected' NOT NULL,
-				"secret_uri" text,
-				"credential_storage" text DEFAULT 'onepassword' NOT NULL,
-				"encrypted_credentials" text,
-				"connection_metadata" text,
-				"last_synced_at" integer,
-				"created_at" integer NOT NULL,
-				"updated_at" integer NOT NULL
-			);
-			
-			CREATE TABLE IF NOT EXISTS "items" (
-				"id" text PRIMARY KEY NOT NULL,
-				"source" text NOT NULL,
-				"type" text NOT NULL,
-				"timestamp" integer NOT NULL,
-				"data" text NOT NULL,
-				"created_at" integer NOT NULL,
-				"updated_at" integer NOT NULL
-			);
-			
-			CREATE TABLE IF NOT EXISTS "chat_sessions" (
-				"id" text PRIMARY KEY NOT NULL,
-				"title" text,
-				"created_at" integer NOT NULL,
-				"updated_at" integer NOT NULL
-			);
-			
-			CREATE TABLE IF NOT EXISTS "chat_messages" (
-				"id" text PRIMARY KEY NOT NULL,
-				"session_id" text NOT NULL REFERENCES "chat_sessions"("id") ON DELETE CASCADE,
-				"role" text NOT NULL,
-				"content" text NOT NULL,
-				"created_at" integer NOT NULL
-			);
-			
-			CREATE INDEX IF NOT EXISTS "items_source_idx" ON "items"("source");
-			CREATE INDEX IF NOT EXISTS "items_timestamp_idx" ON "items"("timestamp");
-			CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
-			CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
-			CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
-		`);
-	}
-	
-	// Always ensure chat tables exist (for existing databases)
-	sqliteDb.exec(`
-		CREATE TABLE IF NOT EXISTS "chat_sessions" (
-			"id" text PRIMARY KEY NOT NULL,
-			"title" text,
-			"created_at" integer NOT NULL,
-			"updated_at" integer NOT NULL
-		);
-		
-		CREATE TABLE IF NOT EXISTS "chat_messages" (
-			"id" text PRIMARY KEY NOT NULL,
-			"session_id" text NOT NULL REFERENCES "chat_sessions"("id") ON DELETE CASCADE,
-			"role" text NOT NULL,
-			"content" text NOT NULL,
-			"created_at" integer NOT NULL
-		);
-		
-		CREATE INDEX IF NOT EXISTS "chat_messages_session_idx" ON "chat_messages"("session_id");
-	`);
-	
-	// Always ensure core tables exist (for existing databases)
+	// Always ensure all tables exist
 	sqliteDb.exec(`
 		CREATE TABLE IF NOT EXISTS "apps" (
 			"id" text PRIMARY KEY NOT NULL,
@@ -141,7 +55,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			"created_at" integer NOT NULL,
 			"updated_at" integer NOT NULL
 		);
-		
+
 		CREATE TABLE IF NOT EXISTS "connections" (
 			"id" text PRIMARY KEY NOT NULL,
 			"server_id" text NOT NULL,
@@ -158,7 +72,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			"created_at" integer NOT NULL,
 			"updated_at" integer NOT NULL
 		);
-		
+
 		CREATE TABLE IF NOT EXISTS "items" (
 			"id" text PRIMARY KEY NOT NULL,
 			"source" text NOT NULL,
@@ -168,11 +82,55 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 			"created_at" integer NOT NULL,
 			"updated_at" integer NOT NULL
 		);
-		
+
+		CREATE TABLE IF NOT EXISTS "timeline_items" (
+			"id" text PRIMARY KEY NOT NULL,
+			"source" text NOT NULL,
+			"type" text NOT NULL,
+			"external_id" text,
+			"title" text,
+			"content" text,
+			"raw_data" text,
+			"url" text,
+			"timestamp" integer NOT NULL,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL,
+			"sync_status" text DEFAULT 'pending' NOT NULL,
+			"error_message" text
+		);
+
+		CREATE TABLE IF NOT EXISTS "sources" (
+			"id" text PRIMARY KEY NOT NULL,
+			"name" text NOT NULL,
+			"type" text NOT NULL,
+			"config" text,
+			"last_sync_at" integer,
+			"is_enabled" integer DEFAULT 1 NOT NULL,
+			"created_at" integer NOT NULL,
+			"updated_at" integer NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS "embeddings" (
+			"id" text PRIMARY KEY NOT NULL,
+			"item_id" text NOT NULL REFERENCES "timeline_items"("id") ON DELETE CASCADE,
+			"vector" blob,
+			"model" text NOT NULL,
+			"created_at" integer NOT NULL
+		);
+
 		CREATE INDEX IF NOT EXISTS "items_source_idx" ON "items"("source");
 		CREATE INDEX IF NOT EXISTS "items_timestamp_idx" ON "items"("timestamp");
 		CREATE INDEX IF NOT EXISTS "items_type_idx" ON "items"("type");
 		CREATE INDEX IF NOT EXISTS "connections_server_id_idx" ON "connections"("server_id");
+		CREATE INDEX IF NOT EXISTS "timeline_items_source_idx" ON "timeline_items"("source");
+		CREATE INDEX IF NOT EXISTS "timeline_items_type_idx" ON "timeline_items"("type");
+		CREATE INDEX IF NOT EXISTS "timeline_items_timestamp_idx" ON "timeline_items"("timestamp");
+		CREATE INDEX IF NOT EXISTS "timeline_items_external_id_idx" ON "timeline_items"("external_id");
+		CREATE INDEX IF NOT EXISTS "timeline_items_sync_status_idx" ON "timeline_items"("sync_status");
+		CREATE INDEX IF NOT EXISTS "sources_type_idx" ON "sources"("type");
+		CREATE INDEX IF NOT EXISTS "sources_enabled_idx" ON "sources"("is_enabled");
+		CREATE INDEX IF NOT EXISTS "embeddings_item_id_idx" ON "embeddings"("item_id");
+		CREATE INDEX IF NOT EXISTS "embeddings_model_idx" ON "embeddings"("model");
 	`);
 	
 	// Run migrations
@@ -264,9 +222,10 @@ Database Tables:
 - apps: id (text PK), name, description, transport, oauth (int), icon_url, config, connection_type, created_at, updated_at
 - connections: id (text PK), server_id, server_name, vendor, transport_type, transport_config, status, secret_uri, credential_storage, encrypted_credentials, connection_metadata, last_synced_at, created_at, updated_at
 - items: id (text PK), source (e.g. 'farcaster', 'teller', 'chrome', 'brave'), type (e.g. 'cast', 'transaction', 'browser-history'), timestamp (unix ms), data (JSON text), created_at, updated_at
-- chat_sessions: id (text PK), title, created_at, updated_at
-- chat_messages: id (text PK), session_id, role, content, created_at
-Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source. Browser history entries are stored in the items table with source='chrome' or source='brave'.
+- timeline_items: id (text PK), source, type, external_id, title, content, raw_data, url, timestamp, created_at, updated_at, sync_status, error_message
+- sources: id (text PK), name, type, config, last_sync_at, is_enabled, created_at, updated_at
+- embeddings: id (text PK), item_id (FK timeline_items), vector (blob), model, created_at
+Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source.
 `.trim();
 }
 
@@ -276,6 +235,7 @@ export { db };
 
 // Export schemas
 export * from "./schema/mcp";
+export * from "./schema/core";
 
 // Export seed function
 export { seedDatabase, DEFAULT_APPS } from "./seed";

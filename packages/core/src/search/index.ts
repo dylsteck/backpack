@@ -3,7 +3,7 @@
  */
 
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import * as schema from "../db/schema.js";
+import * as schema from "@backpack/db/schema/core";
 import { eq, and, gte, lte, inArray, sql, desc } from "drizzle-orm";
 import { searchVectors, isQmdAvailable } from "../embeddings/qmd.js";
 import type { SearchOptions, SearchResponse, SearchResult } from "./types.js";

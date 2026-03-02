@@ -7,8 +7,8 @@ import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { SourceType, SourceConfig } from "../config/schema.js";
 import type { TimelineItem } from "../types/index.js";
 import type { SyncProgress, SyncOptions } from "./types.js";
-import { timelineItems, sources } from "../db/schema.js";
-import * as schema from "../db/schema.js";
+import { timelineItems, sources } from "@backpack/db/schema/core";
+import * as schema from "@backpack/db/schema/core";
 
 /**
  * Abstract base class for all source syncers

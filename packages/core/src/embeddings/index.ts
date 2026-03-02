@@ -3,7 +3,7 @@
  */
 
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import * as schema from "../db/schema.js";
+import * as schema from "@backpack/db/schema/core";
 import { indexItems, isQmdAvailable } from "./qmd.js";
 
 const BATCH_SIZE = 100;

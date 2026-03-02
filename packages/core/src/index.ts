@@ -17,8 +17,8 @@ export {
   timelineItemsRelations,
   sourcesRelations,
   embeddingsRelations,
-  indexes,
-} from "./db/schema.js";
+  coreIndexes as indexes,
+} from "@backpack/db/schema/core";
 
 // Types exports
 export * from "./types/index.js";
@@ -72,3 +72,11 @@ export {
 // Search exports
 export { search } from "./search/index.js";
 export type { SearchOptions, SearchResponse, SearchResult, SearchFilters } from "./search/types.js";
+
+// Plugin exports
+export { PluginRegistry, registry } from "./plugins/registry.js";
+export { loadBuiltinPlugins, loadExternalPlugins } from "./plugins/loader.js";
+export type { BackpackPlugin, PluginContext } from "./plugins/types.js";
+
+// SDK exports
+export * from "./sdk/index.js";

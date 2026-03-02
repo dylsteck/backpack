@@ -9,8 +9,8 @@ import { BaseSyncer } from "../base.js";
 import type { SyncProgress } from "../types.js";
 import type { TimelineItem } from "../../types/index.js";
 import type { TellerAccount, TellerTransaction } from "../../types/teller.js";
-import * as schema from "../../db/schema.js";
-import { getTellerToken } from "../../auth/keychain.js";
+import * as schema from "@backpack/db/schema/core";
+import { getTellerToken } from "../../auth/secrets.js";
 
 /**
  * Teller API client
@@ -242,7 +242,7 @@ export class TellerSyncer extends BaseSyncer {
    * Get existing item from database by transaction ID
    */
   private async getExistingItem(transactionId: string): Promise<TimelineItem | null> {
-    const { timelineItems } = await import("../../db/schema.js");
+    const { timelineItems } = await import("@backpack/db/schema/core");
     const { eq, and } = await import("drizzle-orm");
 
     const result = await this.db.query.timelineItems.findFirst({
