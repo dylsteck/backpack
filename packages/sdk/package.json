@@ -1,0 +1,30 @@
+{
+	"name": "@backpack/sdk",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@backpack/db": "workspace:*",
+		"drizzle-orm": "^0.44.2"
+	},
+	"devDependencies": {
+		"@types/node": "^22.13.4",
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

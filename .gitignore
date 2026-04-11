@@ -11,15 +11,6 @@ dist/
 *.wasm
 *.scm
 
-# CLI build artifacts
-packages/cli/dist/
-
-# Rust/Cargo
-**/target/
-
-# Tauri generated
-**/src-tauri/gen/
-
-# Server binary (compiled by beforeBuildCommand)
-apps/server/server
-apps/server/server-*
+# Electron Forge / Vite outputs
+apps/desktop/.vite/
+apps/desktop/out/

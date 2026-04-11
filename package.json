@@ -16,12 +16,12 @@
     }
   },
   "scripts": {
-    "dev": "turbo dev",
+    "postinstall": "mkdir -p apps/desktop/node_modules && ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron",
+    "dev": "turbo -F @backpack/desktop start",
     "build": "turbo build",
     "check-types": "turbo check-types",
-    "dev:cli": "turbo -F @backpack/cli dev",
-    "dev:server": "turbo -F server dev",
-    "cli": "bun run apps/cli/dist/bin/run.js",
+    "lint": "turbo lint",
+    "desktop": "turbo -F @backpack/desktop start",
     "db:push": "turbo -F @backpack/db db:push",
     "db:studio": "turbo -F @backpack/db db:studio",
     "db:generate": "turbo -F @backpack/db db:generate",

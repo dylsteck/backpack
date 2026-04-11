@@ -1,16 +1,13 @@
 # Backpack
 
-A personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Teller banking, Chrome, etc.) into a unified timeline. **CLI-first** with optional TUI and API server.
+A personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Teller banking, Chrome, etc.) into a unified timeline. Ships as a single **Electron desktop app** with a local-first SQLite database.
 
 ## Features
 
-- **CLI** - Full-featured command-line interface
-- **TUI** - Interactive terminal UI (Ink/React)
-- **Sync** - Obsidian, Farcaster, Teller, Chrome/Brave
-- **Search** - Semantic (QMD) + full-text hybrid search
-- **SQLite** - Local-first database
-- **API Server** - Optional tRPC HTTP API
-- **MCP Server** - Model Context Protocol for AI agents
+- **Desktop app** - Electron + React 19 + Vite + TanStack Router
+- **Local-first** - Drizzle ORM over better-sqlite3, no HTTP server
+- **Unified timeline** - Obsidian, Farcaster, Teller, Chrome/Brave, and more
+- **Typed IPC** - Renderer talks to the main process via a preload bridge; no network hops
 
 ## Quick Start
 
@@ -18,209 +15,122 @@ A personal operating system that aggregates data from multiple sources (Farcaste
 # Install dependencies
 bun install
 
-# Build
-bun run build
-
-# Start server + initialize database (for web/desktop)
-bun run dev:server
-# In another terminal: curl -X POST http://localhost:3000/api/init-database
-
-# Or run everything: bun run dev
+# Start the desktop app (Electron + Vite HMR)
+bun run dev
 ```
 
-**Full setup & onboarding:** See [SETUP.md](SETUP.md) for database init, connections, and all ways to run Backpack.
+`bun run dev` is a shortcut for `turbo -F @backpack/desktop start`, which launches the app via `electron-forge start`.
 
-## CLI Commands
+## Architecture
 
-| Command | Description |
-|---------|-------------|
-| `backpack config` | View/set configuration |
-| `backpack timeline` | View timeline of items |
-| `backpack items <source>` | List items by source |
-| `backpack sync` | Sync from all sources |
-| `backpack search "query"` | Search items |
-| `backpack view <id>` | View item details |
-| `backpack embed` | Generate embeddings (QMD) |
-| `backpack tui` | Launch interactive TUI |
-| `backpack daemon` | Manage sync daemon |
+Backpack is a three-package monorepo:
 
-## MCP Server (Code Mode)
-
-Backpack exposes an MCP server with **Code Mode** - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
-
-### Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `search` | Write JS to search the SDK spec |
-| `execute` | Write JS to call SDK methods |
-
-### How It Works
-
-Instead of 7+ tool definitions, agents write code:
-
-```javascript
-// Search for timeline methods
-async () => {
-  const results = [];
-  for (const [name, method] of Object.entries(backpackSpec)) {
-    if (name.includes('timeline')) {
-      results.push({ name, description: method.description });
-    }
-  }
-  return results;
-}
-
-// Execute timeline
-async () => {
-  const result = await backpack.timeline({ limit: 10 });
-  return result.items;
-}
+```
+backpack/
+├── apps/
+│   └── desktop/       # @backpack/desktop — Electron + React 19 + Vite + TanStack Router
+└── packages/
+    ├── sdk/           # @backpack/sdk — Node-only, main-process SDK
+    └── db/            # @backpack/db — Drizzle ORM + better-sqlite3 schema
 ```
 
-### Start Server
+- **`apps/desktop`** — The Electron shell. The main process imports `@backpack/sdk` directly; the React 19 renderer talks to it through a preload bridge (`src/preload.ts`, `src/ipc/`). TanStack Router handles navigation, TanStack Query handles data loading. Tailwind CSS v4 + Radix UI for styling.
+- **`@backpack/sdk`** — Node-only SDK consumed exclusively by the Electron main process. Wraps source integrations (Obsidian, Farcaster, Teller, Chrome), timeline aggregation, and search.
+- **`@backpack/db`** — Drizzle ORM schema + migrations, backed by `better-sqlite3`. Opened from the main process; never shipped to the renderer.
+
+There is no HTTP server, no CLI, no `localhost:3000`. The renderer never touches Node APIs directly — all side effects go through IPC.
+
+## Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh/) 1.3+
+- macOS, Linux, or Windows (anything Electron supports)
+
+### Install and run
 
 ```bash
-bun run dev:server
-# or
-cd apps/server && bun run src/index.ts
+git clone <repo-url>
+cd backpack
+bun install
+bun run dev
 ```
 
-### Connect AI Agent
+The first `bun run dev` will rebuild `better-sqlite3` against the Electron ABI automatically (electron-forge handles it). The app window opens with Vite HMR attached.
 
-```json
-// Claude Desktop
-{
-  "mcpServers": {
-    "backpack": {
-      "url": "http://localhost:3000/mcp/sse"
-    }
-  }
-}
-```
+### Database commands
 
-### API Endpoints
-
-- `POST /mcp/sse` - MCP JSON-RPC
-- `GET /mcp/health` - Health check
-
-## Configuration
-
-Config is stored in:
-- **macOS**: `~/Library/Application Support/backpack/config.json`
-- **Linux**: `~/.config/backpack/config.json`
-- **Windows**: `~/AppData/Roaming/backpack/config.json`
+Run from the repo root — these are turbo passthroughs to `@backpack/db`.
 
 ```bash
-# Set Obsidian vault path
-backpack config --set sources.obsidian.config.vaultPath=/path/to/vault
-
-# Set source config (full structure)
-backpack config --set sources.obsidian='{"type":"obsidian","enabled":true,"config":{"vaultPath":"/path"}}'
+bun run db:push        # Sync schema to SQLite
+bun run db:generate    # Generate a new migration
+bun run db:migrate     # Apply migrations
+bun run db:studio      # Open Drizzle Studio
 ```
 
-## Database
-
-SQLite database location:
-- **macOS**: `~/Library/Application Support/backpack/backpack.db`
-- **Linux**: `~/.local/share/backpack/backpack.db`
-
-## Development
+### Type checking and lint
 
 ```bash
-bun run build          # Build all packages (excludes desktop)
-bun run dev:cli        # Watch CLI
-bun run dev:server     # Watch server
-bun run dev:web        # Watch web app (requires server on :3000)
-bun run dev:desktop    # Watch desktop app (spawns server automatically)
-bun run check-types    # Type check
+bun run check-types
+bun run lint
+# or scope to the desktop app:
+bun --filter @backpack/desktop run lint
 ```
 
-### Running Web and Desktop
+The desktop ESLint config (`apps/desktop/eslint.config.mjs`) enforces the project's **no-useEffect** rule. See [`.claude/skills/no-use-effect/SKILL.md`](.claude/skills/no-use-effect/SKILL.md) for the 5 replacement patterns, or `apps/desktop/src/hooks/useMountEffect.ts` for the one sanctioned escape hatch.
 
-**Web app** (`bun run dev:web`): SolidJS SPA at http://localhost:5173. Connects to the API at http://localhost:3000. Start the server first: `bun run dev:server` (in another terminal).
+## Data Locations
 
-**Desktop app** (`bun run dev:desktop`): Tauri window with the same UI. Spawns the server sidecar automatically if not already running. Use for Obsidian vault picker (folder selection) and OAuth flows that open the system browser.
+- **macOS**: `~/Library/Application Support/Backpack/`
+- **Linux**: `~/.local/share/Backpack/`
+- **Windows**: `%APPDATA%\Backpack\`
 
-### Build commands
-
-| Command | Description |
-|---------|-------------|
-| `bun run build` | Build web, server, CLI, and packages (excludes desktop) |
-| `bun run build:desktop` | Build desktop app only (requires Rust 1.85+) |
-| `bun run build:all` | Build everything including desktop |
-
-**Desktop build:** The Tauri desktop app requires Rust 1.85+ for some transitive dependencies. Run `rustup update` (or `rustup default stable`) before `bun run build:desktop`.
-
-## Deploy to VM (Self-Host)
-
-To run Backpack on a VM or remote server (inspired by [opencode](https://opencode.ai)):
-
-```bash
-# 1. Clone and build
-git clone <repo> && cd backpack
-bun install && bun run build
-
-# 2. Compile server binary (optional – for no-Bun runtime)
-cd apps/server && bun run compile
-
-# 3. Run server (bind all interfaces for external access)
-HOST=0.0.0.0 PORT=3000 ./server
-# Or with Bun: HOST=0.0.0.0 bun run dev:server
-```
-
-**Environment variables for VM deployment:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HOST` | `127.0.0.1` | Bind address. Use `0.0.0.0` to accept external connections. |
-| `PORT` | `3000` | Server port. |
-| `CORS_ORIGIN` | `http://localhost:5173,...` | Comma-separated origins for web app (e.g. `https://your-app.vercel.app`). |
-
-**Web app:** Deploy the web app (Vercel, Netlify) with `VITE_API_URL=https://your-vm-ip:3000` so it connects to your server.
+The Electron app creates its SQLite database here on first launch.
 
 ## Project Structure
 
 ```
 backpack/
 ├── apps/
-│   ├── cli/       # CLI + TUI
-│   └── server/   # API server
+│   └── desktop/
+│       ├── src/
+│       │   ├── main.ts          # Electron main entry
+│       │   ├── preload.ts       # Context bridge
+│       │   ├── renderer.tsx     # React entry
+│       │   ├── router.tsx       # TanStack Router
+│       │   ├── App.tsx
+│       │   ├── hooks/
+│       │   │   └── useMountEffect.ts   # the only allowed useEffect wrapper
+│       │   ├── ipc/             # typed IPC handlers
+│       │   ├── components/
+│       │   ├── contexts/
+│       │   ├── lib/
+│       │   ├── styles/
+│       │   └── types/
+│       ├── forge.config.ts
+│       ├── vite.main.config.mts
+│       ├── vite.preload.config.mts
+│       ├── vite.renderer.config.mts
+│       └── eslint.config.mjs
 ├── packages/
-│   ├── core/     # Database, sync, search, config
-│   ├── api/      # tRPC routers
-│   ├── db/       # Legacy DB (server)
-│   └── sdk/      # TypeScript SDK
+│   ├── sdk/
+│   └── db/
+├── turbo.json
+└── package.json
 ```
 
-## Embeddings (QMD)
+## Conventions
 
-For semantic search, install QMD:
+- **No direct `useEffect`.** Use one of the 5 patterns in [`.claude/skills/no-use-effect/SKILL.md`](.claude/skills/no-use-effect/SKILL.md): derived state (inline compute), data fetching (TanStack Query), user actions (event handlers), one-shot mount sync (`useMountEffect`), or state reset (`key` prop).
+- **Tabs** for indentation in TS/JS/JSON.
+- **Main-process-only Node APIs.** The renderer is pure React + DOM; anything Node goes through IPC.
 
-```bash
-bun install -g qmd   # or: npm install -g qmd
-backpack embed --setup  # Verify installation
-backpack sync          # Sync triggers auto-embed
-backpack search "query" # Semantic + full-text search
-```
+## Additional Resources
 
-## How to Test
-
-```bash
-# From workspace root
-cd apps/cli
-
-# Test all commands
-bun run dist/bin/run.js --help
-bun run dist/bin/run.js config
-bun run dist/bin/run.js config --json
-bun run dist/bin/run.js timeline
-bun run dist/bin/run.js timeline --json
-bun run dist/bin/run.js items obsidian
-bun run dist/bin/run.js search "test"
-bun run dist/bin/run.js sync
-bun run dist/bin/run.js embed --setup
-bun run dist/bin/run.js tui   # Interactive - press q to quit
-```
-
-**Note**: Run with `bun` (not `node`) - the core package uses `bun:sqlite`.
+- [React docs — You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+- [TanStack Router](https://tanstack.com/router)
+- [TanStack Query](https://tanstack.com/query)
+- [Electron Forge](https://www.electronforge.io/)
+- [Drizzle ORM](https://orm.drizzle.team/)
+- [Bun](https://bun.sh/docs)

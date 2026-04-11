@@ -1,127 +1,84 @@
 # Backpack - AI Agent Development Guide
 
-> **A comprehensive guide for AI agents working with the Backpack monorepo**
-> This document explains the codebase structure, architecture decisions, development workflows, and best practices for working effectively with Backpack.
->
-> **Planning docs:** See `.planning/` for detailed plans ([WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)).
+> **A guide for AI agents working with the Backpack monorepo.**
+> Backpack is an Electron desktop app (React 19 + Vite + TanStack Router) backed by a Node-only SDK and a Drizzle/SQLite database.
 
 ---
 
-## Table of Contents
+## React rules
 
-1. [Project Overview](#project-overview)
-2. [Monorepo Structure](#monorepo-structure)
-3. [Tech Stack](#tech-stack)
-4. [MCP Server (Code Mode)](#mcp-server)
-5. [Development Workflow](#development-workflow)
-6. [Build System](#build-system)
-7. [Database & API](#database--api)
-8. [Common Tasks](#common-tasks)
-9. [Best Practices](#best-practices)
-10. [Backpack CLI](#backpack-cli)
-11. [Deploy to VM](#deploy-to-vm)
-12. [Troubleshooting](#troubleshooting)
+Direct `useEffect` is **banned** across `apps/desktop`. The only sanctioned escape hatch is `apps/desktop/src/hooks/useMountEffect.ts`, and an ESLint rule fails the build on any other `useEffect` import or call.
 
----
+Use one of the 5 patterns below instead — see `.claude/skills/no-use-effect/SKILL.md` for the full doctrine with code examples.
 
-## Project Overview {#project-overview}
+1. **Derived state → inline compute.** Don't `useState + useEffect` to mirror props; compute from props/state during render.
+2. **Data fetching → TanStack Query.** Use `useQuery` / `useMutation`, not `useEffect(fetch → setState)`.
+3. **User actions → event handlers.** Put side effects in `onClick`/`onSubmit`, not in effects that watch a state flag.
+4. **One-shot external sync on mount → `useMountEffect(() => { ... })`.** For DOM integration, third-party widget lifecycles, and browser API subscriptions. Exactly once per mount.
+5. **Reset state when a prop changes → `key` prop on the parent.** Don't use a dep-array effect to reset state; remount via `key`.
 
-**Backpack** is a personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Chrome, Teller banking, etc.) into a unified timeline and interface. The goal is to provide a cohesive view of your digital life with AI-powered interactions.
+Reference files:
 
-**Key Features:**
-- CLI-first with optional TUI
-- Timeline view aggregating data from multiple sources
-- Obsidian vault integration with markdown rendering
-- Chat interface with AI (OpenRouter)
-- Banking transactions via Teller API
-- Browser history tracking (Chrome/Brave)
-- Local-first SQLite database
-- MCP Server with Code Mode for AI agents
+- `.claude/skills/no-use-effect/SKILL.md` — full doctrine + examples.
+- `apps/desktop/src/hooks/useMountEffect.ts` — the one allowed wrapper.
+- `apps/desktop/eslint.config.mjs` — the ESLint rule that enforces this.
 
-**Architecture Philosophy:**
-- **Performance First**: CLI-first, optional TUI
-- **Type Safety**: End-to-end TypeScript with tRPC for API calls
-- **Local-First**: SQLite database
-- **Monorepo**: Shared types and business logic across apps
+Based on [React docs: You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect).
 
 ---
 
-## Monorepo Structure {#monorepo-structure}
+## Project overview
+
+**Backpack** is a personal operating system that aggregates data from multiple sources (Farcaster, Obsidian, Teller banking, Chrome, etc.) into a unified timeline and interface. It ships as a single Electron desktop app with a local-first SQLite database.
+
+**Architecture philosophy:**
+
+- **Terminal-first UX inside a desktop window** — React 19 renderer, TanStack Router.
+- **Type safety** — end-to-end TypeScript across desktop, SDK, and DB.
+- **Local-first** — SQLite via Drizzle + better-sqlite3.
+- **No HTTP server** — the renderer talks to the main process via Electron IPC; the main process uses `@backpack/sdk` directly.
+
+---
+
+## Monorepo structure
 
 ```
 backpack/
 ├── apps/
-│   ├── cli/           # CLI + TUI (Ink/React)
-│   ├── server/        # API server (Elysia + Bun)
-│   ├── web/           # SolidJS + Vite SPA
-│   └── desktop/       # Tauri v2 wrapping shared web UI
+│   └── desktop/       # Electron + React 19 + Vite + TanStack Router
 ├── packages/
-│   ├── api/           # tRPC routers + @backpack/api/client
-│   ├── core/          # Database, sync, search, config
-│   ├── sdk/           # TypeScript SDK (@backpack/sdk)
-│   ├── ui/            # Shared SolidJS components (web + desktop)
-│   └── db/            # Drizzle ORM schema
-├── turbo.json         # Turborepo configuration
-├── package.json       # Root workspace configuration
-└── README.md          # Project documentation
-```
-
-### Apps
-
-#### `apps/cli/` - CLI + TUI
-
-Command-line interface with optional Ink/React TUI. Primary way for AI agents to interact with Backpack data.
-
-#### `apps/server/` - API Server
-
-Backend server built with **Elysia** (Bun framework) providing tRPC endpoints and MCP Code Mode.
-
-**Key Files:**
-```
-apps/server/
-├── src/
-│   ├── index.ts          # Server entry point
-│   ├── mcp/              # MCP Code Mode
-│   │   ├── codemode.ts  # search() and execute() tools
-│   │   └── sandbox.ts   # V8 sandbox for code execution
-│   └── routes/          # API routes (tRPC integration)
+│   ├── sdk/           # @backpack/sdk — Node-only, main-process SDK
+│   └── db/            # @backpack/db — Drizzle ORM + better-sqlite3 schema
+├── turbo.json
 ├── package.json
-└── compile script        # Bun standalone binary compilation
+└── README.md
 ```
 
-**Compilation:**
-- Server compiles to standalone binary: `bun run compile`
-- Binary is embedded in desktop app as sidecar (opencode pattern)
-- Use `HOST=0.0.0.0` for VM deployment (see [Deploy to VM](#deploy-to-vm))
+### `apps/desktop/` — Electron desktop app
 
-#### `apps/web/` - Web App
+Electron main process + React 19 renderer bundled with Vite (`@electron-forge/plugin-vite`). The renderer uses TanStack Router for navigation and TanStack Query for data loading. Main-process code imports `@backpack/sdk` directly and exposes it to the renderer via a preload bridge (`src/preload.ts` / `src/ipc/`).
 
-SolidJS + Vite SPA. Routes: `/` (timeline), `/connections`, `/settings`. Shares 100% UI with desktop via `packages/ui`. Uses `@backpack/api/client` with `VITE_API_URL` (default `http://localhost:3000`).
+Key paths:
 
-#### `apps/desktop/` - Desktop App
+- `src/main.ts` — Electron main entry.
+- `src/preload.ts` — context bridge between main and renderer.
+- `src/renderer.tsx` — React entry.
+- `src/router.tsx` — TanStack Router setup.
+- `src/App.tsx` — root component.
+- `src/hooks/useMountEffect.ts` — the only sanctioned `useEffect` wrapper.
+- `src/ipc/` — typed IPC handlers.
+- `src/components/`, `src/contexts/`, `src/lib/`, `src/styles/`, `src/types/`.
 
-Tauri v2 wrapping the same SolidJS UI as web. Optional server sidecar (opencode pattern). On startup, invokes `ensure_server_ready` (health check + spawn sidecar if needed) before rendering. Native folder picker for Obsidian vault via `pickFolder()`. OAuth (Teller) opens system browser via `openExternalUrl()`. **Prerequisites:** Rust (`rustup default stable`), Bun. **Build order:** `bun run build:web` → `cd apps/server && bun run compile` → `bun run build:desktop`.
+### `packages/sdk/` — `@backpack/sdk`
 
-### Packages
+Node-only TypeScript SDK consumed exclusively by the Electron main process. Encapsulates source integrations (Obsidian, Farcaster, Teller, etc.), timeline aggregation, and search.
 
-#### `packages/api/` - Shared API Layer
+### `packages/db/` — `@backpack/db`
 
-Contains tRPC routers and `@backpack/api/client` (browser-safe tRPC client).
+Drizzle ORM schema + migrations. Uses `better-sqlite3`. Exposes typed query helpers consumed by the SDK.
 
-**Purpose:**
-- Define API contracts with full TypeScript types
-- Share logic between web, desktop, and server
-- tRPC provides end-to-end type safety
+**Commands (from repo root):**
 
-#### `packages/ui/` - Shared UI Components
-
-SolidJS + Tailwind components used by both web and desktop. Layout, ServerGate, ConnectionCard, Timeline, Settings. **Platform utils:** `isTauri()`, `openExternalUrl(url)` (OAuth – system browser on desktop, navigate on web), `pickFolder()` (desktop-only native folder picker). ServerGate waits for server health before rendering; on desktop, calls Tauri `ensure_server_ready` first.
-
-#### `packages/db/` - Database Layer
-
-Database schema and migrations using **Drizzle ORM**. Server uses SQLite locally.
-
-**Commands:**
 ```bash
 bun run db:push        # Sync schema to database
 bun run db:generate    # Generate migrations
@@ -131,543 +88,104 @@ bun run db:studio      # Open Drizzle Studio
 
 ---
 
-## Tech Stack {#tech-stack}
+## Tech stack
 
-### Web + Desktop (Shared UI)
-
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **UI Framework** | SolidJS | Fine-grained reactivity, 7kb, no VDOM |
-| **Bundler** | Vite | Fast HMR, Tauri-native |
-| **Styling** | Tailwind CSS v4 | Utility-first |
-| **Desktop** | Tauri v2 | Lightweight (~3–5MB vs Electron 200MB+) |
-| **API Client** | @backpack/api/client | tRPC proxy, type-safe |
-
-### Backend
-
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Runtime** | Bun | Fast, built-in TypeScript, standalone compilation |
-| **Framework** | Elysia | Type-safe, high-performance, Bun-native |
-| **API** | tRPC | End-to-end type safety, no code generation |
-| **MCP** | Code Mode | Reduced token usage (~1-2KB vs ~10KB+) |
-| **Sandbox** | Node.js vm | V8 isolate for safe code execution |
-| **Database** | SQLite | Local-first, embedded |
-
-### Monorepo
-
-| Tool | Purpose |
-|------|---------|
-| **Turborepo** | Build orchestration, caching, parallel execution |
-| **Bun** | Package manager, runtime, fast installs |
-| **TypeScript 5.9** | Type safety across entire monorepo |
-| **ESLint + Prettier** | Code quality and formatting |
+| Layer | Technology |
+|-------|-----------|
+| **Desktop shell** | Electron + electron-forge |
+| **Renderer** | React 19 + Vite |
+| **Router** | TanStack Router |
+| **Data loading** | TanStack Query |
+| **Styling** | Tailwind CSS v4 + Radix UI |
+| **Database** | SQLite via Drizzle ORM + better-sqlite3 |
+| **Runtime / pkg manager** | Bun |
+| **Monorepo** | Turborepo |
+| **Lint** | ESLint 9 (flat config) + typescript-eslint |
 
 ---
 
-## MCP Server (Code Mode) {#mcp-server}
+## Development workflow
 
-Backpack exposes an MCP server using Cloudflare's "Code Mode" pattern - just 2 tools that let AI agents write JavaScript to discover and call SDK methods.
-
-### Why Code Mode?
-
-- **Token savings**: ~1-2KB instead of ~10KB+ for tool schemas
-- **Flexibility**: Agents write code to query data, not rigid tool calls
-- **Type safety**: Full SDK available in sandbox
-
-### Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `search` | Write JavaScript to search the SDK spec |
-| `execute` | Write JavaScript to call SDK methods |
-
-### How It Works
-
-The MCP server uses Node.js `vm` module (V8 isolate) to sandbox code execution:
-
-```typescript
-// apps/server/src/mcp/sandbox.ts
-import vm from "node:vm";
-import { Backpack, backpackSpec } from "@backpack/sdk";
-
-const context = vm.createContext({
-  backpack: new Backpack(),
-  backpackSpec,  // Typed spec for discovery
-  console: { log: (...args) => logs.push(args.join(' ')) }
-});
-
-const script = new vm.Script(wrappedCode);
-const result = script.runInContext(context, { timeout: 30000 });
-```
-
-### Usage Examples
-
-**Discover available methods:**
-```javascript
-// search tool
-async () => {
-  const results = [];
-  for (const [name, method] of Object.entries(backpackSpec)) {
-    if (name.includes('timeline')) {
-      results.push({ name, description: method.description });
-    }
-  }
-  return results;
-}
-```
-
-**Get timeline items:**
-```javascript
-// execute tool
-async () => {
-  const timeline = await backpack.timeline({ limit: 10 });
-  return timeline.items.map(i => ({ id: i.id, source: i.source }));
-}
-```
-
-**Chain operations:**
-```javascript
-// execute tool - search then get details
-async () => {
-  const search = await backpack.search("farcaster posts");
-  if (search.results.length > 0) {
-    const item = await backpack.get(search.results[0].id);
-    return item;
-  }
-  return null;
-}
-```
-
-### SDK Methods
-
-```typescript
-const backpack = new Backpack();
-
-// Timeline & Items
-await backpack.timeline({ limit: 10, source: 'farcaster', cursor: '...' })
-await backpack.items({ source: 'teller', type: 'transaction', limit: 100, all: true })
-await backpack.get(itemId)
-
-// Search
-await backpack.search("query", { limit: 10, dbOnly: false })
-
-// Connections & Sync
-await backpack.connections()
-await backpack.status()
-await backpack.sync()           // Sync all
-await backpack.sync('obsidian') // Sync specific app
-
-// Obsidian
-await backpack.obsidian.listNotes({ limit: 10, folder: 'Notes' })
-await backpack.obsidian.readNote('note-title')
-await backpack.obsidian.createNote('Title', '# Content', { tags: ['tag'], folder: 'Notes' })
-await backpack.obsidian.updateNote('Title', 'new content', 'append')
-await backpack.obsidian.addBacklink('Note', 'TargetNote')
-await backpack.obsidian.search('query', { searchIn: 'content', limit: 10 })
-
-// Browser (if available)
-await backpack.browser.navigate('https://example.com')
-await backpack.browser.click('1_11')
-await backpack.browser.fill('2_5', 'text')
-await backpack.browser.snapshot()
-await backpack.browser.screenshot()
-```
-
-### Connecting AI Agents
-
-```json
-// Claude Desktop, Cursor, etc.
-{
-  "mcpServers": {
-    "backpack": {
-      "url": "http://localhost:3000/mcp/sse"
-    }
-  }
-}
-```
-
-### Testing
+### Initial setup
 
 ```bash
-# Start server
-bun run dev:server
-
-# Test health
-curl http://localhost:3000/mcp/health
-
-# List tools (should show 2)
-curl -X POST http://localhost:3000/mcp/sse \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-
-# Test search
-curl -X POST http://localhost:3000/mcp/sse \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search","arguments":{"code":"async () => { const results = []; for (const [name, method] of Object.entries(backpackSpec)) { if (name.includes('\''timeline'\'')) results.push({ name }); } return results; }"}}}'
-
-# Test execute
-curl -X POST http://localhost:3000/mcp/sse \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute","arguments":{"code":"async () => { const r = await backpack.timeline({ limit: 3 }); return { count: r.count }; }"}}}'
-```
-
----
-
-## Development Workflow {#development-workflow}
-
-### Initial Setup
-
-```bash
-# Clone repository
 git clone <repo-url>
 cd backpack
-
-# Install dependencies
 bun install
-
-# Build
-bun run build
-
-# Create .env files (if needed)
-# apps/server/.env
-TELLER_APPLICATION_ID=app_xxxx
-TELLER_ENVIRONMENT=sandbox
 ```
 
-### Running in Development
+### Running in development
 
 ```bash
-# From root - runs everything in parallel
+# From root — starts the Electron desktop app with Vite HMR
 bun run dev
-
-# Or run individually
-bun run dev:server   # API server (hot reload with Bun)
-bun run dev:cli     # CLI (hot reload)
-bun run dev:web     # Web app (Vite, http://localhost:5173)
-bun run dev:desktop # Tauri desktop (wraps web UI)
+# equivalent to: turbo -F @backpack/desktop start
 ```
 
-### Building
+### Type checking
 
 ```bash
-# Build all apps
-bun run build
-
-# Build web or desktop
-bun run build:web
-bun run build:desktop
-
-# Compile server to standalone binary
-cd apps/server
-bun run compile  # Creates standalone `server` binary
-```
-
-### Type Checking
-
-```bash
-# Check types across all packages
 bun run check-types
 ```
 
----
-
-## Build System {#build-system}
-
-### Turborepo Configuration
-
-**`turbo.json`:**
-```json
-{
-  "ui": "tui",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],    // Build dependencies first
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true           // Keep running
-    }
-  }
-}
-```
-
-**How it works:**
-- Runs tasks in parallel when possible
-- Caches outputs for unchanged code
-- Respects dependency order (`^build` means "build dependencies first")
-- `persistent: true` keeps dev servers running
-
----
-
-## Database & API {#database--api}
-
-### Database Schema
-
-**Drizzle ORM** with **SQLite** (local-first). Schema in `packages/db/src/schema/`.
-
-**Commands:**
-```bash
-bun run db:push        # Sync schema to database
-bun run db:generate    # Generate migrations
-bun run db:migrate     # Run migrations
-bun run db:studio      # Open Drizzle Studio
-```
-
-### Server HTTP Endpoints
-
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /`, `GET /mcp/health` | Health check |
-| `POST /api/init-database` | Initialize DB after onboarding |
-| `GET /api/database-status` | DB readiness |
-| `ALL /trpc/*` | tRPC (timeline, apps, sync, teller, farcaster, chat, obsidian) |
-| `GET /teller/connect` | Teller OAuth initiation |
-| `POST /mcp/sse` | MCP Code Mode (JSON-RPC) |
-
-### tRPC API
-
-**Defining routers** (`packages/api/src/routers/timeline.ts`):
-
-```typescript
-import { router, publicProcedure } from '../trpc';
-import { z } from 'zod';
-
-export const timelineRouter = router({
-  getTimeline: publicProcedure
-    .input(z.object({ limit: z.number().default(25) }))
-    .query(async ({ input, ctx }) => {
-      const items = await ctx.db.query.timelineItems.findMany({
-        limit: input.limit,
-        orderBy: (items, { desc }) => [desc(items.timestamp)],
-      });
-      return items;
-    }),
-});
-```
-
-**Using in web/desktop:**
-
-```typescript
-import { createBackpackClient } from "@backpack/api/client";
-
-const client = createBackpackClient("http://localhost:3000");
-const timeline = await client.timeline.getTimeline.query({ limit: 25 });
-// timeline is fully typed!
-```
-
-**Key procedures for web/desktop:** `apps.getAvailableServers`, `apps.connectObsidian`, `apps.removeConnection`, `timeline.getTimeline`, `sync.triggerSyncAll`.
-
----
-
-## Common Tasks {#common-tasks}
-
-### Running Database Migrations
+### Linting
 
 ```bash
-# Generate migration from schema changes
-cd packages/db
-bun run db:generate
-
-# Apply migrations
-bun run db:migrate
-
-# Or push directly (development)
-bun run db:push
+bun run lint
+# or just the desktop package
+bun --filter @backpack/desktop run lint
 ```
 
-### Adding a tRPC Route
-
-1. Define procedure in `packages/api/src/routers/<feature>.ts`
-2. Add to root router in `packages/api/src/routers/index.ts`
-3. Use via `api.<router>.<procedure>.query/mutate()`
+The desktop ESLint config lives at `apps/desktop/eslint.config.mjs` and enforces the no-useEffect rule described above.
 
 ---
 
-## Best Practices {#best-practices}
+## Build system
 
-### Error Handling
+### Turborepo
 
-**Always handle errors:**
-```typescript
-try {
-  const data = await api.fetchData.query();
-  store.data.set(data);
-} catch (error) {
-  console.error('Failed to fetch data:', error);
-  // Show user-friendly error message
-}
-```
+`turbo.json` orchestrates `build`, `check-types`, `lint`, and `start` tasks across the workspace. Dev tasks are `persistent: true` and uncached. The root `dev` script filters to `@backpack/desktop start`, which runs `electron-forge start` with Vite HMR.
 
 ---
 
-## Backpack CLI {#backpack-cli}
+## Best practices
 
-The CLI is the recommended way for AI agents to interact with Backpack data. All commands support `--json` for machine-readable output.
+### React
 
-### SDK Usage
+Follow the 5 no-useEffect rules above. When unsure, open `.claude/skills/no-use-effect/SKILL.md`.
 
-```ts
-import { Backpack } from "@backpack/sdk";
+### Error handling
 
-const backpack = new Backpack();
-await backpack.status();
-await backpack.timeline({ limit: 10 });
-await backpack.search("query");
-```
+Wrap SDK calls (in main-process IPC handlers or `useQuery` `queryFn`s) in try/catch and surface user-friendly errors. TanStack Query's `error` state handles the renderer side.
 
-### Available Commands
+### IPC
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `backpack search` | Hybrid search (QMD) | `backpack search "API docs" --json` |
-| `backpack items` | Get items by source | `backpack items --source farcaster --json` |
-| `backpack timeline` | Get timeline items | `backpack timeline --json --limit 50` |
-| `backpack status` | Connection status | `backpack status --json` |
-| `backpack sync` | Trigger data sync | `backpack sync all --json` |
-| `backpack embed` | Update search index | `backpack embed --json` |
-| `backpack get` | Get specific item | `backpack get <id> --json` |
-
-### Agent Usage Examples
-
-```bash
-# Get all Farcaster posts as JSON
-backpack items --source farcaster --json
-
-# Get all Teller transactions
-backpack items --source teller --json
-
-# Search with semantic understanding
-backpack search "what did I post about AI last week" --json
-
-# Get paginated data
-backpack items --source farcaster --limit 100 --json
-# Use nextCursor from response for next page
-backpack items --source farcaster --limit 100 --cursor "..." --json
-
-# Export data as CSV
-backpack items --source teller --csv > transactions.csv
-```
-
-### Search Setup (QMD)
-
-For semantic search capabilities:
-
-```bash
-# Install QMD
-bun install -g https://github.com/tobi/qmd
-
-# Setup collections and context
-backpack embed --setup
-
-# Generate embeddings
-backpack embed
-
-# Now search works with semantic understanding
-backpack search "quarterly planning discussions" --json
-```
-
-### MCP Integration
-
-The MCP server uses **Code Mode** - just 2 tools (`search` and `execute`) that let agents write JavaScript code.
-
-```json
-// Claude Desktop, Cursor, etc.
-{
-  "mcpServers": {
-    "backpack": {
-      "url": "http://localhost:3000/mcp/sse"
-    }
-  }
-}
-```
-
-Agents write code to discover and call SDK methods. See [MCP Server (Code Mode)](#mcp-server) section for details.
+Add new IPC channels in `src/ipc/` and expose them via `src/preload.ts`. Keep the renderer free of Node APIs.
 
 ---
 
-## Deploy to VM {#deploy-to-vm}
-
-To run Backpack on a VM or remote server (inspired by [opencode](https://opencode.ai)):
-
-```bash
-# 1. Clone and build
-git clone <repo> && cd backpack
-bun install && bun run build
-
-# 2. Compile server binary (optional – for no-Bun runtime)
-cd apps/server && bun run compile
-
-# 3. Run server (bind all interfaces for external access)
-HOST=0.0.0.0 PORT=3000 ./server
-# Or with Bun: HOST=0.0.0.0 bun run dev:server
-```
-
-**Environment variables:** `HOST` (default `127.0.0.1`), `PORT` (default `3000`), `CORS_ORIGIN` for web app origins. See [README.md](README.md#deploy-to-vm-self-host) for full details.
-
----
-
-## Troubleshooting {#troubleshooting}
-
-### Common Issues
+## Troubleshooting
 
 **"Module not found" errors:**
+
 ```bash
-# Clean install
 rm -rf node_modules
 bun install
 ```
 
-**Type errors in IDE:**
-```bash
-# Restart TypeScript server
-# VS Code: Cmd+Shift+P → "TypeScript: Restart TS Server"
+**Type errors in IDE:** restart the TypeScript server, then `bun run check-types`.
 
-# Check types manually
-bun run check-types
-```
+**Database file location (macOS):** `~/Library/Application Support/Backpack/` — Electron auto-creates it on first run.
 
-**Database connection failed:**
-```bash
-# Check database file exists
-ls ~/Library/Application\ Support/Backpack/
-
-# Server auto-creates database on first run
-# Just start the server and it will initialize
-```
-
-**Server won't start:**
-```bash
-# Check for port conflicts
-lsof -i :3000
-
-# Rebuild native modules if needed
-cd apps/server
-bun install
-```
-
-**Hot reload not working:**
-```bash
-# Restart dev server
-bun run dev:server
-```
+**Native module mismatch (better-sqlite3):** run `bun install` inside `apps/desktop` — electron-forge rebuilds native modules against the Electron ABI automatically on `start`.
 
 ---
 
-## Additional Resources
+## Additional resources
 
-- **MCP Server**: `apps/server/src/mcp/`
-- **Code Mode Spec**: `packages/sdk/src/spec.ts`
-- **API Client**: `packages/api/src/client.ts` (`@backpack/api/client`)
-- **Shared UI**: `packages/ui/`
-- **Planning docs**: `.planning/` – [WEB-DESKTOP-APPS.md](.planning/WEB-DESKTOP-APPS.md), [STATE.md](.planning/STATE.md), [code-mode-mcp.md](.planning/code-mode-mcp.md)
-- **Elysia Docs**: https://elysiajs.com/
-- **tRPC Docs**: https://trpc.io/docs
-- **Bun Docs**: https://bun.sh/docs
-
----
-
-**Last Updated:** February 2026
-**Backpack Version:** 1.0.0
+- React docs: https://react.dev/
+- TanStack Router: https://tanstack.com/router
+- TanStack Query: https://tanstack.com/query
+- Electron Forge: https://www.electronforge.io/
+- Drizzle ORM: https://orm.drizzle.team/
+- Bun: https://bun.sh/docs

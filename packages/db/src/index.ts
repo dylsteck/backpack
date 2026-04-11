@@ -1,14 +1,15 @@
-import { Database } from "bun:sqlite";
-import { drizzle, BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import Database from "better-sqlite3";
+import { drizzle, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema/mcp";
-import * as coreSchema from "./schema/core";
 import path from "path";
 import fs from "fs";
 import { readFileSync } from "fs";
 
+type SqliteDatabase = Database.Database;
+
 // Global database instance
-let db: BunSQLiteDatabase<typeof schema> | null = null;
-let sqliteDb: Database | null = null;
+let db: BetterSQLite3Database<typeof schema> | null = null;
+let sqliteDb: SqliteDatabase | null = null;
 
 /**
  * Check if database exists at the given path
@@ -22,7 +23,7 @@ export function databaseExists(dbPath: string): boolean {
  * Creates the directory and database file if they don't exist
  * Returns true if this is a fresh database (needs seeding)
  */
-export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof schema>; isNew: boolean } {
+export function initDatabase(dbPath: string): { db: BetterSQLite3Database<typeof schema>; isNew: boolean } {
 	// Ensure directory exists
 	const dir = path.dirname(dbPath);
 	if (!fs.existsSync(dir)) {
@@ -32,8 +33,8 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
 	// Check if database file exists (before we create it)
 	const isNew = !fs.existsSync(dbPath);
 
-	// Create SQLite connection using Bun's native SQLite
-	sqliteDb = new Database(dbPath, { create: true });
+	// Create SQLite connection
+	sqliteDb = new Database(dbPath);
 	
 	// Use DELETE journal mode for a single file (no -wal/-shm files)
 	sqliteDb.exec("PRAGMA journal_mode = DELETE");
@@ -172,7 +173,7 @@ export function initDatabase(dbPath: string): { db: BunSQLiteDatabase<typeof sch
  * Get the current database instance
  * Throws if database hasn't been initialized
  */
-export function getDatabase(): BunSQLiteDatabase<typeof schema> {
+export function getDatabase(): BetterSQLite3Database<typeof schema> {
 	if (!db) {
 		throw new Error("Database not initialized. Call initDatabase() first.");
 	}
@@ -206,7 +207,7 @@ export function executeRawQuery(query: string): { success: boolean; data?: Recor
 	}
 
 	try {
-		const results = sqliteDb.query(query).all() as Record<string, unknown>[];
+		const results = sqliteDb.prepare(query).all() as Record<string, unknown>[];
 		return { success: true, data: results };
 	} catch (error) {
 		return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
