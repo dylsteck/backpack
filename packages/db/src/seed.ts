@@ -1,4 +1,4 @@
-import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { apps, type AppConfig } from "./schema/mcp";
 import * as schema from "./schema/mcp";
 
@@ -72,7 +72,7 @@ export const DEFAULT_APPS: Array<{
  * Seed the database with default apps
  * Uses INSERT OR REPLACE to handle both fresh installs and updates
  */
-export function seedDatabase(db: BunSQLiteDatabase<typeof schema>): void {
+export function seedDatabase(db: BetterSQLite3Database<typeof schema>): void {
 	const now = new Date();
 
 	for (const app of DEFAULT_APPS) {

@@ -235,8 +235,33 @@ Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in
 export { db };
 
 // Export schemas
-export * from "./schema/mcp";
-export * from "./schema/core";
+export {
+	TRANSPORT_TYPES,
+	CONNECTION_STATUSES,
+	apps,
+	connections,
+	items,
+	appsRelations,
+	itemsRelations,
+} from "./schema/mcp";
+export type {
+	TransportType,
+	ConnectionStatus,
+	AppConfig,
+	TransportConfig,
+} from "./schema/mcp";
+export {
+	SOURCE_TYPES,
+	ITEM_TYPES,
+	SYNC_STATUSES,
+	timelineItems,
+	sources,
+	embeddings,
+	timelineItemsRelations,
+	sourcesRelations,
+	embeddingsRelations,
+	coreIndexes,
+} from "./schema/core";
 
 // Export seed function
 export { seedDatabase, DEFAULT_APPS } from "./seed";
