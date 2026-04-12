@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "postinstall": "mkdir -p apps/desktop/node_modules && ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron",
+    "postinstall": "mkdir -p apps/desktop/node_modules && ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron && ln -sfn ../../../node_modules/better-sqlite3 apps/desktop/node_modules/better-sqlite3 && bunx --bun @electron/rebuild -f -w better-sqlite3 --project-root apps/desktop",
     "dev": "turbo -F @backpack/desktop start",
     "build": "turbo build",
     "check-types": "turbo check-types",
