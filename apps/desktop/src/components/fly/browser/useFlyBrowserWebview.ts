@@ -6,15 +6,35 @@ import { hostTitle, isBlankPageUrl } from "./fly-browser-helpers";
 import { makeWebviewRefCallback } from "./fly-browser-webview-ref";
 import type { FlyBrowserShellApi } from "./fly-browser-shell-types";
 
+const CAPTURE_PAGE_TIMEOUT_MS = 2800;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const t = setTimeout(() => reject(new Error("capture timeout")), ms);
+		promise.then(
+			(v) => {
+				clearTimeout(t);
+				resolve(v);
+			},
+			(e) => {
+				clearTimeout(t);
+				reject(e);
+			},
+		);
+	});
+}
+
 export function useFlyBrowserWebview(queryClient: QueryClient, s: FlyBrowserShellApi) {
 	const captureTab = useCallback(async (id: string, wv: WebviewHTMLElement) => {
 		try {
-			const image = await wv.capturePage();
+			const image = await withTimeout(wv.capturePage(), CAPTURE_PAGE_TIMEOUT_MS);
 			const dataUrl = image.toDataURL();
 			if (dataUrl && dataUrl.length > 100) {
 				s.setThumbnails((prev) => ({ ...prev, [id]: dataUrl }));
 			}
-		} catch {}
+		} catch {
+			/* timeout, invisible webview, or capture failure — keep prior thumbnail / favicon */
+		}
 	}, [s]);
 
 	const captureAll = useCallback(async () => {

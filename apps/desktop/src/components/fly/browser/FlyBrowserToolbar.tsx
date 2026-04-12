@@ -85,6 +85,7 @@ export function FlyBrowserToolbar({
 			</Link>
 			<button
 				type="button"
+				aria-pressed={viewMode === "grid"}
 				onClick={onToggleOverview}
 				className={cn(
 					"no-drag flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",

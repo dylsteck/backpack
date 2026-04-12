@@ -275,7 +275,7 @@ export function AppDetail() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-8 text-sm font-medium shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
+			<header className="sticky top-0 z-20 flex h-10 items-center gap-3 bg-background/80 px-8 text-sm font-medium shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
 				<Button asChild variant="ghost" size="icon">
 					<Link to="/apps">
 						<ArrowLeft className="h-4 w-4" />

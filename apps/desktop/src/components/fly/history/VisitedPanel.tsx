@@ -1,5 +1,9 @@
 import type { FlyVisitRow } from "@backpack/sdk";
-import { formatHistoryDayKey, formatHistoryTime24 } from "./fly-history-dates";
+import {
+	formatHistoryDayKey,
+	formatHistorySectionTitle,
+	formatHistoryTime24,
+} from "./fly-history-dates";
 
 function normalizeVisitUrl(url: string): string {
 	try {
@@ -80,7 +84,7 @@ export function VisitedPanel({ visits }: { visits: FlyVisitRow[] }) {
 
 	if (visits.length === 0) {
 		return (
-			<p className="py-16 text-center font-mono text-sm text-muted-foreground">No visits yet.</p>
+			<p className="py-16 text-center text-sm text-muted-foreground">No visits yet.</p>
 		);
 	}
 
@@ -91,11 +95,11 @@ export function VisitedPanel({ visits }: { visits: FlyVisitRow[] }) {
 				return (
 					<section key={day}>
 						<div className="mb-4 border-b border-border/70 pb-2">
-							<h2 className="font-mono text-base font-bold tracking-tight text-foreground">
-								{day}
+							<h2 className="text-base font-semibold tracking-tight text-foreground">
+								{formatHistorySectionTitle(day)}
 							</h2>
 						</div>
-						<div className="font-mono text-[13px] leading-relaxed">
+						<div className="text-[13px] leading-relaxed">
 							<div className="mb-2 grid grid-cols-[4.5rem_1fr_2rem] gap-4 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:grid-cols-[5rem_1fr_2.5rem]">
 								<span>Time</span>
 								<span>Page</span>

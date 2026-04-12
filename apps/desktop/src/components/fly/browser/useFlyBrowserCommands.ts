@@ -55,13 +55,15 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 		[s],
 	);
 
-	const toggleOverview = useCallback(async () => {
+	const toggleOverview = useCallback(() => {
 		if (s.viewMode === "grid") {
 			s.setViewMode("browser");
 			return;
 		}
-		await w.captureAll();
+		// Show overview immediately. capturePage() can hang on background tabs; awaiting it
+		// here made the control feel broken. Thumbnails refresh as captures finish.
 		s.setViewMode("grid");
+		void w.captureAll();
 	}, [s, w]);
 
 	const navigateTo = useCallback(

@@ -31,7 +31,7 @@ export function FlyHistoryChrome({
 }: Props) {
 	return (
 		<div className="shrink-0 bg-background">
-			<header className="flex h-11 items-center gap-2 border-b border-border/80 px-3 md:px-8">
+			<header className="flex h-10 items-center gap-2 border-b border-border/80 px-3 md:px-8">
 				<SidebarTrigger className="no-drag size-7 shrink-0 [&_svg]:size-3.5" />
 				<Link
 					to="/fly/browser"
@@ -83,7 +83,7 @@ export function FlyHistoryChrome({
 						value={filter}
 						onChange={(e) => onFilterChange(e.target.value)}
 						placeholder="Search history…"
-						className="h-9 w-full rounded-md border border-border/70 bg-background py-2 pl-9 pr-3 font-mono text-[13px] text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:border-[#162b45]/50 focus-visible:ring-2 focus-visible:ring-[#162b45]/20 dark:focus-visible:border-[#6b8caf]/50 dark:focus-visible:ring-[#6b8caf]/20"
+						className="h-9 w-full rounded-md border border-border/70 bg-background py-2 pl-9 pr-3 text-[13px] text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:border-[#162b45]/50 focus-visible:ring-2 focus-visible:ring-[#162b45]/20 dark:focus-visible:border-[#6b8caf]/50 dark:focus-visible:ring-[#6b8caf]/20"
 					/>
 				</div>
 			</div>

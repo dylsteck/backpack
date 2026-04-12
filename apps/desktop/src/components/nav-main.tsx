@@ -30,7 +30,7 @@ export type NavMainItem = {
 export function NavMain({ items }: { items: NavMainItem[] }) {
 	return (
 		<SidebarGroup>
-			<SidebarGroupLabel>Backpack</SidebarGroupLabel>
+			<SidebarGroupLabel>Menu</SidebarGroupLabel>
 			<SidebarMenu>
 				{items.map((item) =>
 					item.items?.length ? (

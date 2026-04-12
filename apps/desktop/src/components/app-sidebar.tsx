@@ -70,13 +70,13 @@ export function AppSidebar({ className, ...props }: React.ComponentProps<typeof 
 			variant="inset"
 			collapsible="offcanvas"
 			className={cn(
-				// hiddenInset: lights overlap content; apply title-bar inset on the rail for both states.
-				runtime?.platform === "darwin" && "!px-2 !pb-2 !pt-14",
+				// hiddenInset: lights overlap content; inset below traffic lights (tighter than pt-14).
+				runtime?.platform === "darwin" && "!px-2 !pb-2 !pt-11",
 				className,
 			)}
 			{...props}
 		>
-			<SidebarHeader>
+			<SidebarHeader className={runtime?.platform === "darwin" ? "!pt-1.5" : undefined}>
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild>
@@ -85,7 +85,7 @@ export function AppSidebar({ className, ...props }: React.ComponentProps<typeof 
 									<PackageIcon className="size-4" />
 								</div>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">Backpack</span>
+									<span className="truncate font-medium">Menu</span>
 									<span className="truncate text-xs">Local-first</span>
 								</div>
 							</Link>

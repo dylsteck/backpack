@@ -23,7 +23,7 @@ export function FlyBrowserOverview({
 	onAddTab,
 }: Props) {
 	return (
-		<div className="absolute inset-0 z-10 overflow-auto bg-background p-8">
+		<div className="absolute inset-0 z-10 overflow-auto bg-background/95 p-8 backdrop-blur-[2px] [animation:fade-in_0.18s_ease-out]">
 			<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 				{tabs.map((tab) => (
 					<button
@@ -78,10 +78,18 @@ export function FlyBrowserOverview({
 				<button
 					type="button"
 					onClick={onAddTab}
-					className="flex aspect-[16/10] flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/20 text-muted-foreground/40 transition-colors hover:border-primary/50 hover:text-primary/60"
+					className={cn(
+						"flex flex-col overflow-hidden rounded-2xl border-2 border-dashed border-muted-foreground/20",
+						"text-muted-foreground/40 shadow-sm transition-colors hover:border-primary/50 hover:text-primary/60",
+					)}
 				>
-					<Plus className="h-8 w-8" />
-					<span className="mt-1 text-xs font-medium">New tab</span>
+					<div className="relative flex aspect-[16/10] w-full items-center justify-center bg-muted/20">
+						<Plus className="h-8 w-8" />
+					</div>
+					<div className="flex items-center gap-2 px-3 py-2 shadow-[inset_0_1px_0_0_hsl(var(--border)/0.5)]">
+						<Plus className="h-3 w-3 shrink-0 opacity-50" aria-hidden />
+						<span className="truncate text-xs font-medium">New tab</span>
+					</div>
 				</button>
 			</div>
 		</div>

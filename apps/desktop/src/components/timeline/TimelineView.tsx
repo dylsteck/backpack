@@ -86,7 +86,7 @@ export function TimelineView() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center justify-between gap-3 bg-background/80 px-8 shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
+			<header className="sticky top-0 z-20 flex h-10 items-center justify-between gap-3 bg-background/80 px-8 shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
 				<h1 className="text-[15px] font-semibold tracking-[-0.02em]">Timeline</h1>
 				<SourceFilter options={sourceOptions} />
 			</header>

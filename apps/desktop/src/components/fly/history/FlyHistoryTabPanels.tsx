@@ -15,7 +15,7 @@ export function FlyHistoryTabPanels({ tab, visitsQuery, analyticsQuery }: Props)
 		<div className="min-h-0 flex-1 overflow-auto bg-background px-3 py-6 md:px-8 md:py-8">
 			{tab === "visited" ? (
 				visitsQuery.isLoading ? (
-					<p className="font-mono text-sm text-muted-foreground">Loading…</p>
+					<p className="text-sm text-muted-foreground">Loading…</p>
 				) : visitsQuery.error ? (
 					<p className="text-sm text-destructive">Could not load visits.</p>
 				) : (
@@ -24,7 +24,7 @@ export function FlyHistoryTabPanels({ tab, visitsQuery, analyticsQuery }: Props)
 			) : null}
 			{tab === "analytics" ? (
 				analyticsQuery.isLoading ? (
-					<p className="font-mono text-sm text-muted-foreground">Loading…</p>
+					<p className="text-sm text-muted-foreground">Loading…</p>
 				) : analyticsQuery.error ? (
 					<p className="text-sm text-destructive">Could not load analytics.</p>
 				) : analyticsQuery.data ? (
