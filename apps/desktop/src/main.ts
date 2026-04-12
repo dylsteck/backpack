@@ -11,6 +11,11 @@ const inDevelopment = process.env.NODE_ENV === "development";
 let mainWindow: BrowserWindow | null = null;
 let backpack: Backpack | null = null;
 
+function getBackpack(): Backpack {
+	backpack ??= new Backpack();
+	return backpack;
+}
+
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
 
@@ -25,7 +30,7 @@ function createWindow() {
 		minHeight: 600,
 		icon: iconPath,
 		titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
-		trafficLightPosition: process.platform === "darwin" ? { x: 18, y: 16 } : undefined,
+		trafficLightPosition: process.platform === "darwin" ? { x: 18, y: 12 } : undefined,
 		webPreferences: {
 			preload,
 			contextIsolation: true,
@@ -47,9 +52,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-	backpack = new Backpack();
-	registerIpcHandlers(backpack);
 	createWindow();
+	registerIpcHandlers(getBackpack);
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();

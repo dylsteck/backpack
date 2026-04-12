@@ -47,11 +47,14 @@ interface ThemeApi {
 
 declare global {
 	interface Window {
+		runtime?: { readonly platform: NodeJS.Platform };
 		backpack: BackpackApi;
 		win: WindowApi;
 		theme: ThemeApi;
 	}
 }
+
+export const runtime: Window["runtime"] = window.runtime;
 
 export const backpack: BackpackApi = window.backpack;
 export const winApi: WindowApi = window.win;

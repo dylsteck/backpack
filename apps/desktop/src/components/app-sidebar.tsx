@@ -22,6 +22,8 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { runtime } from "@/lib/backpack-client";
 
 const navMain = [
 	{
@@ -62,9 +64,18 @@ const navSecondary = [
 	},
 ];
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
-		<Sidebar variant="inset" collapsible="icon" {...props}>
+		<Sidebar
+			variant="inset"
+			collapsible="icon"
+			className={cn(
+				// hiddenInset: lights overlap content; apply title-bar inset on the rail for both states.
+				runtime?.platform === "darwin" && "!px-2 !pb-2 !pt-14",
+				className,
+			)}
+			{...props}
+		>
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>

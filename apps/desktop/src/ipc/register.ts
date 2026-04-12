@@ -2,16 +2,19 @@ import { BrowserWindow, ipcMain, nativeTheme } from "electron";
 import type { Backpack } from "@backpack/sdk";
 import { SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
 
-export function registerIpcHandlers(backpack: Backpack): void {
-	ipcMain.handle(SDK_CHANNELS.timeline, (_e, opts) => backpack.timeline(opts));
-	ipcMain.handle(SDK_CHANNELS.items, (_e, opts) => backpack.items(opts));
-	ipcMain.handle(SDK_CHANNELS.get, (_e, id: string) => backpack.get(id));
-	ipcMain.handle(SDK_CHANNELS.search, (_e, query: string, opts) => backpack.search(query, opts));
-	ipcMain.handle(SDK_CHANNELS.status, () => backpack.status());
-	ipcMain.handle(SDK_CHANNELS.connections, () => backpack.connections());
-	ipcMain.handle(SDK_CHANNELS.apps, () => backpack.apps());
-	ipcMain.handle(SDK_CHANNELS.dbPath, () => backpack.dbPath);
+export function registerIpcHandlers(getBackpack: () => Backpack): void {
+	ipcMain.handle(SDK_CHANNELS.timeline, (_e, opts) => getBackpack().timeline(opts));
+	ipcMain.handle(SDK_CHANNELS.items, (_e, opts) => getBackpack().items(opts));
+	ipcMain.handle(SDK_CHANNELS.get, (_e, id: string) => getBackpack().get(id));
+	ipcMain.handle(SDK_CHANNELS.search, (_e, query: string, opts) =>
+		getBackpack().search(query, opts),
+	);
+	ipcMain.handle(SDK_CHANNELS.status, () => getBackpack().status());
+	ipcMain.handle(SDK_CHANNELS.connections, () => getBackpack().connections());
+	ipcMain.handle(SDK_CHANNELS.apps, () => getBackpack().apps());
+	ipcMain.handle(SDK_CHANNELS.dbPath, () => getBackpack().dbPath);
 	ipcMain.handle(SDK_CHANNELS.setDbPath, (_e, dbPath: string) => {
+		const backpack = getBackpack();
 		backpack.setDbPath(dbPath);
 		return backpack.dbPath;
 	});

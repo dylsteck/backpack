@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
 
+const runtime = {
+	platform: process.platform,
+} as const;
+
 const backpackApi = {
 	timeline: (opts?: unknown) => ipcRenderer.invoke(SDK_CHANNELS.timeline, opts),
 	items: (opts?: unknown) => ipcRenderer.invoke(SDK_CHANNELS.items, opts),
@@ -26,6 +30,7 @@ const themeApi = {
 };
 
 export function exposeContexts(): void {
+	contextBridge.exposeInMainWorld("runtime", runtime);
 	contextBridge.exposeInMainWorld("backpack", backpackApi);
 	contextBridge.exposeInMainWorld("win", windowApi);
 	contextBridge.exposeInMainWorld("theme", themeApi);
