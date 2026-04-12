@@ -73,8 +73,8 @@ export function OnboardingFlow() {
 	};
 
 	return (
-		<div className="flex h-full items-center justify-center p-6">
-			<Card className="w-full max-w-2xl shadow-xl shadow-black/5">
+		<div className="flex h-full items-center justify-center p-8">
+			<Card className="w-full max-w-2xl shadow-xl shadow-black/[0.07] dark:shadow-black/40">
 				{step === 1 && (
 					<>
 						<CardHeader>

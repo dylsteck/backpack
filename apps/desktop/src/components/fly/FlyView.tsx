@@ -161,14 +161,14 @@ export function FlyView() {
 					</button>
 				</div>
 
-				<div className="flex-1 overflow-auto p-6">
+				<div className="flex-1 overflow-auto p-8">
 					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 						{tabs.map((tab) => (
 							<button
 								key={tab.id}
 								onClick={() => selectTab(tab.id)}
 								className={cn(
-									"group relative flex flex-col overflow-hidden rounded-xl bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:ring-2 hover:ring-primary/50",
+									"group relative flex flex-col overflow-hidden rounded-2xl bg-card shadow-sm transition-all duration-200 ease-out hover:shadow-md hover:ring-2 hover:ring-primary/40",
 									tab.id === activeTabId && "ring-2 ring-primary",
 								)}
 							>
@@ -225,8 +225,8 @@ export function FlyView() {
 							className={cn(
 								"group flex min-w-0 max-w-48 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 py-1.5 text-xs transition-colors",
 								tab.id === activeTabId
-									? "bg-card text-foreground shadow-[0_1px_3px_hsl(0_0%_0%/0.08)]"
-									: "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+									? "bg-card text-foreground shadow-[0_1px_3px_hsl(0_0%_0%/0.06),0_2px_8px_hsl(0_0%_0%/0.04)]"
+									: "text-muted-foreground hover:bg-background/55 hover:text-foreground",
 							)}
 						>
 							<Globe className="h-3 w-3 shrink-0" />
@@ -274,7 +274,7 @@ export function FlyView() {
 						}}
 						onBlur={() => setUrlFocused(false)}
 						placeholder="Search or enter URL..."
-						className="h-8 w-full rounded-lg bg-secondary/60 px-3 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+						className="h-9 w-full rounded-xl bg-secondary/60 px-3.5 text-[13px] text-foreground outline-none transition-all duration-200 placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
 					/>
 				</form>
 				<button

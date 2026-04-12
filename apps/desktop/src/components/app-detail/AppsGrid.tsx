@@ -77,10 +77,10 @@ export function AppsGrid() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center bg-background/80 px-6 text-[15px] font-semibold tracking-tight shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
+			<header className="sticky top-0 z-20 flex h-12 items-center bg-background/80 px-8 text-[15px] font-semibold tracking-[-0.02em] shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
 				Apps
 			</header>
-			<div className="flex-1 overflow-y-auto p-6">
+			<div className="flex-1 overflow-y-auto p-8">
 				{isLoading && (
 					<p className="text-sm text-muted-foreground">Loading…</p>
 				)}

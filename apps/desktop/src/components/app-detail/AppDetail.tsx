@@ -52,10 +52,10 @@ function TabButton({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"relative h-9 px-3 text-[13px] font-medium transition-colors",
+				"relative h-9 rounded-lg px-3 text-[13px] font-medium transition-all duration-200 ease-out",
 				active
 					? "text-foreground"
-					: "text-muted-foreground hover:text-foreground",
+					: "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground",
 			)}
 		>
 			{label}
@@ -275,7 +275,7 @@ export function AppDetail() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-6 text-sm font-medium shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
+			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-8 text-sm font-medium shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
 				<Button asChild variant="ghost" size="icon">
 					<Link to="/apps">
 						<ArrowLeft className="h-4 w-4" />
@@ -286,7 +286,7 @@ export function AppDetail() {
 			</header>
 
 			{app && (
-				<div className="sticky top-12 z-20 flex h-9 items-center gap-1 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.3)] backdrop-blur-xl">
+				<div className="sticky top-12 z-20 flex h-9 items-center gap-1 bg-background/80 px-8 shadow-[0_1px_0_0_hsl(var(--border)/0.3)] backdrop-blur-2xl">
 					<TabButton
 						label="Home"
 						active={tab === "home"}
@@ -300,7 +300,7 @@ export function AppDetail() {
 				</div>
 			)}
 
-			<div className="flex-1 overflow-y-auto p-6">
+			<div className="flex-1 overflow-y-auto p-8">
 				{apps.isLoading && (
 					<p className="text-sm text-muted-foreground">Loading…</p>
 				)}

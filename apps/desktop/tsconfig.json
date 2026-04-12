@@ -19,6 +19,6 @@
 		},
 		"types": ["node", "vite/client"]
 	},
-	"include": ["src/**/*", "forge.config.ts", "vite.*.config.mts"],
+	"include": ["src/**/*", "forge.config.ts", "vite.config.mts", "vite.*.config.mts"],
 	"exclude": ["node_modules", ".vite"]
 }

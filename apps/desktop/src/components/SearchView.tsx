@@ -60,17 +60,17 @@ export function SearchView() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
+			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-8 shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
 				<SearchIcon className="h-4 w-4 text-muted-foreground" />
 				<Input
 					autoFocus
 					placeholder="Search everything…"
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					className="h-8 border-none text-[13px] shadow-none focus-visible:ring-0"
+					className="h-10 border-none bg-transparent text-[13px] shadow-none focus-visible:ring-0"
 				/>
 			</header>
-			<div className="flex-1 overflow-y-auto p-6">
+			<div className="flex-1 overflow-y-auto p-8">
 				{!enabled && (
 					<p className="text-sm text-muted-foreground">
 						Type at least 3 characters to search.

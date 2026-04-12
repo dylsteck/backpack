@@ -47,11 +47,11 @@ function EntryShell({
 		<button
 			type="button"
 			onClick={onClick}
-			className="group flex w-full items-start gap-3 rounded-xl p-3 text-left transition-all duration-200 hover:bg-card hover:shadow-sm"
+			className="group flex w-full items-start gap-3.5 rounded-2xl p-3.5 text-left transition-all duration-200 ease-out hover:bg-card hover:shadow-[0_1px_3px_hsl(0_0%_0%/0.06),0_4px_12px_hsl(0_0%_0%/0.04)] dark:hover:shadow-[0_1px_3px_hsl(0_0%_0%/0.2),0_4px_12px_hsl(0_0%_0%/0.12)]"
 		>
 			<div
 				className={cn(
-					"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+					"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
 					accent,
 				)}
 			>
@@ -59,7 +59,9 @@ function EntryShell({
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<div className="flex items-baseline justify-between gap-2">
-					<span className="truncate text-[13px] font-medium">{title}</span>
+					<span className="truncate text-[13px] font-semibold tracking-[-0.01em]">
+						{title}
+					</span>
 					<span className="shrink-0 text-[11px] text-muted-foreground/70">
 						{meta}
 					</span>

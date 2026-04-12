@@ -86,11 +86,11 @@ export function TimelineView() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="sticky top-0 z-20 flex h-12 items-center justify-between gap-3 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
-				<h1 className="text-[15px] font-semibold tracking-tight">Timeline</h1>
+			<header className="sticky top-0 z-20 flex h-12 items-center justify-between gap-3 bg-background/80 px-8 shadow-[0_1px_0_0_hsl(var(--border)/0.45)] backdrop-blur-2xl">
+				<h1 className="text-[15px] font-semibold tracking-[-0.02em]">Timeline</h1>
 				<SourceFilter options={sourceOptions} />
 			</header>
-			<div className="flex-1 overflow-y-auto px-6 py-4">
+			<div className="flex-1 overflow-y-auto px-8 py-5">
 				{timeline.isLoading && (
 					<p className="text-sm text-muted-foreground">Loading…</p>
 				)}

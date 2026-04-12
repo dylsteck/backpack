@@ -70,4 +70,11 @@ export default tseslint.config(
 			"no-restricted-syntax": "off",
 		},
 	},
+	{
+		files: ["src/components/ui/sidebar.tsx"],
+		rules: {
+			// Ref sync for Cmd/Ctrl+B handler registered once via useMountEffect (see toggleSidebarRef).
+			"react-hooks/refs": "off",
+		},
+	},
 );

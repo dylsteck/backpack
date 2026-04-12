@@ -179,6 +179,8 @@ bun install
 
 **Native module mismatch (better-sqlite3):** run `bun install` inside `apps/desktop` — electron-forge rebuilds native modules against the Electron ABI automatically on `start`.
 
+**shadcn CLI slow or stuck on “Validating import alias”:** Run commands from `apps/desktop` (where `components.json` lives). After `shadcn init --preset <code>`, the preset is already applied—avoid re-running `shadcn apply` with the same code unless you intend to merge updates (it re-runs validation and may appear to hang). Prefer `bunx --bun shadcn@latest add <component|block> -y` for new UI. This repo keeps a root `vite.config.mts` so the CLI detects Vite (Electron Forge still uses `vite.renderer.config.mts` for builds).
+
 ---
 
 ## Additional resources
