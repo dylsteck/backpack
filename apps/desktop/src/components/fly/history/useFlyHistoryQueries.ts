@@ -21,20 +21,6 @@ export function useFlyHistoryQueries(filter: string) {
 		staleTime: 15_000,
 	});
 
-	const searchesQuery = useQuery({
-		queryKey: flyQueryKeys.searches(filter),
-		queryFn: () => {
-			const rangeTo = Date.now();
-			return flyApi.listSearches({
-				q: filter || undefined,
-				limit: 300,
-				from: rangeTo - RANGE_MS,
-				to: rangeTo,
-			});
-		},
-		staleTime: 15_000,
-	});
-
 	const analyticsQuery = useQuery({
 		queryKey: ["fly-analytics", "rolling-30d"] as const,
 		queryFn: () => {
@@ -49,5 +35,5 @@ export function useFlyHistoryQueries(filter: string) {
 		onSuccess: () => invalidateFlyHistoryQueries(queryClient),
 	});
 
-	return { visitsQuery, searchesQuery, analyticsQuery, deleteMut };
+	return { visitsQuery, analyticsQuery, deleteMut };
 }

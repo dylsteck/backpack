@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, nativeTheme } from "electron";
 import path from "node:path";
 import { Backpack } from "@backpack/sdk";
 import { registerIpcHandlers } from "./ipc/register";
@@ -16,6 +16,11 @@ function getBackpack(): Backpack {
 	return backpack;
 }
 
+function windowBackgroundHex(): string {
+	// Match app light/dark shells so the window does not flash white before the renderer paints.
+	return nativeTheme.shouldUseDarkColors ? "#252524" : "#ffffff";
+}
+
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
 
@@ -28,6 +33,8 @@ function createWindow() {
 		height: 800,
 		minWidth: 960,
 		minHeight: 600,
+		show: false,
+		backgroundColor: windowBackgroundHex(),
 		icon: iconPath,
 		titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
 		trafficLightPosition: process.platform === "darwin" ? { x: 18, y: 12 } : undefined,
@@ -38,6 +45,10 @@ function createWindow() {
 			sandbox: false,
 			webviewTag: true,
 		},
+	});
+
+	mainWindow.once("ready-to-show", () => {
+		mainWindow?.show();
 	});
 
 	if (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== "undefined" && MAIN_WINDOW_VITE_DEV_SERVER_URL) {
