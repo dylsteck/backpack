@@ -2,11 +2,10 @@ import { formatDateLabel } from "./format";
 
 export function DateSeparator({ dateKey }: { dateKey: string }) {
 	return (
-		<div className="sticky top-0 z-10 -mx-6 flex items-center gap-3 bg-background/95 px-6 py-2 backdrop-blur">
-			<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+		<div className="sticky top-0 z-10 -mx-6 bg-background/80 px-6 py-3 backdrop-blur-xl">
+			<span className="text-[11px] font-medium text-muted-foreground/60">
 				{formatDateLabel(dateKey)}
 			</span>
-			<div className="h-px flex-1 bg-border" />
 		</div>
 	);
 }

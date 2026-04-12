@@ -4,10 +4,10 @@ import { formatTime } from "./format";
 function Field({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="flex flex-col gap-0.5">
-			<span className="text-xs uppercase tracking-wide text-muted-foreground">
+			<span className="text-[11px] font-medium text-muted-foreground/60">
 				{label}
 			</span>
-			<span className="break-all text-sm">{value}</span>
+			<span className="break-all text-[13px]">{value}</span>
 		</div>
 	);
 }
@@ -16,7 +16,7 @@ export function renderEntryDetail(item: Item) {
 	const data = item.data as Record<string, unknown>;
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-5">
 			<Field label="Source" value={item.source} />
 			<Field label="Type" value={item.type} />
 			<Field

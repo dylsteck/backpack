@@ -27,20 +27,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 		<FilterProvider>
 			<DetailSidebarProvider>
 				<div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-					<aside className="flex w-56 shrink-0 flex-col border-r bg-sidebar">
+					<aside className="flex w-56 shrink-0 flex-col bg-sidebar/80 backdrop-blur-xl backdrop-saturate-[180%]">
 						<div className="flex h-13 items-end pb-2 pl-20 pr-4 drag">
-							<span className="text-sm font-semibold tracking-tight text-foreground/80">Backpack</span>
+							<span className="text-[13px] font-semibold tracking-tight text-foreground/60">
+								Backpack
+							</span>
 						</div>
-						<nav className="flex flex-1 flex-col gap-0.5 px-2 pt-2 pb-2 no-drag">
+						<nav className="flex flex-1 flex-col gap-1 px-3 pt-2 pb-2 no-drag">
 							{navItems.map(({ to, label, icon: Icon, exact }) => (
 								<Link
 									key={to}
 									to={to}
 									className={cn(
-										"flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+										"flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground/70 transition-colors hover:bg-foreground/[0.06] hover:text-foreground",
 									)}
 									activeProps={{
-										className: "bg-accent text-accent-foreground",
+										className:
+											"bg-foreground/[0.08] font-semibold text-foreground hover:bg-foreground/[0.08] hover:text-foreground",
 									}}
 									activeOptions={{ exact: exact ?? false }}
 								>
@@ -49,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 								</Link>
 							))}
 						</nav>
-						<div className="border-t p-2 no-drag">
+						<div className="p-3 no-drag">
 							<ThemeToggle />
 						</div>
 					</aside>

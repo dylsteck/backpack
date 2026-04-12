@@ -34,7 +34,7 @@ export function ThemeToggle() {
 		<Button
 			variant="ghost"
 			size="sm"
-			className="w-full justify-start gap-2 text-muted-foreground"
+			className="w-full justify-start gap-2.5 rounded-lg text-[13px] text-sidebar-foreground/60 hover:text-foreground"
 			onClick={() => setTheme.mutate(nextMode[current])}
 		>
 			<Icon className="h-4 w-4" />

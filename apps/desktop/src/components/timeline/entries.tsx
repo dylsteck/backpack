@@ -47,11 +47,11 @@ function EntryShell({
 		<button
 			type="button"
 			onClick={onClick}
-			className="group flex w-full items-start gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent"
+			className="group flex w-full items-start gap-3 rounded-xl p-3 text-left transition-all duration-200 hover:bg-card hover:shadow-sm"
 		>
 			<div
 				className={cn(
-					"flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+					"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
 					accent,
 				)}
 			>
@@ -59,8 +59,10 @@ function EntryShell({
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<div className="flex items-baseline justify-between gap-2">
-					<span className="truncate text-sm font-medium">{title}</span>
-					<span className="shrink-0 text-xs text-muted-foreground">{meta}</span>
+					<span className="truncate text-[13px] font-medium">{title}</span>
+					<span className="shrink-0 text-[11px] text-muted-foreground/70">
+						{meta}
+					</span>
 				</div>
 				{children}
 			</div>
@@ -83,13 +85,15 @@ export function CastEntry({
 	return (
 		<EntryShell
 			icon={MessageSquare}
-			accent="bg-purple-500/10 text-purple-500"
+			accent="bg-purple-500/12 text-purple-500"
 			meta={formatTime(item.timestamp)}
 			title={author || "Cast"}
 			onClick={onClick}
 		>
 			{text && (
-				<p className="line-clamp-2 text-sm text-muted-foreground">{text}</p>
+				<p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground/80">
+					{text}
+				</p>
 			)}
 			{likes !== null && (
 				<span className="text-xs text-muted-foreground">
@@ -122,13 +126,13 @@ export function BrowserHistoryEntry({
 	return (
 		<EntryShell
 			icon={Globe}
-			accent="bg-sky-500/10 text-sky-500"
+			accent="bg-sky-500/12 text-sky-500"
 			meta={formatTime(item.timestamp)}
 			title={title || url || "Page visit"}
 			onClick={onClick}
 		>
 			{host && (
-				<span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+				<span className="flex items-center gap-1 truncate text-[13px] leading-relaxed text-muted-foreground/80">
 					<ExternalLink className="h-3 w-3" />
 					{host}
 					{visits ? ` · ${visits} visits` : ""}
@@ -156,15 +160,15 @@ export function TellerTransactionEntry({
 			icon={CreditCard}
 			accent={
 				isCredit
-					? "bg-emerald-500/10 text-emerald-500"
-					: "bg-rose-500/10 text-rose-500"
+					? "bg-emerald-500/12 text-emerald-500"
+					: "bg-rose-500/12 text-rose-500"
 			}
 			meta={formatTime(item.timestamp)}
 			title={desc || "Transaction"}
 			onClick={onClick}
 		>
 			<div className="flex items-center justify-between gap-2">
-				<span className="text-xs text-muted-foreground">
+				<span className="text-[13px] leading-relaxed text-muted-foreground/80">
 					{category || item.type}
 				</span>
 				{amount !== null && (
@@ -203,7 +207,9 @@ export function GenericEntry({
 			onClick={onClick}
 		>
 			{snippet && (
-				<p className="line-clamp-2 text-sm text-muted-foreground">{snippet}</p>
+				<p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground/80">
+					{snippet}
+				</p>
 			)}
 		</EntryShell>
 	);

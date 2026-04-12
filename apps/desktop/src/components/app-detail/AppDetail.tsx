@@ -52,7 +52,7 @@ function TabButton({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"relative h-9 px-3 text-sm font-medium transition-colors",
+				"relative h-9 px-3 text-[13px] font-medium transition-colors",
 				active
 					? "text-foreground"
 					: "text-muted-foreground hover:text-foreground",
@@ -60,7 +60,7 @@ function TabButton({
 		>
 			{label}
 			{active && (
-				<span className="absolute inset-x-0 -bottom-px h-px bg-foreground" />
+				<span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" />
 			)}
 		</button>
 	);
@@ -70,10 +70,10 @@ function StatusPill({ connected }: { connected: boolean }) {
 	return (
 		<span
 			className={cn(
-				"flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+				"flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
 				connected
-					? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-					: "border-border text-muted-foreground",
+					? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+					: "bg-muted text-muted-foreground",
 			)}
 		>
 			<span
@@ -122,7 +122,7 @@ function HomeTab({ appId }: { appId: string }) {
 			{groups.map((group) => (
 				<section key={group.dateKey} className="flex flex-col gap-2">
 					<DateSeparator dateKey={group.dateKey} />
-					<ul className="flex flex-col gap-2">
+					<ul className="flex flex-col gap-1">
 						{group.items.map((item) => (
 							<li key={item.id}>
 								<TimelineEntry item={item} onClick={() => show(item)} />
@@ -275,7 +275,7 @@ export function AppDetail() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex h-12 items-center gap-3 border-b px-6 text-sm font-medium">
+			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-6 text-sm font-medium shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
 				<Button asChild variant="ghost" size="icon">
 					<Link to="/apps">
 						<ArrowLeft className="h-4 w-4" />
@@ -286,7 +286,7 @@ export function AppDetail() {
 			</header>
 
 			{app && (
-				<div className="flex h-9 items-center gap-1 border-b px-6">
+				<div className="sticky top-12 z-20 flex h-9 items-center gap-1 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.3)] backdrop-blur-xl">
 					<TabButton
 						label="Home"
 						active={tab === "home"}

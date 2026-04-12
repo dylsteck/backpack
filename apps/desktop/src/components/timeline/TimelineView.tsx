@@ -86,8 +86,8 @@ export function TimelineView() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex h-12 items-center justify-between gap-3 border-b px-6">
-				<h1 className="text-sm font-medium">Timeline</h1>
+			<header className="sticky top-0 z-20 flex h-12 items-center justify-between gap-3 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
+				<h1 className="text-[15px] font-semibold tracking-tight">Timeline</h1>
 				<SourceFilter options={sourceOptions} />
 			</header>
 			<div className="flex-1 overflow-y-auto px-6 py-4">
@@ -108,7 +108,7 @@ export function TimelineView() {
 					{groups.map((group) => (
 						<section key={group.dateKey} className="flex flex-col gap-2">
 							<DateSeparator dateKey={group.dateKey} />
-							<ul className="flex flex-col gap-2">
+							<ul className="flex flex-col gap-1">
 								{group.items.map((item) => (
 									<li key={item.id}>
 										<TimelineEntry item={item} onClick={() => show(item)} />

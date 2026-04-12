@@ -77,7 +77,7 @@ export function AppsGrid() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex h-12 items-center border-b px-6 text-sm font-medium">
+			<header className="sticky top-0 z-20 flex h-12 items-center bg-background/80 px-6 text-[15px] font-semibold tracking-tight shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
 				Apps
 			</header>
 			<div className="flex-1 overflow-y-auto p-6">
@@ -102,16 +102,16 @@ export function AppsGrid() {
 							params={{ appId: app.id }}
 							className="block"
 						>
-							<Card className="h-full transition-colors hover:bg-accent">
-								<CardContent className="flex h-full flex-col gap-2 p-4">
+							<Card className="h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+								<CardContent className="flex h-full flex-col gap-2 p-5">
 									<div className="flex items-start justify-between gap-2">
-										<CardTitle className="text-sm">{app.name}</CardTitle>
+										<CardTitle>{app.name}</CardTitle>
 										<span
 											className={cn(
-												"flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+												"flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
 												connected
-													? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-													: "border-border text-muted-foreground",
+													? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+													: "bg-muted text-muted-foreground",
 											)}
 										>
 											<span

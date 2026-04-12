@@ -74,12 +74,12 @@ export function OnboardingFlow() {
 
 	return (
 		<div className="flex h-full items-center justify-center p-6">
-			<Card className="w-full max-w-2xl">
+			<Card className="w-full max-w-2xl shadow-xl shadow-black/5">
 				{step === 1 && (
 					<>
 						<CardHeader>
 							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+								<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
 									<Package className="h-5 w-5" />
 								</div>
 								<div className="flex flex-col gap-1">
@@ -110,7 +110,7 @@ export function OnboardingFlow() {
 					<>
 						<CardHeader>
 							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+								<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
 									<Database className="h-5 w-5" />
 								</div>
 								<div className="flex flex-col gap-1">
@@ -177,7 +177,7 @@ export function OnboardingFlow() {
 					<>
 						<CardHeader>
 							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+								<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
 									<Plug className="h-5 w-5" />
 								</div>
 								<div className="flex flex-col gap-1">
@@ -214,9 +214,9 @@ export function OnboardingFlow() {
 												type="button"
 												onClick={() => toggleApp(app.id)}
 												className={cn(
-													"flex flex-col items-start gap-2 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent/40",
+													"flex flex-col items-start gap-2 rounded-xl bg-card/60 p-3 text-left transition-all duration-200 hover:bg-card hover:shadow-sm",
 													isSelected &&
-														"border-primary bg-primary/5 ring-1 ring-primary",
+														"bg-primary/5 shadow-sm ring-1 ring-primary/30",
 												)}
 											>
 												<div className="flex w-full items-center justify-between gap-2">
@@ -290,8 +290,10 @@ function StepIndicator({ step }: { step: Step }) {
 				<span
 					key={n}
 					className={cn(
-						"h-1.5 w-1.5 rounded-full transition-colors",
-						n === step ? "bg-primary" : "bg-muted-foreground/30",
+						"h-1.5 rounded-full transition-all duration-300",
+						n === step
+							? "w-6 bg-primary"
+							: "w-1.5 bg-muted-foreground/30",
 					)}
 				/>
 			))}

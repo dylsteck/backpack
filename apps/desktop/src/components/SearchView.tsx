@@ -60,14 +60,14 @@ export function SearchView() {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex h-12 items-center gap-3 border-b px-6">
+			<header className="sticky top-0 z-20 flex h-12 items-center gap-3 bg-background/80 px-6 shadow-[0_1px_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl">
 				<SearchIcon className="h-4 w-4 text-muted-foreground" />
 				<Input
 					autoFocus
 					placeholder="Search everything…"
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					className="h-8 border-none shadow-none focus-visible:ring-0"
+					className="h-8 border-none text-[13px] shadow-none focus-visible:ring-0"
 				/>
 			</header>
 			<div className="flex-1 overflow-y-auto p-6">
@@ -87,7 +87,7 @@ export function SearchView() {
 				<div className="flex flex-col gap-6">
 					{groups.map((group) => (
 						<section key={group.source} className="flex flex-col gap-2">
-							<h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+							<h2 className="text-[11px] font-medium text-muted-foreground/60">
 								{group.source}
 							</h2>
 							<ul className="flex flex-col gap-2">
@@ -100,11 +100,9 @@ export function SearchView() {
 											}}
 											className="block w-full text-left"
 										>
-											<Card className="transition-colors hover:bg-accent">
-												<CardContent className="p-4">
-													<CardTitle className="text-sm">
-														{result.title ?? result.type}
-													</CardTitle>
+											<Card className="transition-all duration-200 hover:shadow-sm">
+												<CardContent className="p-5">
+													<CardTitle>{result.title ?? result.type}</CardTitle>
 													{result.snippet && (
 														<CardDescription className="mt-1 line-clamp-2">
 															{result.snippet}

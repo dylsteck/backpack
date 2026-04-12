@@ -141,7 +141,7 @@ export function FlyView() {
 	if (viewMode === "grid") {
 		return (
 			<div className="flex flex-1 flex-col overflow-hidden">
-				<div className="flex items-center justify-between border-b px-4 py-3">
+				<div className="flex items-center justify-between px-4 py-3 shadow-[0_1px_0_0_hsl(var(--border)/0.5)]">
 					<button
 						onClick={() => setViewMode("browser")}
 						className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -168,7 +168,7 @@ export function FlyView() {
 								key={tab.id}
 								onClick={() => selectTab(tab.id)}
 								className={cn(
-									"group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all hover:ring-2 hover:ring-primary/50 hover:shadow-lg",
+									"group relative flex flex-col overflow-hidden rounded-xl bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:ring-2 hover:ring-primary/50",
 									tab.id === activeTabId && "ring-2 ring-primary",
 								)}
 							>
@@ -194,7 +194,7 @@ export function FlyView() {
 										<X className="h-3 w-3" />
 									</button>
 								</div>
-								<div className="flex items-center gap-2 border-t px-3 py-2">
+								<div className="flex items-center gap-2 px-3 py-2 shadow-[inset_0_1px_0_0_hsl(var(--border)/0.5)]">
 									<Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
 									<span className="truncate text-xs font-medium">{tab.title}</span>
 								</div>
@@ -216,7 +216,7 @@ export function FlyView() {
 
 	return (
 		<div className="flex flex-1 flex-col overflow-hidden">
-			<div className="flex items-center gap-0.5 border-b bg-muted/30 px-1 pt-1">
+			<div className="flex items-center gap-0.5 bg-secondary/40 px-1 pt-1 shadow-[0_1px_0_0_hsl(var(--border)/0.5)]">
 				<div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
 					{tabs.map((tab) => (
 						<div
@@ -225,7 +225,7 @@ export function FlyView() {
 							className={cn(
 								"group flex min-w-0 max-w-48 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 py-1.5 text-xs transition-colors",
 								tab.id === activeTabId
-									? "bg-background text-foreground shadow-sm"
+									? "bg-card text-foreground shadow-[0_1px_3px_hsl(0_0%_0%/0.08)]"
 									: "text-muted-foreground hover:bg-background/50 hover:text-foreground",
 							)}
 						>
@@ -251,7 +251,7 @@ export function FlyView() {
 				</button>
 			</div>
 
-			<div className="flex items-center gap-2 border-b px-2 py-1.5">
+			<div className="flex items-center gap-2 px-2 py-1.5 shadow-[0_1px_0_0_hsl(var(--border)/0.5)]">
 				<div className="flex items-center gap-0.5">
 					<button className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent">
 						<ArrowLeft className="h-3.5 w-3.5" />
@@ -274,7 +274,7 @@ export function FlyView() {
 						}}
 						onBlur={() => setUrlFocused(false)}
 						placeholder="Search or enter URL..."
-						className="h-8 w-full rounded-lg bg-muted px-3 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+						className="h-8 w-full rounded-lg bg-secondary/60 px-3 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
 					/>
 				</form>
 				<button

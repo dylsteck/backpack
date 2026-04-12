@@ -12,16 +12,16 @@ export function SourceFilter({ options }: { options: SourceOption[] }) {
 	const all = [{ value: "all", label: "All" }, ...options];
 
 	return (
-		<div className="flex items-center gap-1 rounded-md border bg-background p-0.5 text-xs">
+		<div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5 text-[12px]">
 			{all.map((opt) => (
 				<button
 					key={opt.value}
 					type="button"
 					onClick={() => setSource(opt.value)}
 					className={cn(
-						"rounded-sm px-2.5 py-1 transition-colors",
+						"rounded-md px-2.5 py-1 transition-colors",
 						source === opt.value
-							? "bg-accent text-accent-foreground"
+							? "bg-card text-foreground shadow-sm"
 							: "text-muted-foreground hover:text-foreground",
 					)}
 				>
