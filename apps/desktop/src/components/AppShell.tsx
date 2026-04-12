@@ -27,8 +27,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 			<DetailSidebarProvider>
 				<div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
 					<aside className="flex w-56 shrink-0 flex-col border-r bg-sidebar">
-						<div className="flex h-12 items-center gap-2 border-b px-4 text-sm font-semibold drag">
-							<Package className="h-4 w-4" />
+						<div className="flex h-13 items-center gap-2 border-b pl-20 pr-4 text-sm font-semibold tracking-tight drag">
+							<Package className="h-4 w-4 text-primary" />
 							<span>Backpack</span>
 						</div>
 						<nav className="flex flex-1 flex-col gap-1 p-2 no-drag">
@@ -54,6 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 						</div>
 					</aside>
 					<main className="flex flex-1 flex-col overflow-hidden">
+						<div className="h-13 shrink-0 drag" />
 						{children}
 					</main>
 					<DetailSidebar />
