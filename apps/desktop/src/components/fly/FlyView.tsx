@@ -21,11 +21,6 @@ const STARTER_TABS: Tab[] = [
 
 type ViewMode = "browser" | "grid";
 
-interface WebviewElement extends HTMLElement {
-	capturePage: () => Promise<{ toDataURL: () => string }>;
-	getTitle: () => string;
-}
-
 export function FlyView() {
 	const [tabs, setTabs] = useState<Tab[]>(STARTER_TABS);
 	const [activeTabId, setActiveTabId] = useState(STARTER_TABS[0].id);
@@ -33,27 +28,37 @@ export function FlyView() {
 	const [urlInput, setUrlInput] = useState("");
 	const [urlFocused, setUrlFocused] = useState(false);
 	const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
-	const webviewRef = useRef<WebviewElement | null>(null);
+	const webviewRefs = useRef<Map<string, WebviewHTMLElement>>(new Map());
 
 	const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
 
-	const captureCurrentTab = useCallback(async () => {
-		const wv = webviewRef.current;
-		if (!wv || !activeTabId) return;
-		try {
-			const image = await wv.capturePage();
-			const dataUrl = image.toDataURL();
-			if (dataUrl && dataUrl.length > 100) {
-				setThumbnails((prev) => ({ ...prev, [activeTabId]: dataUrl }));
+	const captureAll = useCallback(async () => {
+		const entries = Array.from(webviewRefs.current.entries());
+		const results = await Promise.allSettled(
+			entries.map(async ([id, wv]) => {
+				const image = await wv.capturePage();
+				const dataUrl = image.toDataURL();
+				if (dataUrl && dataUrl.length > 100) return [id, dataUrl] as const;
+				return null;
+			}),
+		);
+		const updates: Record<string, string> = {};
+		for (const r of results) {
+			if (r.status === "fulfilled" && r.value) {
+				updates[r.value[0]] = r.value[1];
 			}
-			const title = wv.getTitle?.();
-			if (title) {
-				setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, title } : t)));
-			}
-		} catch {
-			// webview not ready yet
 		}
-	}, [activeTabId]);
+		if (Object.keys(updates).length > 0) {
+			setThumbnails((prev) => ({ ...prev, ...updates }));
+		}
+	}, []);
+
+	const syncTitle = useCallback((id: string, wv: WebviewHTMLElement) => {
+		const title = wv.getTitle?.();
+		if (title) {
+			setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+		}
+	}, []);
 
 	const addTab = useCallback(() => {
 		const tab = makeTab();
@@ -78,6 +83,7 @@ export function FlyView() {
 				}
 				return next;
 			});
+			webviewRefs.current.delete(id);
 			setThumbnails((prev) => {
 				const next = { ...prev };
 				delete next[id];
@@ -87,26 +93,15 @@ export function FlyView() {
 		[activeTabId],
 	);
 
-	const switchTab = useCallback(
-		async (id: string) => {
-			await captureCurrentTab();
-			setActiveTabId(id);
-		},
-		[captureCurrentTab],
-	);
-
-	const selectTab = useCallback(
-		(id: string) => {
-			setActiveTabId(id);
-			setViewMode("browser");
-		},
-		[],
-	);
+	const selectTab = useCallback((id: string) => {
+		setActiveTabId(id);
+		setViewMode("browser");
+	}, []);
 
 	const openGrid = useCallback(async () => {
-		await captureCurrentTab();
+		await captureAll();
 		setViewMode("grid");
-	}, [captureCurrentTab]);
+	}, [captureAll]);
 
 	const navigateTo = useCallback(
 		(raw: string) => {
@@ -131,22 +126,17 @@ export function FlyView() {
 		[urlInput, navigateTo],
 	);
 
-	const webviewCallback = useCallback(
-		(node: WebviewElement | null) => {
-			webviewRef.current = node;
-			if (!node) return;
-			const onTitle = () => {
-				const title = node.getTitle?.();
-				if (title) {
-					setTabs((prev) =>
-						prev.map((t) => (t.id === activeTabId ? { ...t, title } : t)),
-					);
-				}
-			};
-			node.addEventListener("page-title-updated", onTitle);
-			return () => node.removeEventListener("page-title-updated", onTitle);
+	const makeWebviewRef = useCallback(
+		(tabId: string) => (node: WebviewHTMLElement | null) => {
+			if (node) {
+				webviewRefs.current.set(tabId, node);
+				const onTitle = () => syncTitle(tabId, node);
+				node.addEventListener("page-title-updated", onTitle);
+			} else {
+				webviewRefs.current.delete(tabId);
+			}
 		},
-		[activeTabId],
+		[syncTitle],
 	);
 
 	if (viewMode === "grid") {
@@ -232,7 +222,7 @@ export function FlyView() {
 					{tabs.map((tab) => (
 						<div
 							key={tab.id}
-							onClick={() => switchTab(tab.id)}
+							onClick={() => setActiveTabId(tab.id)}
 							className={cn(
 								"group flex min-w-0 max-w-48 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 py-1.5 text-xs transition-colors",
 								tab.id === activeTabId
@@ -297,15 +287,19 @@ export function FlyView() {
 				</button>
 			</div>
 
+			{/* All webviews rendered; inactive ones are hidden but still load */}
 			<div className="relative flex-1 overflow-hidden bg-background">
-				{activeTab && (
+				{tabs.map((tab) => (
 					<webview
-						key={activeTab.id}
-						src={activeTab.url}
-						ref={webviewCallback as unknown as React.Ref<HTMLElement>}
-						className="absolute inset-0 h-full w-full"
+						key={tab.id}
+						src={tab.url}
+						ref={makeWebviewRef(tab.id)}
+						className={cn(
+							"absolute inset-0 h-full w-full",
+							tab.id !== activeTabId && "invisible",
+						)}
 					/>
-				)}
+				))}
 			</div>
 		</div>
 	);
