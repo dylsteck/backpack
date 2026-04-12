@@ -68,7 +68,7 @@ export function AppSidebar({ className, ...props }: React.ComponentProps<typeof 
 	return (
 		<Sidebar
 			variant="inset"
-			collapsible="icon"
+			collapsible="offcanvas"
 			className={cn(
 				// hiddenInset: lights overlap content; apply title-bar inset on the rail for both states.
 				runtime?.platform === "darwin" && "!px-2 !pb-2 !pt-14",

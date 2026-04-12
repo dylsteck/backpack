@@ -22,6 +22,8 @@ const windowApi = {
 	minimize: () => ipcRenderer.invoke(WINDOW_CHANNELS.minimize),
 	maximize: () => ipcRenderer.invoke(WINDOW_CHANNELS.maximize),
 	close: () => ipcRenderer.invoke(WINDOW_CHANNELS.close),
+	setTrafficLightsVisible: (visible: boolean) =>
+		ipcRenderer.invoke(WINDOW_CHANNELS.setTrafficLightsVisible, visible),
 };
 
 const themeApi = {

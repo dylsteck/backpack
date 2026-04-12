@@ -35,6 +35,8 @@ interface WindowApi {
 	minimize(): Promise<void>;
 	maximize(): Promise<void>;
 	close(): Promise<void>;
+	/** macOS only; no-op on other platforms in main. */
+	setTrafficLightsVisible(visible: boolean): Promise<void>;
 }
 
 interface ThemeApi {

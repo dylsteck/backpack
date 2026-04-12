@@ -5,11 +5,21 @@ import { DetailSidebarProvider } from "@/contexts/DetailSidebarContext";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { runtime, winApi } from "@/lib/backpack-client";
+
+/** Sidebar open state lives inside `SidebarProvider`; this is only a darwin chrome side effect (no mirror `useState` in the shell). */
+function syncDarwinTrafficLightsWithSidebar(open: boolean) {
+	if (runtime?.platform !== "darwin") return;
+	void winApi.setTrafficLightsVisible(open);
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
 	return (
 		<TooltipProvider delayDuration={0}>
-			<SidebarProvider className="h-svh max-h-svh overflow-hidden">
+			<SidebarProvider
+				onAfterOpenChange={syncDarwinTrafficLightsWithSidebar}
+				className="h-svh max-h-svh overflow-hidden"
+			>
 				<FilterProvider>
 					<DetailSidebarProvider>
 						<AppSidebar />

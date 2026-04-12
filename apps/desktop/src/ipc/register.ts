@@ -32,6 +32,15 @@ export function registerIpcHandlers(getBackpack: () => Backpack): void {
 		BrowserWindow.fromWebContents(e.sender)?.close();
 	});
 
+	ipcMain.handle(WINDOW_CHANNELS.setTrafficLightsVisible, (e, visible: boolean) => {
+		if (process.platform !== "darwin") return;
+		const win = BrowserWindow.fromWebContents(e.sender);
+		if (!win) return;
+		(
+			win as BrowserWindow & { setWindowButtonVisibility(visible: boolean): void }
+		).setWindowButtonVisibility(visible);
+	});
+
 	ipcMain.handle(THEME_CHANNELS.get, () => ({
 		shouldUseDark: nativeTheme.shouldUseDarkColors,
 		source: nativeTheme.themeSource,

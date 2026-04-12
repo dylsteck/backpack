@@ -14,6 +14,7 @@ export const WINDOW_CHANNELS = {
 	minimize: "window:minimize",
 	maximize: "window:maximize",
 	close: "window:close",
+	setTrafficLightsVisible: "window:set-traffic-lights-visible",
 } as const;
 
 export const THEME_CHANNELS = {

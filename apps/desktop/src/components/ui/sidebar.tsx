@@ -55,6 +55,7 @@ function SidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
+  onAfterOpenChange,
   className,
   style,
   children,
@@ -63,6 +64,8 @@ function SidebarProvider({
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Runs after open updates (desktop offcanvas + cookie). For side effects that must not require a controlling parent `useState`. */
+  onAfterOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
@@ -82,8 +85,9 @@ function SidebarProvider({
 
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      onAfterOpenChange?.(openState)
     },
-    [setOpenProp, open]
+    [setOpenProp, open, onAfterOpenChange]
   )
 
   // Helper to toggle the sidebar.
