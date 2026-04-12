@@ -32,26 +32,20 @@ export function FlyView() {
 
 	const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
 
+	const captureTab = useCallback(async (id: string, wv: WebviewHTMLElement) => {
+		try {
+			const image = await wv.capturePage();
+			const dataUrl = image.toDataURL();
+			if (dataUrl && dataUrl.length > 100) {
+				setThumbnails((prev) => ({ ...prev, [id]: dataUrl }));
+			}
+		} catch {}
+	}, []);
+
 	const captureAll = useCallback(async () => {
 		const entries = Array.from(webviewRefs.current.entries());
-		const results = await Promise.allSettled(
-			entries.map(async ([id, wv]) => {
-				const image = await wv.capturePage();
-				const dataUrl = image.toDataURL();
-				if (dataUrl && dataUrl.length > 100) return [id, dataUrl] as const;
-				return null;
-			}),
-		);
-		const updates: Record<string, string> = {};
-		for (const r of results) {
-			if (r.status === "fulfilled" && r.value) {
-				updates[r.value[0]] = r.value[1];
-			}
-		}
-		if (Object.keys(updates).length > 0) {
-			setThumbnails((prev) => ({ ...prev, ...updates }));
-		}
-	}, []);
+		await Promise.allSettled(entries.map(([id, wv]) => captureTab(id, wv)));
+	}, [captureTab]);
 
 	const syncTitle = useCallback((id: string, wv: WebviewHTMLElement) => {
 		const title = wv.getTitle?.();
@@ -131,12 +125,17 @@ export function FlyView() {
 			if (node) {
 				webviewRefs.current.set(tabId, node);
 				const onTitle = () => syncTitle(tabId, node);
+				const onLoad = () => {
+					syncTitle(tabId, node);
+					captureTab(tabId, node);
+				};
 				node.addEventListener("page-title-updated", onTitle);
+				node.addEventListener("did-finish-load", onLoad);
 			} else {
 				webviewRefs.current.delete(tabId);
 			}
 		},
-		[syncTitle],
+		[syncTitle, captureTab],
 	);
 
 	if (viewMode === "grid") {
