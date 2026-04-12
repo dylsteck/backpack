@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Plus, X, ArrowLeft, ArrowRight, RotateCcw, Globe, LayoutGrid, Columns2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -6,7 +6,6 @@ interface Tab {
 	id: string;
 	url: string;
 	title: string;
-	favicon?: string;
 }
 
 let nextId = 1;
@@ -22,14 +21,39 @@ const STARTER_TABS: Tab[] = [
 
 type ViewMode = "browser" | "grid";
 
+interface WebviewElement extends HTMLElement {
+	capturePage: () => Promise<{ toDataURL: () => string }>;
+	getTitle: () => string;
+}
+
 export function FlyView() {
 	const [tabs, setTabs] = useState<Tab[]>(STARTER_TABS);
 	const [activeTabId, setActiveTabId] = useState(STARTER_TABS[0].id);
 	const [viewMode, setViewMode] = useState<ViewMode>("browser");
 	const [urlInput, setUrlInput] = useState("");
 	const [urlFocused, setUrlFocused] = useState(false);
+	const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+	const webviewRef = useRef<WebviewElement | null>(null);
 
 	const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+
+	const captureCurrentTab = useCallback(async () => {
+		const wv = webviewRef.current;
+		if (!wv || !activeTabId) return;
+		try {
+			const image = await wv.capturePage();
+			const dataUrl = image.toDataURL();
+			if (dataUrl && dataUrl.length > 100) {
+				setThumbnails((prev) => ({ ...prev, [activeTabId]: dataUrl }));
+			}
+			const title = wv.getTitle?.();
+			if (title) {
+				setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, title } : t)));
+			}
+		} catch {
+			// webview not ready yet
+		}
+	}, [activeTabId]);
 
 	const addTab = useCallback(() => {
 		const tab = makeTab();
@@ -54,14 +78,35 @@ export function FlyView() {
 				}
 				return next;
 			});
+			setThumbnails((prev) => {
+				const next = { ...prev };
+				delete next[id];
+				return next;
+			});
 		},
 		[activeTabId],
 	);
 
-	const selectTab = useCallback((id: string) => {
-		setActiveTabId(id);
-		setViewMode("browser");
-	}, []);
+	const switchTab = useCallback(
+		async (id: string) => {
+			await captureCurrentTab();
+			setActiveTabId(id);
+		},
+		[captureCurrentTab],
+	);
+
+	const selectTab = useCallback(
+		(id: string) => {
+			setActiveTabId(id);
+			setViewMode("browser");
+		},
+		[],
+	);
+
+	const openGrid = useCallback(async () => {
+		await captureCurrentTab();
+		setViewMode("grid");
+	}, [captureCurrentTab]);
 
 	const navigateTo = useCallback(
 		(raw: string) => {
@@ -86,20 +131,35 @@ export function FlyView() {
 		[urlInput, navigateTo],
 	);
 
+	const webviewCallback = useCallback(
+		(node: WebviewElement | null) => {
+			webviewRef.current = node;
+			if (!node) return;
+			const onTitle = () => {
+				const title = node.getTitle?.();
+				if (title) {
+					setTabs((prev) =>
+						prev.map((t) => (t.id === activeTabId ? { ...t, title } : t)),
+					);
+				}
+			};
+			node.addEventListener("page-title-updated", onTitle);
+			return () => node.removeEventListener("page-title-updated", onTitle);
+		},
+		[activeTabId],
+	);
+
 	if (viewMode === "grid") {
 		return (
 			<div className="flex flex-1 flex-col overflow-hidden">
-				{/* Grid toolbar */}
 				<div className="flex items-center justify-between border-b px-4 py-3">
-					<div className="flex items-center gap-2">
-						<button
-							onClick={() => setViewMode("browser")}
-							className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-						>
-							<Columns2 className="h-3.5 w-3.5" />
-							Back to browser
-						</button>
-					</div>
+					<button
+						onClick={() => setViewMode("browser")}
+						className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+					>
+						<Columns2 className="h-3.5 w-3.5" />
+						Back to browser
+					</button>
 					<div className="text-xs font-medium text-muted-foreground">
 						{tabs.length} {tabs.length === 1 ? "tab" : "tabs"} open
 					</div>
@@ -112,7 +172,6 @@ export function FlyView() {
 					</button>
 				</div>
 
-				{/* Bird's eye grid */}
 				<div className="flex-1 overflow-auto p-6">
 					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 						{tabs.map((tab) => (
@@ -124,12 +183,18 @@ export function FlyView() {
 									tab.id === activeTabId && "ring-2 ring-primary",
 								)}
 							>
-								{/* Tab preview */}
 								<div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-									<div className="flex h-full items-center justify-center">
-										<Globe className="h-8 w-8 text-muted-foreground/30" />
-									</div>
-									{/* Close button overlay */}
+									{thumbnails[tab.id] ? (
+										<img
+											src={thumbnails[tab.id]}
+											alt={tab.title}
+											className="h-full w-full object-cover object-top"
+										/>
+									) : (
+										<div className="flex h-full items-center justify-center">
+											<Globe className="h-8 w-8 text-muted-foreground/30" />
+										</div>
+									)}
 									<button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -140,7 +205,6 @@ export function FlyView() {
 										<X className="h-3 w-3" />
 									</button>
 								</div>
-								{/* Tab info */}
 								<div className="flex items-center gap-2 border-t px-3 py-2">
 									<Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
 									<span className="truncate text-xs font-medium">{tab.title}</span>
@@ -148,7 +212,6 @@ export function FlyView() {
 							</button>
 						))}
 
-						{/* Add tab card */}
 						<button
 							onClick={addTab}
 							className="flex aspect-[16/10] flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/20 text-muted-foreground/40 transition-colors hover:border-primary/50 hover:text-primary/60"
@@ -164,13 +227,12 @@ export function FlyView() {
 
 	return (
 		<div className="flex flex-1 flex-col overflow-hidden">
-			{/* Tab bar */}
 			<div className="flex items-center gap-0.5 border-b bg-muted/30 px-1 pt-1">
 				<div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
 					{tabs.map((tab) => (
 						<div
 							key={tab.id}
-							onClick={() => setActiveTabId(tab.id)}
+							onClick={() => switchTab(tab.id)}
 							className={cn(
 								"group flex min-w-0 max-w-48 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 py-1.5 text-xs transition-colors",
 								tab.id === activeTabId
@@ -200,7 +262,6 @@ export function FlyView() {
 				</button>
 			</div>
 
-			{/* URL bar + controls */}
 			<div className="flex items-center gap-2 border-b px-2 py-1.5">
 				<div className="flex items-center gap-0.5">
 					<button className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent">
@@ -228,7 +289,7 @@ export function FlyView() {
 					/>
 				</form>
 				<button
-					onClick={() => setViewMode("grid")}
+					onClick={openGrid}
 					className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
 					title="Bird's eye view"
 				>
@@ -236,12 +297,12 @@ export function FlyView() {
 				</button>
 			</div>
 
-			{/* Webview area */}
 			<div className="relative flex-1 overflow-hidden bg-background">
 				{activeTab && (
 					<webview
 						key={activeTab.id}
 						src={activeTab.url}
+						ref={webviewCallback as unknown as React.Ref<HTMLElement>}
 						className="absolute inset-0 h-full w-full"
 					/>
 				)}
