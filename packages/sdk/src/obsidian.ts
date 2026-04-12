@@ -3,6 +3,10 @@ import * as path from "path";
 import { getDatabase, connections } from "@backpack/db";
 import { eq } from "drizzle-orm";
 
+function obsidianErrorMessage(err: unknown): string {
+	return err instanceof Error ? err.message : String(err);
+}
+
 export interface ObsidianNote {
 	path: string;
 	title: string;
@@ -326,10 +330,10 @@ export class ObsidianService {
 					lastModified: stats.mtime.toISOString(),
 				},
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: `Failed to read note: ${error.message}`,
+				error: `Failed to read note: ${obsidianErrorMessage(error)}`,
 			};
 		}
 	}
@@ -379,10 +383,10 @@ export class ObsidianService {
 				message: `Created note: ${title}`,
 				notePath,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: `Failed to create note: ${error.message}`,
+				error: `Failed to create note: ${obsidianErrorMessage(error)}`,
 			};
 		}
 	}
@@ -449,10 +453,10 @@ export class ObsidianService {
 				message: `Updated note: ${path.basename(fullPath, ".md")}`,
 				notePath: fullPath,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: `Failed to update note: ${error.message}`,
+				error: `Failed to update note: ${obsidianErrorMessage(error)}`,
 			};
 		}
 	}
@@ -501,10 +505,10 @@ export class ObsidianService {
 				message: `Added backlink to ${targetNote}`,
 				notePath: fullPath,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: `Failed to add backlink: ${error.message}`,
+				error: `Failed to add backlink: ${obsidianErrorMessage(error)}`,
 			};
 		}
 	}

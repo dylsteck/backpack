@@ -3,7 +3,7 @@ export interface Item {
 	source: string;
 	type: string;
 	timestamp: Date;
-	data: Record<string, any>;
+	data: Record<string, unknown>;
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -29,7 +29,7 @@ export interface SearchResultItem {
 	snippet?: string;
 	score: number;
 	timestamp?: string;
-	data?: Record<string, any>;
+	data?: Record<string, unknown>;
 }
 
 export interface SearchResult {

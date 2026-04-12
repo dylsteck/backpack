@@ -40,6 +40,14 @@ export default tseslint.config(
 		rules: {
 			...react.configs.recommended.rules,
 			...reactHooks.configs.recommended.rules,
+			"max-lines": [
+				"warn",
+				{ max: 420, skipBlankLines: true, skipComments: true },
+			],
+			"max-lines-per-function": [
+				"warn",
+				{ max: 120, skipBlankLines: true, skipComments: true },
+			],
 			"react/react-in-jsx-scope": "off",
 			"react/prop-types": "off",
 			"@typescript-eslint/no-unused-vars": [
@@ -75,6 +83,27 @@ export default tseslint.config(
 		rules: {
 			// Ref sync for Cmd/Ctrl+B handler registered once via useMountEffect (see toggleSidebarRef).
 			"react-hooks/refs": "off",
+			"max-lines": "off",
+			"max-lines-per-function": "off",
+		},
+	},
+	{
+		files: ["src/components/ui/**/*.tsx"],
+		rules: {
+			"max-lines": ["warn", { max: 750, skipBlankLines: true, skipComments: true }],
+			"max-lines-per-function": [
+				"warn",
+				{ max: 200, skipBlankLines: true, skipComments: true },
+			],
+		},
+	},
+	{
+		files: ["src/components/onboarding/**/*.tsx"],
+		rules: {
+			"max-lines-per-function": [
+				"warn",
+				{ max: 280, skipBlankLines: true, skipComments: true },
+			],
 		},
 	},
 );

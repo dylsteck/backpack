@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
+import type {
+	AnalyticsArgs,
+	ListSearchesArgs,
+	ListVisitsArgs,
+	RecordVisitPayload,
+	WindowStatePayload,
+} from "@/types/fly";
+import { FLY_CHANNELS, SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
 
 const runtime = {
 	platform: process.platform,
@@ -31,13 +38,28 @@ const themeApi = {
 	set: (source: "system" | "light" | "dark") => ipcRenderer.invoke(THEME_CHANNELS.set, source),
 };
 
+const flyApi = {
+	ensureSession: () => ipcRenderer.invoke(FLY_CHANNELS.ensureSession) as Promise<{ sessionId: string }>,
+	recordVisit: (payload: RecordVisitPayload) =>
+		ipcRenderer.invoke(FLY_CHANNELS.recordVisit, payload) as Promise<{ visitId: string }>,
+	finalizeTab: (tabId: string) => ipcRenderer.invoke(FLY_CHANNELS.finalizeTab, tabId),
+	listVisits: (args?: ListVisitsArgs) => ipcRenderer.invoke(FLY_CHANNELS.listVisits, args),
+	listSearches: (args?: ListSearchesArgs) => ipcRenderer.invoke(FLY_CHANNELS.listSearches, args),
+	analytics: (args?: AnalyticsArgs) => ipcRenderer.invoke(FLY_CHANNELS.analytics, args),
+	deleteAllHistory: () => ipcRenderer.invoke(FLY_CHANNELS.deleteAllHistory),
+	getWindowState: () => ipcRenderer.invoke(FLY_CHANNELS.getWindowState),
+	saveWindowState: (state: WindowStatePayload) => ipcRenderer.invoke(FLY_CHANNELS.saveWindowState, state),
+};
+
 export function exposeContexts(): void {
 	contextBridge.exposeInMainWorld("runtime", runtime);
 	contextBridge.exposeInMainWorld("backpack", backpackApi);
 	contextBridge.exposeInMainWorld("win", windowApi);
 	contextBridge.exposeInMainWorld("theme", themeApi);
+	contextBridge.exposeInMainWorld("fly", flyApi);
 }
 
 export type BackpackApi = typeof backpackApi;
 export type WindowApi = typeof windowApi;
 export type ThemeApi = typeof themeApi;
+export type FlyApi = typeof flyApi;

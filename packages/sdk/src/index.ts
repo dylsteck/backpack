@@ -1,4 +1,11 @@
 export { Backpack } from "./backpack";
+export { FlyHistoryService } from "./fly-history";
+export type {
+	FlyVisitRow,
+	FlySearchRow,
+	FlyAnalytics,
+	FlyTabSnapshot,
+} from "./fly-history";
 export { ObsidianService } from "./obsidian";
 export { BrowserService } from "./browser";
 export { getDefaultDbPath, getDatabasePath } from "./db";

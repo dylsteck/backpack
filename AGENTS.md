@@ -162,6 +162,18 @@ Wrap SDK calls (in main-process IPC handlers or `useQuery` `queryFn`s) in try/ca
 
 Add new IPC channels in `src/ipc/` and expose them via `src/preload.ts`. Keep the renderer free of Node APIs.
 
+### Fly (in-app browser)
+
+**Fly** is the embedded webview browser in the desktop app. Navigation history, searches, session metadata, and tab/window state are stored **only in local SQLite** (same database as the rest of Backpack — see `getDatabaseSchema()` in `packages/db/src/index.ts`). Nothing is synced to the cloud for Fly history.
+
+| Area | Location |
+|------|----------|
+| Routes | `/fly` → `/fly/browser` (webview UI), `/fly/history` (visited list, analytics, searches) |
+| Renderer API | `window.fly` — typed as `FlyRendererApi` in `apps/desktop/src/types/fly.ts`; exported helper `flyApi` in `apps/desktop/src/lib/backpack-client.ts` |
+| IPC | `FLY_CHANNELS` in `apps/desktop/src/ipc/channels.ts` — handlers in `register.ts`, preload exposure in `ipc/expose.ts` |
+| SDK | `Backpack#flyHistory` → `FlyHistoryService` in `packages/sdk/src/fly-history.ts` |
+| Schema | `packages/db/src/schema/fly.ts` — `fly_visits`, `fly_searches`, `fly_browse_sessions`, `fly_window_state` |
+
 ---
 
 ## Troubleshooting

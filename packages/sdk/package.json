@@ -15,7 +15,8 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check-types": "tsc --noEmit"
+		"check-types": "tsc --noEmit",
+		"lint": "eslint src"
 	},
 	"dependencies": {
 		"@backpack/db": "workspace:*",
@@ -23,8 +24,10 @@
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.4",
+		"eslint": "^9.38.0",
 		"tsdown": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"typescript-eslint": "^8.46.1"
 	},
 	"peerDependencies": {
 		"typescript": "^5"

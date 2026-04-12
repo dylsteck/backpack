@@ -1,14 +1,54 @@
 import Database from "better-sqlite3";
 import { drizzle, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema/mcp";
+import {
+	apps,
+	connections,
+	items,
+	appsRelations,
+	itemsRelations,
+} from "./schema/mcp";
+import {
+	timelineItems,
+	sources,
+	embeddings,
+	timelineItemsRelations,
+	sourcesRelations,
+	embeddingsRelations,
+} from "./schema/core";
+import {
+	flyBrowseSessions,
+	flyVisits,
+	flySearches,
+	flyWindowState,
+} from "./schema/fly";
 import path from "path";
 import fs from "fs";
 import { readFileSync } from "fs";
 
+const schema = {
+	apps,
+	connections,
+	items,
+	appsRelations,
+	itemsRelations,
+	timelineItems,
+	sources,
+	embeddings,
+	timelineItemsRelations,
+	sourcesRelations,
+	embeddingsRelations,
+	flyBrowseSessions,
+	flyVisits,
+	flySearches,
+	flyWindowState,
+};
+
+type Schema = typeof schema;
+
 type SqliteDatabase = Database.Database;
 
 // Global database instance
-let db: BetterSQLite3Database<typeof schema> | null = null;
+let db: BetterSQLite3Database<Schema> | null = null;
 let sqliteDb: SqliteDatabase | null = null;
 
 /**
@@ -23,7 +63,7 @@ export function databaseExists(dbPath: string): boolean {
  * Creates the directory and database file if they don't exist
  * Returns true if this is a fresh database (needs seeding)
  */
-export function initDatabase(dbPath: string): { db: BetterSQLite3Database<typeof schema>; isNew: boolean } {
+export function initDatabase(dbPath: string): { db: BetterSQLite3Database<Schema>; isNew: boolean } {
 	// Ensure directory exists
 	const dir = path.dirname(dbPath);
 	if (!fs.existsSync(dir)) {
@@ -132,6 +172,48 @@ export function initDatabase(dbPath: string): { db: BetterSQLite3Database<typeof
 		CREATE INDEX IF NOT EXISTS "sources_enabled_idx" ON "sources"("is_enabled");
 		CREATE INDEX IF NOT EXISTS "embeddings_item_id_idx" ON "embeddings"("item_id");
 		CREATE INDEX IF NOT EXISTS "embeddings_model_idx" ON "embeddings"("model");
+
+		CREATE TABLE IF NOT EXISTS "fly_browse_sessions" (
+			"id" text PRIMARY KEY NOT NULL,
+			"started_at" integer NOT NULL,
+			"ended_at" integer
+		);
+
+		CREATE TABLE IF NOT EXISTS "fly_visits" (
+			"id" text PRIMARY KEY NOT NULL,
+			"session_id" text REFERENCES "fly_browse_sessions"("id"),
+			"tab_id" text NOT NULL,
+			"url" text NOT NULL,
+			"title" text,
+			"favicon_url" text,
+			"domain" text NOT NULL,
+			"visited_at" integer NOT NULL,
+			"referrer_url" text,
+			"transition" text DEFAULT 'unknown' NOT NULL,
+			"preceding_visit_id" text,
+			"duration_ms" integer
+		);
+
+		CREATE INDEX IF NOT EXISTS "fly_visits_visited_at_idx" ON "fly_visits" ("visited_at");
+		CREATE INDEX IF NOT EXISTS "fly_visits_domain_idx" ON "fly_visits" ("domain");
+		CREATE INDEX IF NOT EXISTS "fly_visits_tab_id_visited_at_idx" ON "fly_visits" ("tab_id", "visited_at");
+		CREATE INDEX IF NOT EXISTS "fly_visits_session_id_idx" ON "fly_visits" ("session_id");
+
+		CREATE TABLE IF NOT EXISTS "fly_searches" (
+			"id" text PRIMARY KEY NOT NULL,
+			"query" text NOT NULL,
+			"searched_at" integer NOT NULL,
+			"engine" text,
+			"source_visit_id" text REFERENCES "fly_visits"("id")
+		);
+
+		CREATE INDEX IF NOT EXISTS "fly_searches_searched_at_idx" ON "fly_searches" ("searched_at");
+
+		CREATE TABLE IF NOT EXISTS "fly_window_state" (
+			"id" text PRIMARY KEY NOT NULL,
+			"tabs_json" text NOT NULL,
+			"updated_at" integer NOT NULL
+		);
 	`);
 	
 	// Run migrations
@@ -139,6 +221,7 @@ export function initDatabase(dbPath: string): { db: BetterSQLite3Database<typeof
 		"0002_add_browser_tables.sql",
 		"0003_remove_unused_tables.sql",
 		"0004_remove_browser_tables.sql",
+		"0005_fly_history.sql",
 	];
 	
 	for (const migrationFile of migrations) {
@@ -173,7 +256,7 @@ export function initDatabase(dbPath: string): { db: BetterSQLite3Database<typeof
  * Get the current database instance
  * Throws if database hasn't been initialized
  */
-export function getDatabase(): BetterSQLite3Database<typeof schema> {
+export function getDatabase(): BetterSQLite3Database<Schema> {
 	if (!db) {
 		throw new Error("Database not initialized. Call initDatabase() first.");
 	}
@@ -226,6 +309,10 @@ Database Tables:
 - timeline_items: id (text PK), source, type, external_id, title, content, raw_data, url, timestamp, created_at, updated_at, sync_status, error_message
 - sources: id (text PK), name, type, config, last_sync_at, is_enabled, created_at, updated_at
 - embeddings: id (text PK), item_id (FK timeline_items), vector (blob), model, created_at
+- fly_browse_sessions: id (text PK), started_at, ended_at (unix ms)
+- fly_visits: id, session_id, tab_id, url, title, favicon_url, domain, visited_at, referrer_url, transition, preceding_visit_id, duration_ms
+- fly_searches: id, query, searched_at, engine, source_visit_id (FK fly_visits)
+- fly_window_state: id (PK, use 'default'), tabs_json, updated_at — persisted Fly browser tabs
 Note: timestamps are stored as Unix milliseconds (integer). The 'data' column in items is JSON text containing the raw data from each source.
 `.trim();
 }
@@ -262,6 +349,12 @@ export {
 	embeddingsRelations,
 	coreIndexes,
 } from "./schema/core";
+export {
+	flyBrowseSessions,
+	flyVisits,
+	flySearches,
+	flyWindowState,
+} from "./schema/fly";
 
 // Export seed function
 export { seedDatabase, DEFAULT_APPS } from "./seed";

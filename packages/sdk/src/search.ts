@@ -27,7 +27,7 @@ async function searchDatabase(query: string, limit: number) {
 	return results;
 }
 
-function extractItemMeta(item: { source: string; type: string; data: Record<string, any> }): {
+function extractItemMeta(item: { source: string; type: string; data: Record<string, unknown> }): {
 	title: string;
 	snippet: string;
 } {
@@ -46,8 +46,14 @@ function extractItemMeta(item: { source: string; type: string; data: Record<stri
 			snippet: `$${txn.amount || "0"}`,
 		};
 	}
+	const titleVal = data["title"];
+	const nameVal = data["name"];
+	const title =
+		(typeof titleVal === "string" ? titleVal : undefined) ??
+		(typeof nameVal === "string" ? nameVal : undefined) ??
+		item.type;
 	return {
-		title: String(data.title || data.name || item.type),
+		title: String(title),
 		snippet: JSON.stringify(data).slice(0, 100),
 	};
 }
@@ -69,7 +75,7 @@ export async function dbSearch(query: string, limit: number): Promise<SearchResu
 			snippet: meta.snippet,
 			score: 0.5,
 			timestamp: item.timestamp.toISOString(),
-			data: item.data as Record<string, any>,
+			data: item.data as Record<string, unknown>,
 		});
 	}
 

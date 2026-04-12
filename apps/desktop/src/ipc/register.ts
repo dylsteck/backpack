@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, nativeTheme } from "electron";
-import type { Backpack } from "@backpack/sdk";
-import { SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
+import type { Backpack, FlyHistoryService } from "@backpack/sdk";
+import { FLY_CHANNELS, SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
 
 export function registerIpcHandlers(getBackpack: () => Backpack): void {
 	ipcMain.handle(SDK_CHANNELS.timeline, (_e, opts) => getBackpack().timeline(opts));
@@ -49,4 +49,28 @@ export function registerIpcHandlers(getBackpack: () => Backpack): void {
 		nativeTheme.themeSource = source;
 		return { shouldUseDark: nativeTheme.shouldUseDarkColors, source };
 	});
+
+	ipcMain.handle(FLY_CHANNELS.ensureSession, () => ({
+		sessionId: getBackpack().flyHistory.ensureSession(),
+	}));
+	ipcMain.handle(FLY_CHANNELS.recordVisit, (_e, payload: Parameters<FlyHistoryService["recordVisit"]>[0]) =>
+		getBackpack().flyHistory.recordVisit(payload),
+	);
+	ipcMain.handle(FLY_CHANNELS.finalizeTab, (_e, tabId: string) => {
+		getBackpack().flyHistory.finalizeTab(tabId);
+	});
+	ipcMain.handle(FLY_CHANNELS.listVisits, (_e, args: Parameters<FlyHistoryService["listVisits"]>[0]) =>
+		getBackpack().flyHistory.listVisits(args ?? {}),
+	);
+	ipcMain.handle(FLY_CHANNELS.listSearches, (_e, args: Parameters<FlyHistoryService["listSearches"]>[0]) =>
+		getBackpack().flyHistory.listSearches(args ?? {}),
+	);
+	ipcMain.handle(FLY_CHANNELS.analytics, (_e, args: Parameters<FlyHistoryService["getAnalytics"]>[0]) =>
+		getBackpack().flyHistory.getAnalytics(args ?? {}),
+	);
+	ipcMain.handle(FLY_CHANNELS.deleteAllHistory, () => getBackpack().flyHistory.deleteAllHistory());
+	ipcMain.handle(FLY_CHANNELS.getWindowState, () => getBackpack().flyHistory.getWindowState());
+	ipcMain.handle(FLY_CHANNELS.saveWindowState, (_e, state: Parameters<FlyHistoryService["saveWindowState"]>[0]) =>
+		getBackpack().flyHistory.saveWindowState(state),
+	);
 }

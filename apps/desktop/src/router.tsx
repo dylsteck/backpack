@@ -11,7 +11,10 @@ import { AppsGrid } from "./components/app-detail/AppsGrid";
 import { AppDetail } from "./components/app-detail/AppDetail";
 import { SearchView } from "./components/SearchView";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
-import { FlyView } from "./components/fly/FlyView";
+import { FlyLayout } from "./components/fly/FlyLayout";
+import { FlyIndexRedirect } from "./components/fly/FlyIndexRedirect";
+import { FlyBrowserView } from "./components/fly/FlyBrowserView";
+import { FlyHistoryView } from "./components/fly/history/FlyHistoryView";
 
 interface RouterContext {
 	queryClient: QueryClient;
@@ -49,10 +52,28 @@ const searchRoute = createRoute({
 	component: SearchView,
 });
 
-const flyRoute = createRoute({
+const flyLayoutRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/fly",
-	component: FlyView,
+	component: FlyLayout,
+});
+
+const flyIndexRoute = createRoute({
+	getParentRoute: () => flyLayoutRoute,
+	path: "/",
+	component: FlyIndexRedirect,
+});
+
+const flyBrowserRoute = createRoute({
+	getParentRoute: () => flyLayoutRoute,
+	path: "browser",
+	component: FlyBrowserView,
+});
+
+const flyHistoryRoute = createRoute({
+	getParentRoute: () => flyLayoutRoute,
+	path: "history",
+	component: FlyHistoryView,
 });
 
 const onboardingRoute = createRoute({
@@ -66,7 +87,7 @@ const routeTree = rootRoute.addChildren([
 	appsRoute,
 	appDetailRoute,
 	searchRoute,
-	flyRoute,
+	flyLayoutRoute.addChildren([flyIndexRoute, flyBrowserRoute, flyHistoryRoute]),
 	onboardingRoute,
 ]);
 

@@ -1,12 +1,41 @@
 const BRIDGE_PORT = process.env.BROWSER_BRIDGE_PORT || "3001";
 const BRIDGE_URL = `http://127.0.0.1:${BRIDGE_PORT}/browser-tool`;
 
+function bridgeErrorMessage(err: unknown): string {
+	if (err instanceof Error) return err.message;
+	return String(err);
+}
+
+function isConnRefused(err: unknown): boolean {
+	if (typeof err !== "object" || err === null) return false;
+	const o = err as { code?: unknown; message?: unknown };
+	return (
+		o.code === "ECONNREFUSED" ||
+		(typeof o.message === "string" && o.message.includes("ECONNREFUSED"))
+	);
+}
+
+function mergeToolRecord(result: unknown): Record<string, unknown> {
+	if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+		return result as Record<string, unknown>;
+	}
+	return {};
+}
+
+function isImageContentBlock(
+	block: unknown,
+): block is { type: string; data: string } {
+	if (typeof block !== "object" || block === null) return false;
+	const b = block as Record<string, unknown>;
+	return b.type === "image" && typeof b.data === "string";
+}
+
 export interface NavigateResult {
 	success: boolean;
 	url?: string;
 	action?: string;
 	message?: string;
-	result?: any;
+	result?: unknown;
 	error?: string;
 }
 
@@ -25,27 +54,27 @@ export interface FillResult {
 export interface ScreenshotResult {
 	success: boolean;
 	imageDataUrl?: string;
-	content?: any[];
+	content?: unknown[];
 	screenshot?: string;
 	error?: string;
 }
 
 export interface SnapshotResult {
 	success: boolean;
-	tree?: any;
+	tree?: unknown;
 	verbose?: boolean;
 	error?: string;
 }
 
 export interface NetworkResult {
 	success: boolean;
-	requests?: any[];
+	requests?: unknown[];
 	error?: string;
 }
 
 export interface EvaluateResult {
 	success: boolean;
-	result?: any;
+	result?: unknown;
 	error?: string;
 }
 
@@ -71,7 +100,10 @@ export interface SelectPageResult {
 	error?: string;
 }
 
-async function callBrowserTool(toolName: string, args: any): Promise<any> {
+async function callBrowserTool(
+	toolName: string,
+	args: Record<string, unknown>,
+): Promise<unknown> {
 	try {
 		const response = await fetch(BRIDGE_URL, {
 			method: "POST",
@@ -84,20 +116,24 @@ async function callBrowserTool(toolName: string, args: any): Promise<any> {
 			throw new Error(`Bridge returned ${response.status}: ${errorText}`);
 		}
 
-		const data = (await response.json()) as { success?: boolean; error?: string; result?: any };
+		const data = (await response.json()) as {
+			success?: boolean;
+			error?: string;
+			result?: unknown;
+		};
 		if (!data.success) {
 			throw new Error(data.error || "Tool call failed");
 		}
 
 		return data.result;
-	} catch (error: any) {
-		if (error.code === "ECONNREFUSED" || error.message?.includes("ECONNREFUSED")) {
+	} catch (error: unknown) {
+		if (isConnRefused(error)) {
 			throw new Error(
-				"Browser bridge not available. Make sure the browser tab is open."
+				"Browser bridge not available. Make sure the browser tab is open.",
 			);
 		}
 		throw new Error(
-			`Failed to call browser tool ${toolName}: ${error.message || error}`
+			`Failed to call browser tool ${toolName}: ${bridgeErrorMessage(error)}`,
 		);
 	}
 }
@@ -105,7 +141,7 @@ async function callBrowserTool(toolName: string, args: any): Promise<any> {
 export class BrowserService {
 	async navigate(
 		url: string,
-		type: "url" | "back" | "forward" | "reload" = "url"
+		type: "url" | "back" | "forward" | "reload" = "url",
 	): Promise<NavigateResult> {
 		try {
 			let normalizedUrl = url.trim();
@@ -132,10 +168,10 @@ export class BrowserService {
 					result,
 				};
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Navigation failed",
+				error: bridgeErrorMessage(error) || "Navigation failed",
 			};
 		}
 	}
@@ -146,12 +182,12 @@ export class BrowserService {
 			return {
 				success: true,
 				message: `Clicked element ${uid}`,
-				...result,
+				...mergeToolRecord(result),
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Click failed",
+				error: bridgeErrorMessage(error) || "Click failed",
 			};
 		}
 	}
@@ -162,12 +198,12 @@ export class BrowserService {
 			return {
 				success: true,
 				message: `Filled element ${uid}`,
-				...result,
+				...mergeToolRecord(result),
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Fill failed",
+				error: bridgeErrorMessage(error) || "Fill failed",
 			};
 		}
 	}
@@ -176,26 +212,34 @@ export class BrowserService {
 		try {
 			const result = await callBrowserTool("take_screenshot", {});
 			try {
-				if (result?.content && Array.isArray(result.content)) {
-					const imageBlock = result.content.find(
-						(block: any) => block?.type === "image" && block?.data
-					);
+				if (
+					typeof result === "object" &&
+					result !== null &&
+					"content" in result &&
+					Array.isArray((result as { content: unknown }).content)
+				) {
+					const content = (result as { content: unknown[] }).content;
+					const imageBlock = content.find(isImageContentBlock);
 					if (imageBlock?.data) {
 						return {
 							success: true,
 							imageDataUrl: `data:image/png;base64,${imageBlock.data}`,
-							content: result.content,
+							content,
 						};
 					}
 				}
-				if (typeof result?.screenshot === "string") {
-					const alreadyDataUrl = result.screenshot.startsWith("data:image");
+				if (
+					typeof result === "object" &&
+					result !== null &&
+					"screenshot" in result &&
+					typeof (result as { screenshot: unknown }).screenshot === "string"
+				) {
+					const shot = (result as { screenshot: string }).screenshot;
+					const alreadyDataUrl = shot.startsWith("data:image");
 					return {
 						success: true,
-						imageDataUrl: alreadyDataUrl
-							? result.screenshot
-							: `data:image/png;base64,${result.screenshot}`,
-						screenshot: result.screenshot,
+						imageDataUrl: alreadyDataUrl ? shot : `data:image/png;base64,${shot}`,
+						screenshot: shot,
 					};
 				}
 			} catch {
@@ -203,12 +247,12 @@ export class BrowserService {
 			}
 			return {
 				success: true,
-				...result,
+				...mergeToolRecord(result),
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Screenshot failed",
+				error: bridgeErrorMessage(error) || "Screenshot failed",
 			};
 		}
 	}
@@ -216,16 +260,19 @@ export class BrowserService {
 	async snapshot(verbose: boolean = false): Promise<SnapshotResult> {
 		try {
 			const result = await callBrowserTool("take_snapshot", { verbose });
+			const rec = mergeToolRecord(result);
+			const tree =
+				"tree" in rec && rec.tree !== undefined ? rec.tree : result;
 			return {
 				success: true,
-				tree: result.tree || result,
+				tree,
 				verbose,
-				...result,
+				...rec,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Snapshot failed",
+				error: bridgeErrorMessage(error) || "Snapshot failed",
 			};
 		}
 	}
@@ -233,34 +280,42 @@ export class BrowserService {
 	async network(): Promise<NetworkResult> {
 		try {
 			const result = await callBrowserTool("list_network_requests", {});
+			const rec = mergeToolRecord(result);
+			const rawRequests =
+				rec.requests !== undefined ? rec.requests : result;
+			const requests = Array.isArray(rawRequests)
+				? rawRequests
+				: rawRequests !== undefined && rawRequests !== null
+					? [rawRequests]
+					: undefined;
 			return {
 				success: true,
-				requests: result.requests || result,
-				...result,
+				requests,
+				...rec,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Network request failed",
+				error: bridgeErrorMessage(error) || "Network request failed",
 			};
 		}
 	}
 
-	async evaluate(script: string, args?: any[]): Promise<EvaluateResult> {
+	async evaluate(script: string, args?: unknown[]): Promise<EvaluateResult> {
 		try {
 			const result = await callBrowserTool("evaluate_script", {
 				function: script,
-				args: args || [],
+				args: args ?? [],
 			});
 			return {
 				success: true,
 				result,
-				...result,
+				...mergeToolRecord(result),
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Evaluate failed",
+				error: bridgeErrorMessage(error) || "Evaluate failed",
 			};
 		}
 	}
@@ -268,15 +323,19 @@ export class BrowserService {
 	async wait(text: string, timeout?: number): Promise<WaitResult> {
 		try {
 			const result = await callBrowserTool("wait_for", { text, timeout });
+			const rec = mergeToolRecord(result);
 			return {
 				success: true,
-				message: result.message || `Waited for text: ${text}`,
-				...result,
+				message:
+					typeof rec.message === "string"
+						? rec.message
+						: `Waited for text: ${text}`,
+				...rec,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Wait failed",
+				error: bridgeErrorMessage(error) || "Wait failed",
 			};
 		}
 	}
@@ -284,15 +343,20 @@ export class BrowserService {
 	async listPages(): Promise<ListPagesResult> {
 		try {
 			const result = await callBrowserTool("list_pages", {});
+			const rec = mergeToolRecord(result);
+			const rawPages = rec.pages !== undefined ? rec.pages : result;
+			const pages = Array.isArray(rawPages)
+				? (rawPages as NonNullable<ListPagesResult["pages"]>)
+				: undefined;
 			return {
 				success: true,
-				pages: result.pages || result,
-				...result,
+				pages,
+				...rec,
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "List pages failed",
+				error: bridgeErrorMessage(error) || "List pages failed",
 			};
 		}
 	}
@@ -303,12 +367,12 @@ export class BrowserService {
 			return {
 				success: true,
 				message: `Switched to page ${pageId}`,
-				...result,
+				...mergeToolRecord(result),
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				error: error.message || "Select page failed",
+				error: bridgeErrorMessage(error) || "Select page failed",
 			};
 		}
 	}

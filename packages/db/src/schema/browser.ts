@@ -1,6 +1,8 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
+/** @deprecated Tables removed in migration 0004; use `schema/fly.ts` for Fly browser data. */
+
 /**
  * Browser history entries - stores visited URLs
  */

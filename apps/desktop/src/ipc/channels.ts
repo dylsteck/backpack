@@ -21,3 +21,15 @@ export const THEME_CHANNELS = {
 	get: "theme:get",
 	set: "theme:set",
 } as const;
+
+export const FLY_CHANNELS = {
+	ensureSession: "fly:ensureSession",
+	recordVisit: "fly:recordVisit",
+	finalizeTab: "fly:finalizeTab",
+	listVisits: "fly:listVisits",
+	listSearches: "fly:listSearches",
+	analytics: "fly:analytics",
+	deleteAllHistory: "fly:deleteAllHistory",
+	getWindowState: "fly:getWindowState",
+	saveWindowState: "fly:saveWindowState",
+} as const;

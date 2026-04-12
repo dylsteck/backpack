@@ -15,7 +15,7 @@ function syncDarwinTrafficLightsWithSidebar(open: boolean) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-	const isFlyRoute = useRouterState({ select: (s) => s.location.pathname === "/fly" });
+	const isFlyRoute = useRouterState({ select: (s) => s.location.pathname.startsWith("/fly") });
 
 	return (
 		<TooltipProvider delayDuration={0}>

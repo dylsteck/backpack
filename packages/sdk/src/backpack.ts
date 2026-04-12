@@ -4,6 +4,7 @@ import { ensureDatabase, getDatabasePath, setDatabasePathInConfig } from "./db";
 import { dbSearch } from "./search";
 import { ObsidianService } from "./obsidian";
 import { BrowserService } from "./browser";
+import { FlyHistoryService } from "./fly-history";
 import type {
 	Item,
 	TimelineResult,
@@ -18,6 +19,7 @@ import type {
 
 export class Backpack {
 	private _dbPath: string;
+	private readonly _flyHistory = new FlyHistoryService();
 
 	constructor(opts?: { dbPath?: string }) {
 		this._dbPath = getDatabasePath(opts?.dbPath);
@@ -69,7 +71,7 @@ export class Backpack {
 				source: item.source,
 				type: item.type,
 				timestamp: item.timestamp,
-				data: item.data as Record<string, any>,
+				data: item.data as Item["data"],
 			})),
 			nextCursor: hasMore && lastItem ? lastItem.timestamp.toISOString() : null,
 			count: itemsList.length,
@@ -110,7 +112,7 @@ export class Backpack {
 					source: item.source,
 					type: item.type,
 					timestamp: item.timestamp,
-					data: item.data as Record<string, any>,
+					data: item.data as Item["data"],
 				})),
 			);
 
@@ -158,7 +160,7 @@ export class Backpack {
 			source: item.source,
 			type: item.type,
 			timestamp: item.timestamp,
-			data: item.data as Record<string, any>,
+			data: item.data as Item["data"],
 			createdAt: item.createdAt,
 			updatedAt: item.updatedAt,
 		};
@@ -253,5 +255,9 @@ export class Backpack {
 
 	get browser() {
 		return new BrowserService();
+	}
+
+	get flyHistory() {
+		return this._flyHistory;
 	}
 }

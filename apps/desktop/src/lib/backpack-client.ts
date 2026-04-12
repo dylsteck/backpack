@@ -9,6 +9,7 @@ import type {
 	StatusResult,
 	Connection,
 } from "@backpack/sdk";
+import type { FlyRendererApi } from "@/types/fly";
 
 interface BackpackApi {
 	timeline(opts?: TimelineOptions): Promise<TimelineResult>;
@@ -53,6 +54,7 @@ declare global {
 		backpack: BackpackApi;
 		win: WindowApi;
 		theme: ThemeApi;
+		fly: FlyRendererApi;
 	}
 }
 
@@ -61,3 +63,4 @@ export const runtime: Window["runtime"] = window.runtime;
 export const backpack: BackpackApi = window.backpack;
 export const winApi: WindowApi = window.win;
 export const themeApi: ThemeApi = window.theme;
+export const flyApi: FlyRendererApi = window.fly;

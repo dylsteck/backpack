@@ -7,6 +7,7 @@ A personal operating system that aggregates data from multiple sources (Farcaste
 - **Desktop app** - Electron + React 19 + Vite + TanStack Router
 - **Local-first** - Drizzle ORM over better-sqlite3, no HTTP server
 - **Unified timeline** - Obsidian, Farcaster, Teller, Chrome/Brave, and more
+- **Fly browser** - Embedded webviews with local SQLite history (`/fly/browser`) and a history/analytics UI (`/fly/history`); data stays on disk in your Backpack database
 - **Typed IPC** - Renderer talks to the main process via a preload bridge; no network hops
 
 ## Quick Start

@@ -44,7 +44,7 @@ const navMain = [
 	},
 	{
 		title: "Fly",
-		url: "/fly",
+		url: "/fly/browser",
 		icon: <GlobeIcon />,
 	},
 ];
