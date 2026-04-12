@@ -11,6 +11,7 @@ import { AppsGrid } from "./components/app-detail/AppsGrid";
 import { AppDetail } from "./components/app-detail/AppDetail";
 import { SearchView } from "./components/SearchView";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import { FlyView } from "./components/fly/FlyView";
 
 interface RouterContext {
 	queryClient: QueryClient;
@@ -48,6 +49,12 @@ const searchRoute = createRoute({
 	component: SearchView,
 });
 
+const flyRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/fly",
+	component: FlyView,
+});
+
 const onboardingRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/onboarding",
@@ -59,6 +66,7 @@ const routeTree = rootRoute.addChildren([
 	appsRoute,
 	appDetailRoute,
 	searchRoute,
+	flyRoute,
 	onboardingRoute,
 ]);
 
