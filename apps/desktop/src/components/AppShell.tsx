@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DetailSidebar } from "@/components/DetailSidebar";
 import { DetailSidebarProvider } from "@/contexts/DetailSidebarContext";
@@ -14,6 +15,8 @@ function syncDarwinTrafficLightsWithSidebar(open: boolean) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+	const isFlyRoute = useRouterState({ select: (s) => s.location.pathname === "/fly" });
+
 	return (
 		<TooltipProvider delayDuration={0}>
 			<SidebarProvider
@@ -25,13 +28,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 						<AppSidebar />
 						<SidebarInset className="min-h-0 flex flex-1 flex-row overflow-hidden">
 							<div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-								<header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 md:px-3">
-									<SidebarTrigger className="no-drag" />
-									<div
-										className="h-full min-w-0 flex-1 pl-10 drag md:pl-12"
-										aria-hidden
-									/>
-								</header>
+								{!isFlyRoute ? (
+									<header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 md:px-3">
+										<SidebarTrigger className="no-drag" />
+										<div
+											className="h-full min-w-0 flex-1 pl-10 drag md:pl-12"
+											aria-hidden
+										/>
+									</header>
+								) : null}
 								<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 									{children}
 								</div>
