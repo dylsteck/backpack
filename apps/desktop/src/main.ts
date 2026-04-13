@@ -65,10 +65,9 @@ function createWindow() {
 // Suppress ERR_ABORTED (-3) from webview guest navigation — this is normal browser behavior
 // when a navigation is superseded by another (e.g. clicking a link while a page is still loading).
 process.on("uncaughtException", (err) => {
-	const code = err && typeof err === "object" && "errno" in err ? (err as { errno: number }).errno : undefined;
-	if (code === -3) return;
+	const errno = err && typeof err === "object" && "errno" in err ? (err as { errno: number }).errno : undefined;
+	if (errno === -3) return;
 	console.error("Uncaught exception:", err);
-	app.quit();
 });
 
 app.whenReady().then(() => {

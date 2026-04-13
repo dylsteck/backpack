@@ -18,7 +18,7 @@ declare namespace JSX {
 				src?: string;
 				preload?: string;
 				partition?: string;
-				allowpopups?: string;
+				allowpopups?: string | boolean;
 				nodeintegration?: string;
 			},
 			WebviewHTMLElement
