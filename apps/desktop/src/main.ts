@@ -47,18 +47,6 @@ function createWindow() {
 		},
 	});
 
-	// Intercept target="_blank" / window.open inside <webview> tags:
-	// navigate in-place instead of opening a new window.
-	mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
-		webviewContents.setWindowOpenHandler(({ url }) => {
-			// Defer loadURL so it doesn't conflict with the handler's own navigation lifecycle.
-			setImmediate(() => {
-				webviewContents.loadURL(url).catch(() => {/* ERR_ABORTED is expected on rapid nav */});
-			});
-			return { action: "deny" };
-		});
-	});
-
 	mainWindow.once("ready-to-show", () => {
 		mainWindow?.show();
 	});

@@ -1,4 +1,5 @@
 interface WebviewHTMLElement extends HTMLElement {
+	src: string;
 	capturePage: () => Promise<Electron.NativeImage>;
 	getTitle: () => string;
 	getURL: () => string;

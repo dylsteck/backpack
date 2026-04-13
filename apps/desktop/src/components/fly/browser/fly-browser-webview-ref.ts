@@ -29,11 +29,19 @@ export function attachWebviewNode(tabId: string, node: WebviewHTMLElement, d: We
 		const url = readNavigateUrl(e);
 		if (url) d.onDidNavigate(tabId, url);
 	};
+	const onNewWindow = (e: Event) => {
+		e.preventDefault();
+		const url = readNavigateUrl(e);
+		if (url) {
+			node.src = url;
+		}
+	};
 	node.addEventListener("page-title-updated", onTitle);
 	node.addEventListener("did-finish-load", onLoad);
 	node.addEventListener("page-favicon-updated", onFavicon);
 	node.addEventListener("did-navigate", onNavigate);
 	node.addEventListener("did-navigate-in-page", onNavigate);
+	node.addEventListener("new-window", onNewWindow);
 }
 
 export function makeWebviewRefCallback(
