@@ -1,11 +1,9 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import {
-	BookOpenIcon,
 	GlobeIcon,
 	Grid3x3Icon,
 	HomeIcon,
-	LifeBuoyIcon,
 	PackageIcon,
 	SearchIcon,
 	SettingsIcon,
@@ -49,20 +47,7 @@ const navMain = [
 	},
 ];
 
-const navSecondary = [
-	{
-		title: "Docs",
-		url: "https://ui.shadcn.com/docs",
-		icon: <BookOpenIcon />,
-		external: true,
-	},
-	{
-		title: "Repository",
-		url: "https://github.com/dylsteck/backpack",
-		icon: <LifeBuoyIcon />,
-		external: true,
-	},
-];
+const navSecondary: { title: string; url: string; icon: React.ReactNode; external?: boolean }[] = [];
 
 export function AppSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (

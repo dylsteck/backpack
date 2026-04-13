@@ -47,6 +47,15 @@ function createWindow() {
 		},
 	});
 
+	// Intercept target="_blank" / window.open inside <webview> tags:
+	// navigate in-place instead of opening a new window.
+	mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
+		webviewContents.setWindowOpenHandler(({ url }) => {
+			webviewContents.loadURL(url);
+			return { action: "deny" };
+		});
+	});
+
 	mainWindow.once("ready-to-show", () => {
 		mainWindow?.show();
 	});
