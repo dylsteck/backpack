@@ -40,7 +40,9 @@ const themeApi = {
 
 const webviewApi = {
 	onOpenUrl: (cb: (url: string) => void) => {
-		ipcRenderer.on(WEBVIEW_CHANNELS.openUrl, (_event, url: string) => cb(url));
+		const handler = (_event: Electron.IpcRendererEvent, url: string) => cb(url);
+		ipcRenderer.on(WEBVIEW_CHANNELS.openUrl, handler);
+		return () => ipcRenderer.removeListener(WEBVIEW_CHANNELS.openUrl, handler);
 	},
 };
 

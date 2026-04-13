@@ -19,7 +19,7 @@ export function FlyBrowserView() {
 
 	// Listen for IPC from main process when a webview target="_blank" link is clicked
 	useEffect(() => {
-		webviewBridge.onOpenUrl((url) => {
+		return webviewBridge.onOpenUrl((url) => {
 			shell.onOpenUrlRef.current(url);
 		});
 	}, [shell.onOpenUrlRef]);

@@ -47,15 +47,6 @@ function createWindow() {
 		},
 	});
 
-	// Intercept target="_blank" / window.open in webviews: deny the OS window
-	// and send the URL to the renderer to open as an in-app tab.
-	mainWindow.webContents.on("did-attach-webview", (_event, wc) => {
-		wc.setWindowOpenHandler(({ url }) => {
-			mainWindow?.webContents.send("webview:open-url", url);
-			return { action: "deny" };
-		});
-	});
-
 	mainWindow.once("ready-to-show", () => {
 		mainWindow?.show();
 	});
@@ -73,10 +64,29 @@ function createWindow() {
 
 // Suppress ERR_ABORTED (-3) from webview guest navigation — this is normal browser behavior
 // when a navigation is superseded by another (e.g. clicking a link while a page is still loading).
+function isAbortError(err: unknown): boolean {
+	if (!err || typeof err !== "object") return false;
+	const e = err as Record<string, unknown>;
+	return e.errno === -3 || e.code === "ERR_ABORTED";
+}
 process.on("uncaughtException", (err) => {
-	const errno = err && typeof err === "object" && "errno" in err ? (err as { errno: number }).errno : undefined;
-	if (errno === -3) return;
+	if (isAbortError(err)) return;
 	console.error("Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+	if (isAbortError(reason)) return;
+	console.error("Unhandled rejection:", reason);
+});
+
+// Intercept target="_blank" / window.open in webviews: deny the OS window
+// and send the URL to the renderer to open as an in-app tab.
+app.on("web-contents-created", (_event, wc) => {
+	if (wc.getType() === "webview") {
+		wc.setWindowOpenHandler(({ url }) => {
+			mainWindow?.webContents.send("webview:open-url", url);
+			return { action: "deny" };
+		});
+	}
 });
 
 app.whenReady().then(() => {

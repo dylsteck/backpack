@@ -22,6 +22,8 @@ export function FlyBrowserWebviews({ tabs, activeTabId, viewMode, makeWebviewRef
 					key={tab.id}
 					src={tab.url}
 					ref={makeWebviewRef(tab.id)}
+					// @ts-expect-error Electron boolean attribute
+					allowpopups="true"
 					className={cn(
 						"absolute inset-0 h-full w-full",
 						tab.id !== activeTabId && "invisible",

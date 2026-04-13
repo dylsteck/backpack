@@ -49,7 +49,7 @@ interface ThemeApi {
 }
 
 interface WebviewBridgeApi {
-	onOpenUrl(cb: (url: string) => void): void;
+	onOpenUrl(cb: (url: string) => void): () => void;
 }
 
 declare global {
