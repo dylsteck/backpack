@@ -51,7 +51,10 @@ function createWindow() {
 	// navigate in-place instead of opening a new window.
 	mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
 		webviewContents.setWindowOpenHandler(({ url }) => {
-			webviewContents.loadURL(url);
+			// Defer loadURL so it doesn't conflict with the handler's own navigation lifecycle.
+			setImmediate(() => {
+				webviewContents.loadURL(url).catch(() => {/* ERR_ABORTED is expected on rapid nav */});
+			});
 			return { action: "deny" };
 		});
 	});
