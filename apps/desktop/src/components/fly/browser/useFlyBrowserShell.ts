@@ -18,6 +18,7 @@ export function useFlyBrowserShell() {
 	const [navCanGoBack, setNavCanGoBack] = useState(false);
 	const [navCanGoForward, setNavCanGoForward] = useState(false);
 	const webviewRefs = useRef<Map<string, WebviewHTMLElement>>(new Map());
+	const onOpenUrlRef = useRef<(url: string) => void>(() => {});
 	const sessionIdRef = useRef<string | null>(null);
 	const tabsRef = useRef<FlyBrowserTab[]>([]);
 	const activeTabIdRef = useRef("");
@@ -95,6 +96,7 @@ export function useFlyBrowserShell() {
 		navCanGoForward,
 		setNavCanGoForward,
 		webviewRefs,
+		onOpenUrlRef,
 		sessionIdRef,
 		tabsRef,
 		activeTabIdRef,

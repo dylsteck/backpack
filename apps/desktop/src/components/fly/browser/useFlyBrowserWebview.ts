@@ -105,6 +105,11 @@ export function useFlyBrowserWebview(queryClient: QueryClient, s: FlyBrowserShel
 		[pushVisit, s],
 	);
 
+	const onOpenUrl = useCallback(
+		(url: string) => s.onOpenUrlRef.current(url),
+		[s.onOpenUrlRef],
+	);
+
 	const makeWebviewRef = useCallback(
 		(tabId: string) =>
 			makeWebviewRefCallback(tabId, {
@@ -113,9 +118,10 @@ export function useFlyBrowserWebview(queryClient: QueryClient, s: FlyBrowserShel
 				captureTab,
 				scheduleWindowPersist: s.scheduleWindowPersist,
 				onDidNavigate,
+				onOpenUrl,
 				setTabFavicons: s.setTabFavicons,
 			}),
-		[s, syncTitle, captureTab, onDidNavigate],
+		[s, syncTitle, captureTab, onDidNavigate, onOpenUrl],
 	);
 
 	return {

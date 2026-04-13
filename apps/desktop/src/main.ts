@@ -47,16 +47,6 @@ function createWindow() {
 		},
 	});
 
-	// Handle target="_blank" / window.open inside <webview> tags and
-	// suppress ERR_ABORTED which is normal during rapid navigation.
-	mainWindow.webContents.on("did-attach-webview", (_event, wc) => {
-		wc.setWindowOpenHandler(({ url }) => {
-			// Navigate in the same webview instead of opening a new window
-			setImmediate(() => wc.loadURL(url).catch(() => {}));
-			return { action: "deny" };
-		});
-	});
-
 	mainWindow.once("ready-to-show", () => {
 		mainWindow?.show();
 	});

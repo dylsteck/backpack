@@ -13,6 +13,7 @@ export function FlyBrowserView() {
 	const shell = useFlyBrowserShell();
 	const web = useFlyBrowserWebview(queryClient, shell);
 	const cmd = useFlyBrowserCommands(shell, web);
+	shell.onOpenUrlRef.current = cmd.openUrl;
 
 	if (!shell.ready || shell.tabs.length === 0) {
 		return (

@@ -21,6 +21,7 @@ export type FlyBrowserShellApi = {
 	navCanGoForward: boolean;
 	setNavCanGoForward: Dispatch<SetStateAction<boolean>>;
 	webviewRefs: MutableRefObject<Map<string, WebviewHTMLElement>>;
+	onOpenUrlRef: MutableRefObject<(url: string) => void>;
 	sessionIdRef: MutableRefObject<string | null>;
 	tabFaviconsRef: MutableRefObject<Record<string, string>>;
 	scheduleWindowPersist: () => void;

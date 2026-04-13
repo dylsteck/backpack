@@ -18,6 +18,18 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 		s.scheduleWindowPersist();
 	}, [s]);
 
+	const openUrl = useCallback(
+		(url: string) => {
+			const tab = makeFlyTab(url, hostTitle(url));
+			s.setTabs((prev) => [...prev, tab]);
+			s.setActiveTabId(tab.id);
+			s.setViewMode("browser");
+			s.scheduleWindowPersist();
+			w.pushVisit(tab.id, url, "link");
+		},
+		[s, w],
+	);
+
 	const closeTab = useCallback(
 		(id: string) => {
 			void flyApi.finalizeTab(id);
@@ -129,6 +141,7 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 
 	return {
 		addTab,
+		openUrl,
 		closeTab,
 		selectTab,
 		toggleOverview,
