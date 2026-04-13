@@ -47,10 +47,13 @@ function createWindow() {
 		},
 	});
 
-	// Block OS windows from webview popups — the renderer new-window handler
-	// opens them as in-app tabs instead.
+	// Intercept target="_blank" / window.open in webviews: deny the OS window
+	// and send the URL to the renderer to open as an in-app tab.
 	mainWindow.webContents.on("did-attach-webview", (_event, wc) => {
-		wc.setWindowOpenHandler(() => ({ action: "deny" }));
+		wc.setWindowOpenHandler(({ url }) => {
+			mainWindow?.webContents.send("webview:open-url", url);
+			return { action: "deny" };
+		});
 	});
 
 	mainWindow.once("ready-to-show", () => {

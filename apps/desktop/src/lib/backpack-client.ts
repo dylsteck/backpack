@@ -48,6 +48,10 @@ interface ThemeApi {
 	}>;
 }
 
+interface WebviewBridgeApi {
+	onOpenUrl(cb: (url: string) => void): void;
+}
+
 declare global {
 	interface Window {
 		runtime?: { readonly platform: NodeJS.Platform };
@@ -55,6 +59,7 @@ declare global {
 		win: WindowApi;
 		theme: ThemeApi;
 		fly: FlyRendererApi;
+		webview: WebviewBridgeApi;
 	}
 }
 
@@ -64,3 +69,4 @@ export const backpack: BackpackApi = window.backpack;
 export const winApi: WindowApi = window.win;
 export const themeApi: ThemeApi = window.theme;
 export const flyApi: FlyRendererApi = window.fly;
+export const webviewBridge: WebviewBridgeApi = window.webview;

@@ -22,6 +22,10 @@ export const THEME_CHANNELS = {
 	set: "theme:set",
 } as const;
 
+export const WEBVIEW_CHANNELS = {
+	openUrl: "webview:open-url",
+} as const;
+
 export const FLY_CHANNELS = {
 	ensureSession: "fly:ensureSession",
 	recordVisit: "fly:recordVisit",

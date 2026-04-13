@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { webviewBridge } from "@/lib/backpack-client";
 import { omniboxDisplayUrl } from "./browser/fly-browser-helpers";
 import { FlyBrowserAddressBar } from "./browser/FlyBrowserAddressBar";
 import { FlyBrowserOverview } from "./browser/FlyBrowserOverview";
@@ -14,6 +16,13 @@ export function FlyBrowserView() {
 	const web = useFlyBrowserWebview(queryClient, shell);
 	const cmd = useFlyBrowserCommands(shell, web);
 	shell.onOpenUrlRef.current = cmd.openUrl;
+
+	// Listen for IPC from main process when a webview target="_blank" link is clicked
+	useEffect(() => {
+		webviewBridge.onOpenUrl((url) => {
+			shell.onOpenUrlRef.current(url);
+		});
+	}, [shell.onOpenUrlRef]);
 
 	if (!shell.ready || shell.tabs.length === 0) {
 		return (

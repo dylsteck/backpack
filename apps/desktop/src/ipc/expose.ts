@@ -6,7 +6,7 @@ import type {
 	RecordVisitPayload,
 	WindowStatePayload,
 } from "@/types/fly";
-import { FLY_CHANNELS, SDK_CHANNELS, THEME_CHANNELS, WINDOW_CHANNELS } from "./channels";
+import { FLY_CHANNELS, SDK_CHANNELS, THEME_CHANNELS, WEBVIEW_CHANNELS, WINDOW_CHANNELS } from "./channels";
 
 const runtime = {
 	platform: process.platform,
@@ -38,6 +38,12 @@ const themeApi = {
 	set: (source: "system" | "light" | "dark") => ipcRenderer.invoke(THEME_CHANNELS.set, source),
 };
 
+const webviewApi = {
+	onOpenUrl: (cb: (url: string) => void) => {
+		ipcRenderer.on(WEBVIEW_CHANNELS.openUrl, (_event, url: string) => cb(url));
+	},
+};
+
 const flyApi = {
 	ensureSession: () => ipcRenderer.invoke(FLY_CHANNELS.ensureSession) as Promise<{ sessionId: string }>,
 	recordVisit: (payload: RecordVisitPayload) =>
@@ -56,10 +62,12 @@ export function exposeContexts(): void {
 	contextBridge.exposeInMainWorld("backpack", backpackApi);
 	contextBridge.exposeInMainWorld("win", windowApi);
 	contextBridge.exposeInMainWorld("theme", themeApi);
+	contextBridge.exposeInMainWorld("webview", webviewApi);
 	contextBridge.exposeInMainWorld("fly", flyApi);
 }
 
 export type BackpackApi = typeof backpackApi;
 export type WindowApi = typeof windowApi;
 export type ThemeApi = typeof themeApi;
+export type WebviewApi = typeof webviewApi;
 export type FlyApi = typeof flyApi;
