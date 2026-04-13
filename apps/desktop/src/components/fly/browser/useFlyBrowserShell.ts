@@ -15,6 +15,8 @@ export function useFlyBrowserShell() {
 	const [urlFocused, setUrlFocused] = useState(false);
 	const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
 	const [tabFavicons, setTabFavicons] = useState<Record<string, string>>({});
+	const [navCanGoBack, setNavCanGoBack] = useState(false);
+	const [navCanGoForward, setNavCanGoForward] = useState(false);
 	const webviewRefs = useRef<Map<string, WebviewHTMLElement>>(new Map());
 	const sessionIdRef = useRef<string | null>(null);
 	const tabsRef = useRef<FlyBrowserTab[]>([]);
@@ -88,6 +90,10 @@ export function useFlyBrowserShell() {
 		setThumbnails,
 		tabFavicons,
 		setTabFavicons,
+		navCanGoBack,
+		setNavCanGoBack,
+		navCanGoForward,
+		setNavCanGoForward,
 		webviewRefs,
 		sessionIdRef,
 		tabsRef,

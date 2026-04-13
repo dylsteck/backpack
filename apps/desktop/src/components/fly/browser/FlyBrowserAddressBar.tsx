@@ -10,6 +10,8 @@ type Props = {
 	onBack: () => void;
 	onForward: () => void;
 	onReload: () => void;
+	canGoBack: boolean;
+	canGoForward: boolean;
 };
 
 export function FlyBrowserAddressBar({
@@ -22,6 +24,8 @@ export function FlyBrowserAddressBar({
 	onBack,
 	onForward,
 	onReload,
+	canGoBack,
+	canGoForward,
 }: Props) {
 	return (
 		<div className="flex items-center gap-1.5 px-1.5 py-1 shadow-[0_1px_0_0_hsl(var(--border)/0.5)] md:px-2">
@@ -29,7 +33,8 @@ export function FlyBrowserAddressBar({
 				<button
 					type="button"
 					onClick={onBack}
-					className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
+					disabled={!canGoBack}
+					className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-30"
 					title="Back"
 				>
 					<ArrowLeft className="h-3.5 w-3.5" />
@@ -37,7 +42,8 @@ export function FlyBrowserAddressBar({
 				<button
 					type="button"
 					onClick={onForward}
-					className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
+					disabled={!canGoForward}
+					className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-30"
 					title="Forward"
 				>
 					<ArrowRight className="h-3.5 w-3.5" />

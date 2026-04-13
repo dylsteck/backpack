@@ -37,6 +37,9 @@ export function FlyBrowserView() {
 				onActiveTabChange={(id) => {
 					shell.setActiveTabId(id);
 					shell.scheduleWindowPersist();
+					const wv = shell.webviewRefs.current.get(id);
+					shell.setNavCanGoBack(wv?.canGoBack() ?? false);
+					shell.setNavCanGoForward(wv?.canGoForward() ?? false);
 				}}
 				onCloseTab={cmd.closeTab}
 				onToggleOverview={cmd.toggleOverview}
@@ -57,6 +60,8 @@ export function FlyBrowserView() {
 					onBack={cmd.goBack}
 					onForward={cmd.goForward}
 					onReload={cmd.reload}
+					canGoBack={shell.navCanGoBack}
+					canGoForward={shell.navCanGoForward}
 				/>
 			) : null}
 

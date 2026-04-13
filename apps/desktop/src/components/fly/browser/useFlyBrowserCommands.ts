@@ -46,13 +46,23 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 		[s],
 	);
 
+	const syncNavState = useCallback(
+		(tabId: string) => {
+			const wv = s.webviewRefs.current.get(tabId);
+			s.setNavCanGoBack(wv?.canGoBack() ?? false);
+			s.setNavCanGoForward(wv?.canGoForward() ?? false);
+		},
+		[s],
+	);
+
 	const selectTab = useCallback(
 		(id: string) => {
 			s.setActiveTabId(id);
 			s.setViewMode("browser");
 			s.scheduleWindowPersist();
+			syncNavState(id);
 		},
-		[s],
+		[s, syncNavState],
 	);
 
 	const toggleOverview = useCallback(() => {
@@ -87,6 +97,9 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 			});
 			s.scheduleWindowPersist();
 			w.pushVisit(s.activeTabId, url, "typed");
+			// New navigation clears forward history
+			s.setNavCanGoBack(true);
+			s.setNavCanGoForward(false);
 		},
 		[s, w],
 	);
@@ -101,11 +114,13 @@ export function useFlyBrowserCommands(s: FlyBrowserShellApi, w: WebviewPart) {
 	);
 
 	const goBack = useCallback(() => {
-		s.webviewRefs.current.get(s.activeTabId)?.goBack();
+		const wv = s.webviewRefs.current.get(s.activeTabId);
+		if (wv?.canGoBack()) wv.goBack();
 	}, [s.activeTabId, s.webviewRefs]);
 
 	const goForward = useCallback(() => {
-		s.webviewRefs.current.get(s.activeTabId)?.goForward();
+		const wv = s.webviewRefs.current.get(s.activeTabId);
+		if (wv?.canGoForward()) wv.goForward();
 	}, [s.activeTabId, s.webviewRefs]);
 
 	const reload = useCallback(() => {

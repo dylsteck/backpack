@@ -16,6 +16,10 @@ export type FlyBrowserShellApi = {
 	setThumbnails: Dispatch<SetStateAction<Record<string, string>>>;
 	tabFavicons: Record<string, string>;
 	setTabFavicons: Dispatch<SetStateAction<Record<string, string>>>;
+	navCanGoBack: boolean;
+	setNavCanGoBack: Dispatch<SetStateAction<boolean>>;
+	navCanGoForward: boolean;
+	setNavCanGoForward: Dispatch<SetStateAction<boolean>>;
 	webviewRefs: MutableRefObject<Map<string, WebviewHTMLElement>>;
 	sessionIdRef: MutableRefObject<string | null>;
 	tabFaviconsRef: MutableRefObject<Record<string, string>>;

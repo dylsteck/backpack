@@ -85,8 +85,7 @@ export function AppSidebar({ className, ...props }: React.ComponentProps<typeof 
 									<PackageIcon className="size-4" />
 								</div>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">Menu</span>
-									<span className="truncate text-xs">Local-first</span>
+									<span className="truncate font-medium">Backpack</span>
 								</div>
 							</Link>
 						</SidebarMenuButton>

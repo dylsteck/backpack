@@ -92,6 +92,15 @@ export function useFlyBrowserWebview(queryClient: QueryClient, s: FlyBrowserShel
 			);
 			s.scheduleWindowPersist();
 			pushVisit(tabId, url, "link");
+
+			// Sync back/forward button state for the active tab
+			if (tabId === s.activeTabId) {
+				const wv = s.webviewRefs.current.get(tabId);
+				if (wv) {
+					s.setNavCanGoBack(wv.canGoBack());
+					s.setNavCanGoForward(wv.canGoForward());
+				}
+			}
 		},
 		[pushVisit, s],
 	);
